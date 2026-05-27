@@ -145,14 +145,17 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .popup .meta-grid b { color:var(--muted); font-weight:800; }
 .leaflet-control-layers { border-radius:14px!important; overflow:hidden; border:1px solid var(--line)!important; }
 @media (max-width: 980px) {
-  .app { grid-template-columns:1fr; grid-template-rows:50vh 50vh; }
-  .sidebar { order:2; padding:10px 12px 14px; }
+  .app { grid-template-columns:1fr; grid-template-rows:55vh 45vh; }
+  .sidebar { order:2; padding:8px 10px 12px; }
   .map-wrap { order:1; }
-  #map { height:50vh; }
+  #map { height:55vh; }
   .map-title { display:none; }
-  .info-panel { top:60px; right:10px; left:10px; bottom:60px; width:auto; max-width:none; height:auto; max-height:none; padding:10px 12px 12px; border-radius:14px; transform:translateY(120%); }
+  /* Panel info: full-height casi total para que se vean los botones del final */
+  .info-panel { top:10px; right:10px; left:10px; bottom:10px; width:auto; max-width:none; height:auto; max-height:none; padding:12px 14px 14px; border-radius:14px; transform:translateY(120%); z-index:2000; }
   .info-panel.open { transform:translateY(0); }
-  .foto-thumb .foto-rm { opacity:1; background:rgba(0,0,0,.65); }
+  .info-panel .close-x { width:36px; height:36px; font-size:22px; }
+  .info-panel .popup .popup-btn { padding:10px 12px; font-size:13px; }
+  .foto-thumb .foto-rm { opacity:1; background:rgba(0,0,0,.65); width:24px; height:24px; font-size:15px; }
   .map-toggles { font-size:11px; padding:5px 8px 5px 6px; gap:8px; }
   .map-toggles .eye svg { width:16px; height:16px; }
   .basemap-switcher button { width:36px; height:36px; }
@@ -160,6 +163,17 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   .gallery-modal { padding:12px 14px 14px; width:94vw; max-height:78vh; }
   .gallery-grid { grid-template-columns:repeat(2, 1fr); }
   .gallery-title { font-size:13.5px; }
+  /* Sidebar móvil: imagen mucho más pequeña, listado prioridad */
+  .intro-map { padding:4px 6px 2px; margin:2px 0 6px; }
+  .intro-map img { max-height:80px; object-fit:contain; }
+  .intro-stats { font-size:9px; padding:1px 0 0; }
+  .intro-stats b { font-size:11px; }
+  .brand { padding:2px 4px 6px; margin-bottom:4px; gap:8px; }
+  .brand img { width:78px; }
+  .brand h1 { font-size:13px; }
+  .brand p { font-size:11px; }
+  /* Touch targets más grandes para los puntos de finca */
+  .farm-dot-wrap { width:36px !important; height:36px !important; margin-left:-18px !important; margin-top:-18px !important; }
 }
 </style>
 </head>

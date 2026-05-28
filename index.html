@@ -250,12 +250,15 @@ const colorFor = g => g === 'TEST' ? '#00a86b' : '#e24444';
 const fillFor = g => g === 'TEST' ? '#c9f7df' : '#ffd2d2';
 const map = L.map('map', { zoomControl: true, preferCanvas: true, attributionControl: false });
 
-const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, attribution: 'Tiles © Esri' });
-const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' });
+const IMG_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const REF_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+const esri = L.tileLayer(IMG_URL, { maxZoom: 20, attribution: 'Tiles © Esri' });
+const hibrido = L.layerGroup([ L.tileLayer(IMG_URL, { maxZoom: 20, attribution: 'Tiles © Esri' }), L.tileLayer(REF_URL, { maxZoom: 20 }) ]);
+const topo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
 const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, attribution: '© OpenStreetMap © CARTO' });
-esri.addTo(map);
-const BASEMAPS = { esri, carto, osm };
-let currentBase = esri;
+const BASEMAPS = { esri, hibrido, topo, carto };
+let currentBase = hibrido;
+hibrido.addTo(map);
 function setBasemap(key) {
   const next = BASEMAPS[key];
   if (!next || next === currentBase) return;
@@ -263,9 +266,10 @@ function setBasemap(key) {
   document.querySelectorAll('.basemap-switcher button').forEach(b => b.classList.toggle('active', b.dataset.base === key));
 }
 const bmHtml = `
-  <button data-base="esri" class="active" title="Satélite Esri" aria-label="Satélite Esri"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></button>
-  <button data-base="carto" title="Mapa claro" aria-label="Mapa claro"><svg viewBox="0 0 24 24"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></button>
-  <button data-base="osm" title="OpenStreetMap" aria-label="OSM"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 1114 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg></button>`;
+  <button data-base="hibrido" class="active" title="Satélite con nombres" aria-label="Satélite con nombres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/><circle cx="12" cy="9" r="1.6" fill="currentColor" stroke="none"/></svg></button>
+  <button data-base="esri" title="Satélite" aria-label="Satélite"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></button>
+  <button data-base="topo" title="Topográfico" aria-label="Topográfico"><svg viewBox="0 0 24 24"><path d="M3 19l5-9 4 6 3-5 6 8z"/><circle cx="8.5" cy="6.5" r="1.6"/></svg></button>
+  <button data-base="carto" title="Mapa claro" aria-label="Mapa claro"><svg viewBox="0 0 24 24"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></button>`;
 const bmCtrl = L.control({position:'topright'});
 bmCtrl.onAdd = () => { const d = L.DomUtil.create('div','basemap-switcher'); d.innerHTML = bmHtml; L.DomEvent.disableClickPropagation(d); d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setBasemap(b.dataset.base))); return d; };
 bmCtrl.addTo(map);
@@ -278,7 +282,7 @@ togCtrl.onAdd = () => {
     <label><input id="showTest" type="checkbox" checked><span class="dot test"></span>TEST</label>
     <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
     <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
-    <label><input id="showPuntos" type="checkbox"><span class="dot punto"></span>Muestreo</label>`;
+    <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
   return d;
@@ -760,6 +764,8 @@ function updateZoomScale() {
     const el = o.marker.getElement(); if (el) el.style.display = (z < 7 || z > 14) ? 'none' : '';
     const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = (z < 7 || z > 14) ? 'none' : '';
   });
+  // Coordenadas de los puntos de muestreo: solo visibles con zoom alto (dentro de una finca)
+  puntoLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 15 ? '' : 'none'; });
 }
 map.on('zoomend', updateZoomScale);
 map.on('click', () => closeInfoPanel());

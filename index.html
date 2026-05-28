@@ -96,9 +96,14 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .gallery-count { font-size:10.5px; color:var(--muted); font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
 .gallery-close { width:32px; height:32px; border:0; background:#f3f8f5; color:var(--muted); border-radius:10px; cursor:pointer; font-size:20px; line-height:1; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .gallery-close:hover { background:var(--green); color:#fff; }
-.gallery-grid { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px; align-content:start; padding:2px 2px 6px; }
-.gallery-grid img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:10px; cursor:zoom-in; transition:transform .12s ease; background:#222; box-shadow:0 2px 6px rgba(0,0,0,.1); }
-.gallery-grid img:hover { transform:scale(1.025); box-shadow:0 6px 14px rgba(0,0,0,.18); }
+.gallery-grid { flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; align-content:start; padding:2px 2px 8px; }
+.gallery-thumb { position:relative; aspect-ratio:4/3; border-radius:12px; overflow:hidden; cursor:zoom-in; background:#1a1a1a; box-shadow:0 3px 10px rgba(0,0,0,.18); transition:transform .15s ease, box-shadow .15s ease; }
+.gallery-thumb img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .3s ease; }
+.gallery-thumb:hover { transform:translateY(-3px); box-shadow:0 10px 24px rgba(0,0,0,.32); }
+.gallery-thumb:hover img { transform:scale(1.07); }
+.gallery-thumb .gthumb-n { position:absolute; top:6px; left:6px; background:rgba(0,0,0,.55); color:#fff; font-size:10px; font-weight:800; border-radius:6px; padding:1px 6px; backdrop-filter:blur(2px); }
+.gallery-thumb .gthumb-zoom { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:26px; opacity:0; background:rgba(0,0,0,.18); transition:opacity .15s ease; }
+.gallery-thumb:hover .gthumb-zoom { opacity:1; }
 .gallery-empty { color:var(--muted); padding:50px 20px; text-align:center; font-size:13px; grid-column:1/-1; }
 .fotos-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; }
 .foto-thumb { position:relative; aspect-ratio:1; border-radius:6px; overflow:hidden; background:#f0f7f3; }
@@ -125,6 +130,8 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .punto-marker.pt-control { background:#e24444; }
 .punto-marker.pt-r { background:#2f6df6; }
 .dot.punto { background:linear-gradient(90deg,#00a86b 0 50%,#e24444 50% 100%); border:1px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.15); }
+.leaflet-tooltip.punto-coord { background:rgba(255,255,255,.88); border:0; border-radius:4px; padding:0 4px; font-size:8.5px; font-weight:800; color:#143331; box-shadow:0 1px 3px rgba(0,0,0,.3); white-space:nowrap; letter-spacing:.01em; }
+.leaflet-tooltip.punto-coord::before { display:none !important; }
 .pt-badge { display:inline-block; padding:1px 5px; border-radius:5px; font-weight:900; font-size:10px; color:#fff; }
 .pt-badge.test { background:#00a86b; } .pt-badge.control { background:#e24444; } .pt-badge.r { background:#2f6df6; }
 .puntos-legend { display:flex; gap:12px; font-size:10.5px; font-weight:700; color:var(--muted); margin:6px 0 8px; }
@@ -476,7 +483,7 @@ window.openGallery = async function(exps) {
   modal.querySelector('.gallery-count').textContent = `${arr.length} foto${arr.length === 1 ? '' : 's'}`;
   const grid = modal.querySelector('.gallery-grid');
   grid.innerHTML = arr.length
-    ? arr.map(f => `<img src="${f.url}" loading="lazy" onclick="openLightbox(this.src)">`).join('')
+    ? arr.map((f,i) => `<div class="gallery-thumb" onclick="openLightbox('${f.url}')"><img src="${f.url}" loading="lazy"><span class="gthumb-n">${i+1}</span><span class="gthumb-zoom">⤢</span></div>`).join('')
     : '<div class="gallery-empty">Sin fotos todavía. Añade alguna desde el panel lateral (botón +).</div>';
 };
 window.closeGallery = function() {
@@ -530,7 +537,8 @@ function addLayers() {
       const cls = p.tipo === 'test' ? 'pt-test' : p.tipo === 'control' ? 'pt-control' : 'pt-r';
       const tipoTxt = p.tipo === 'r' ? 'Remuestreo' : p.tipo.toUpperCase();
       const marker = L.marker([p.lat, p.lon], { icon: L.divIcon({ className:'punto-marker '+cls, iconSize:[13,13] }) })
-        .bindPopup(`<div class="popup"><h3 style="font-size:14px;margin:0 0 3px">${esc(p.id)} · ${tipoTxt}</h3><div class="sub">${finca?esc(finca.municipio):''} · EXPS${String(exps).padStart(2,'0')}</div>${p.fecha?'<div style="font-size:11px;margin-top:5px;color:#667085">📅 '+esc(p.fecha)+'</div>':''}<div class="coords"><div><b>Latitud</b><span>${p.lat.toFixed(6)}</span></div><div><b>Longitud</b><span>${p.lon.toFixed(6)}</span></div></div></div>`, {maxWidth:260});
+        .bindPopup(`<div class="popup"><h3 style="font-size:14px;margin:0 0 3px">${esc(p.id)} · ${tipoTxt}</h3><div class="sub">${finca?esc(finca.municipio):''} · EXPS${String(exps).padStart(2,'0')}</div>${p.fecha?'<div style="font-size:11px;margin-top:5px;color:#667085">📅 '+esc(p.fecha)+'</div>':''}<div class="coords"><div><b>Latitud</b><span>${p.lat.toFixed(6)}</span></div><div><b>Longitud</b><span>${p.lon.toFixed(6)}</span></div></div></div>`, {maxWidth:260})
+        .bindTooltip(`${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`, { permanent:true, direction:'bottom', offset:[0,6], className:'punto-coord', opacity:1 });
       puntoLayers.push({exps:Number(exps), tipo:p.tipo, marker});
     });
   });

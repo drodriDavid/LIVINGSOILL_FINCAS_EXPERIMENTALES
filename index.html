@@ -80,8 +80,12 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .popup-fotos { margin-top:10px; }
 .popup-fotos .fotos-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; gap:8px; }
 .popup-fotos .fotos-label { font-size:9.5px; color:var(--muted); text-transform:uppercase; font-weight:800; letter-spacing:.05em; }
+.fotos-head-actions { display:flex; align-items:center; gap:8px; }
 .fotos-gallery-btn { background:transparent; border:0; color:var(--green); font-weight:800; font-size:10px; cursor:pointer; text-transform:uppercase; letter-spacing:.05em; padding:0; }
 .fotos-gallery-btn:hover { text-decoration:underline; }
+.fotos-cfg-btn { background:transparent; border:0; cursor:pointer; font-size:13px; padding:0; line-height:1; opacity:.55; }
+.fotos-cfg-btn:hover { opacity:1; }
+.fotos-loading { grid-column:1/-1; font-size:11px; color:var(--muted); padding:8px 2px; }
 .gallery-backdrop { position:fixed; inset:0; background:rgba(10,30,28,.52); backdrop-filter:blur(4px); z-index:9994; display:none; }
 .gallery-backdrop.open { display:block; }
 .gallery-modal { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.96); opacity:0; pointer-events:none; z-index:9995; background:#fff; border:1px solid var(--line); border-radius:18px; padding:14px 16px 16px; width:min(680px, 92vw); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 30px 80px rgba(0,0,0,.35); transition:transform .2s ease, opacity .18s ease; }
@@ -335,7 +339,10 @@ function popupHtml(z) {
       <div class="popup-fotos">
         <div class="fotos-head">
           <span class="fotos-label">Fotos</span>
-          <button class="fotos-gallery-btn" onclick="openGallery(${z.exps})" data-exps="${z.exps}" style="display:none">Ver galería</button>
+          <span class="fotos-head-actions">
+            <button class="fotos-gallery-btn" onclick="openGallery(${z.exps})" data-exps="${z.exps}" style="display:none">Ver galería</button>
+            <button class="fotos-cfg-btn" onclick="setGhToken()" title="Configurar subida de fotos (token de GitHub)">🔑</button>
+          </span>
         </div>
         <div class="fotos-grid" data-exps="${z.exps}"></div>
       </div>
@@ -367,11 +374,18 @@ window.showPopupView = function(btn, which) {
 };
 
 // === Galería de fotos por finca (persistente en localStorage) ===
-function getFotos(exps) { try { return JSON.parse(localStorage.getItem('ls_fotos_'+exps) || '[]'); } catch { return []; } }
-function saveFotos(exps, arr) {
-  try { localStorage.setItem('ls_fotos_'+exps, JSON.stringify(arr)); return true; }
-  catch (e) { alert('No queda espacio en el navegador para guardar más fotos. Elimina alguna y vuelve a intentarlo.'); return false; }
-}
+// ===== Fotos compartidas alojadas en el propio repo de GitHub =====
+const GH = { owner:'drodriDavid', repo:'LIVINGSOILL_FINCAS_EXPERIMENTALES', branch:'main', dir:'fotos' };
+function ghToken() { return localStorage.getItem('gh_token') || ''; }
+function ghDir(exps) { return GH.dir + '/EXPS' + String(exps).padStart(2,'0'); }
+window.setGhToken = function() {
+  const t = prompt('Pega tu token de GitHub (fine-grained, permiso "Contents: Read and write" en este repo).\nSe guarda SOLO en este navegador. Deja vacío para borrarlo.', ghToken());
+  if (t === null) return;
+  if (t.trim()) localStorage.setItem('gh_token', t.trim()); else localStorage.removeItem('gh_token');
+  const grid = document.querySelector('#infoPanelBody .fotos-grid');
+  if (grid && grid.dataset.exps) renderFotos(grid.dataset.exps);
+  alert(t.trim() ? 'Token guardado en este navegador. Ya puedes subir y borrar fotos.' : 'Token borrado.');
+};
 function resizeImage(file, maxW, quality) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -388,51 +402,91 @@ function resizeImage(file, maxW, quality) {
     img.src = URL.createObjectURL(file);
   });
 }
-async function addFotoToFinca(exps, file) {
+const fotosCache = {};
+async function listFotos(exps, force) {
+  const key = String(exps);
+  if (fotosCache[key] && !force) return fotosCache[key];
+  const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${ghDir(exps)}?ref=${GH.branch}`;
   try {
-    const dataUrl = await resizeImage(file, 1100, 0.74);
-    const arr = getFotos(exps);
-    arr.push(dataUrl);
-    if (saveFotos(exps, arr)) renderFotos(exps);
-  } catch (e) { console.warn('Error añadiendo foto', e); }
+    const headers = { 'Accept':'application/vnd.github+json' };
+    if (ghToken()) headers['Authorization'] = 'Bearer ' + ghToken();
+    const r = await fetch(url, { headers });
+    if (r.status === 404) { fotosCache[key] = []; return []; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const arr = (Array.isArray(data) ? data : []).filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f.name))
+      .map(f => ({ name:f.name, url:f.download_url, sha:f.sha }));
+    fotosCache[key] = arr; return arr;
+  } catch (e) { console.warn('listFotos', e); return fotosCache[key] || []; }
 }
-window.removeFoto = function(exps, idx) {
-  if (!confirm('¿Eliminar esta foto?')) return;
-  const arr = getFotos(exps);
-  arr.splice(idx, 1);
-  saveFotos(exps, arr);
-  renderFotos(exps);
+async function addFotoToFinca(exps, file) {
+  if (!ghToken()) { if (confirm('Para subir fotos necesitas configurar tu token de GitHub. ¿Configurarlo ahora?')) setGhToken(); return; }
+  try {
+    const dataUrl = await resizeImage(file, 1400, 0.78);
+    const b64 = dataUrl.split(',')[1];
+    const name = `EXPS${String(exps).padStart(2,'0')}_${Date.now()}.jpg`;
+    const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${ghDir(exps)}/${name}`;
+    const r = await fetch(url, {
+      method:'PUT',
+      headers:{ 'Authorization':'Bearer '+ghToken(), 'Accept':'application/vnd.github+json' },
+      body: JSON.stringify({ message:`foto EXPS${String(exps).padStart(2,'0')}`, content:b64, branch:GH.branch })
+    });
+    if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.message || ('HTTP '+r.status)); }
+    await listFotos(exps, true);
+    renderFotos(exps);
+  } catch (e) { alert('No se pudo subir la foto: ' + e.message); console.warn(e); }
+}
+window.removeFoto = async function(exps, name, sha) {
+  if (!ghToken()) { alert('Necesitas configurar el token (botón 🔑) para borrar fotos.'); return; }
+  if (!confirm('¿Eliminar esta foto del repositorio?')) return;
+  try {
+    const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${ghDir(exps)}/${name}`;
+    const r = await fetch(url, {
+      method:'DELETE',
+      headers:{ 'Authorization':'Bearer '+ghToken(), 'Accept':'application/vnd.github+json' },
+      body: JSON.stringify({ message:`borrar foto ${name}`, sha, branch:GH.branch })
+    });
+    if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.message || ('HTTP '+r.status)); }
+    await listFotos(exps, true);
+    renderFotos(exps);
+  } catch (e) { alert('No se pudo borrar: ' + e.message); }
 };
-function renderFotos(exps) {
+async function renderFotos(exps) {
   const grid = document.querySelector('#infoPanelBody .fotos-grid');
   if (!grid) return;
-  const arr = getFotos(exps);
-  grid.innerHTML = arr.map((src,i) => `<div class="foto-thumb"><img src="${src}" onclick="openLightbox(this.src)"><button class="foto-rm" onclick="removeFoto(${exps},${i})" aria-label="Eliminar">×</button></div>`).join('')
-    + `<label class="foto-add" title="Añadir foto"><input type="file" accept="image/*" multiple onchange="onFotoChange(${exps},this)" hidden>+</label>`;
+  grid.dataset.exps = exps;
+  grid.innerHTML = '<div class="fotos-loading">Cargando fotos…</div>';
+  const arr = await listFotos(exps);
+  if (String(grid.dataset.exps) !== String(exps)) return;
+  const canEdit = !!ghToken();
+  grid.innerHTML = arr.map(f => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" onclick="openLightbox(this.src)">${canEdit?`<button class="foto-rm" onclick="removeFoto(${exps},'${esc(f.name)}','${f.sha}')" aria-label="Eliminar">×</button>`:''}</div>`).join('')
+    + `<label class="foto-add" title="${canEdit?'Añadir foto':'Configura el token (🔑) para poder subir'}"><input type="file" accept="image/*" multiple onchange="onFotoChange(${exps},this)" hidden>+</label>`;
   const btn = document.querySelector(`#infoPanelBody .fotos-gallery-btn[data-exps="${exps}"]`);
   if (btn) { btn.style.display = arr.length ? '' : 'none'; btn.textContent = `Ver galería (${arr.length})`; }
 }
-window.openGallery = function(exps) {
+window.openGallery = async function(exps) {
   const modal = document.getElementById('gallery');
-  const arr = getFotos(exps);
   const f = FINCAS.find(x => String(x.exps) === String(exps)) || {};
   const code = 'EXPS' + String(exps).padStart(2,'0');
   modal.querySelector('.gallery-title').textContent = `${code} · ${f.municipio || 'Finca'}`;
+  modal.querySelector('.gallery-count').textContent = 'Cargando…';
+  modal.classList.add('open');
+  document.getElementById('galleryBackdrop').classList.add('open');
+  const arr = await listFotos(exps);
   modal.querySelector('.gallery-count').textContent = `${arr.length} foto${arr.length === 1 ? '' : 's'}`;
   const grid = modal.querySelector('.gallery-grid');
   grid.innerHTML = arr.length
-    ? arr.map(src => `<img src="${src}" onclick="openLightbox(this.src)">`).join('')
-    : '<div class="gallery-empty">Sin fotos todavía. Añade alguna desde el panel lateral.</div>';
-  modal.classList.add('open');
-  document.getElementById('galleryBackdrop').classList.add('open');
+    ? arr.map(f => `<img src="${f.url}" loading="lazy" onclick="openLightbox(this.src)">`).join('')
+    : '<div class="gallery-empty">Sin fotos todavía. Añade alguna desde el panel lateral (botón +).</div>';
 };
 window.closeGallery = function() {
   document.getElementById('gallery').classList.remove('open');
   document.getElementById('galleryBackdrop').classList.remove('open');
 };
 window.onFotoChange = function(exps, input) {
-  Array.from(input.files).forEach(f => addFotoToFinca(exps, f));
+  const files = Array.from(input.files);
   input.value = '';
+  (async () => { for (const f of files) await addFotoToFinca(exps, f); })();
 };
 window.openLightbox = function(src) {
   const lb = document.getElementById('lightbox');

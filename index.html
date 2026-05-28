@@ -537,6 +537,12 @@ window.closeInfoPanel = function() {
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden','true');
 };
+function openInfoPanelByExps(exps) {
+  if (!exps) { closeInfoPanel(); return; }
+  const zs = ZONES.filter(z => z.exps === Number(exps));
+  const first = zs.find(z => z.group === 'TEST') || zs[0];
+  if (first) openInfoPanel(first);
+}
 
 function addLayers() {
   ZONES.forEach(z => {
@@ -606,7 +612,7 @@ function renderList() {
   document.getElementById('listCount').textContent = farms.length + ' fincas';
   const html = farms.map(f => { const code='EXPS'+String(f.exps).padStart(2,'0'); const desc=(CARACTERISTICAS[f.exps]||[])[0]||`${f.n_zones} zonas · ${f.n_vertices} vértices`; return `<div class="farm-card${String(selectedFarm)===String(f.exps)?' active':''}" data-exps="${f.exps}"><div class="code">${code}</div><div class="farm-title">${esc(f.municipio)} <span class="prov-tag">${esc(f.provincia)}</span></div><div class="farm-meta">${esc(desc)}</div></div>`; }).join('');
   document.getElementById('farmList').innerHTML = html || '<p style="color:#667085">No hay resultados.</p>';
-  document.querySelectorAll('.farm-card').forEach(el => el.addEventListener('click', () => { selectedFarm=el.dataset.exps; document.getElementById('farmFilter').value=selectedFarm; refreshMap(); }));
+  document.querySelectorAll('.farm-card').forEach(el => el.addEventListener('click', () => { selectedFarm=el.dataset.exps; document.getElementById('farmFilter').value=selectedFarm; refreshMap(); openInfoPanelByExps(selectedFarm); }));
 }
 function populateFilters() {
   const ff=document.getElementById('farmFilter');
@@ -778,9 +784,9 @@ setTimeout(updateZoomScale, 0);
     else if (lbOpen && e.key === 'ArrowRight') { lbNav(1); }
   });
 })();
-document.getElementById('farmFilter').addEventListener('change', e => { selectedFarm=e.target.value; refreshMap(); });
+document.getElementById('farmFilter').addEventListener('change', e => { selectedFarm=e.target.value; refreshMap(); openInfoPanelByExps(selectedFarm); });
 ['showTest','showControl','showNumbers','showPuntos'].forEach(id => document.getElementById(id).addEventListener('change', () => refreshMap(false)));
-document.getElementById('fitAll').addEventListener('click', () => { selectedFarm=''; currentProvince=''; currentQuery=''; document.getElementById('farmFilter').value=''; refreshMap(); });
+document.getElementById('fitAll').addEventListener('click', () => { selectedFarm=''; currentProvince=''; currentQuery=''; document.getElementById('farmFilter').value=''; refreshMap(); closeInfoPanel(); });
 refreshMap();
 </script>
 </body>

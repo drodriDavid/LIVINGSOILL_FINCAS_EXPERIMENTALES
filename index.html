@@ -120,7 +120,7 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .punto-marker.pt-test { background:#00a86b; }
 .punto-marker.pt-control { background:#e24444; }
 .punto-marker.pt-r { background:#2f6df6; }
-.dot.punto { background:#2f6df6; }
+.dot.punto { background:linear-gradient(90deg,#00a86b 0 50%,#e24444 50% 100%); border:1px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.15); }
 .pt-badge { display:inline-block; padding:1px 5px; border-radius:5px; font-weight:900; font-size:10px; color:#fff; }
 .pt-badge.test { background:#00a86b; } .pt-badge.control { background:#e24444; } .pt-badge.r { background:#2f6df6; }
 .puntos-legend { display:flex; gap:12px; font-size:10.5px; font-weight:700; color:var(--muted); margin:6px 0 8px; }
@@ -174,8 +174,10 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   .info-panel .close-x { width:36px; height:36px; font-size:22px; }
   .info-panel .popup .popup-btn { padding:10px 12px; font-size:13px; }
   .foto-thumb .foto-rm { opacity:1; background:rgba(0,0,0,.65); width:24px; height:24px; font-size:15px; }
-  .map-toggles { font-size:11px; padding:5px 8px 5px 6px; gap:8px; }
+  .map-toggles { font-size:10.5px; padding:5px 9px; gap:5px 11px; flex-wrap:wrap; max-width:calc(100vw - 16px); }
+  .map-toggles .eye { padding-right:0; border-right:0; margin-right:0; flex-basis:100%; display:none; }
   .map-toggles .eye svg { width:16px; height:16px; }
+  .map-toggles label { flex:0 0 auto; }
   .basemap-switcher button { width:36px; height:36px; }
   .basemap-switcher svg { width:18px; height:18px; }
   .gallery-modal { padding:12px 14px 14px; width:94vw; max-height:78vh; }

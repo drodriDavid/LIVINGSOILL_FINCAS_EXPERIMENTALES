@@ -91,8 +91,10 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .muestras-block { margin-top:8px; }
 .iot-chart-wrap { margin:7px 0 4px; }
 .iot-chart-label { font-size:10.5px; color:var(--muted); font-weight:700; margin-bottom:2px; }
-.iot-help { color:var(--green); font-weight:700; cursor:help; }
-.iot-chart { width:100%; height:48px; display:block; background:#f5faf8; border:1px solid var(--line); border-radius:8px; cursor:crosshair; }
+.iot-help { color:var(--green); font-weight:700; cursor:pointer; }
+.iot-explain { display:none; font-size:10.5px; color:var(--ink); background:#f0f7f3; border:1px solid var(--line); border-radius:7px; padding:6px 8px; margin-top:4px; line-height:1.5; }
+.iot-chart-wrap.open .iot-explain { display:block; }
+.iot-chart { width:100%; height:48px; display:block; background:#f5faf8; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
 .iot-chart:hover { border-color:var(--green); }
 #iotTip { position:fixed; z-index:3000; display:none; background:rgba(20,51,49,.96); color:#fff; font-size:11px; line-height:1.55; padding:6px 9px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.32); pointer-events:none; max-width:220px; }
 #iotTip .iot-tip-t { font-weight:800; margin-bottom:3px; font-size:10.5px; opacity:.92; }
@@ -377,7 +379,7 @@ function muestrasHtml(exps){
   const chart = (key,label,desc) => {
     const s=[]; if(dt) s.push({name:'test',vals:dt[key],color:'#00a86b'}); if(dc) s.push({name:'control',vals:dc[key],color:'#e24444'});
     const labels = (dt&&dt.t) || (dc&&dc.t) || [];
-    return `<div class="iot-chart-wrap"><div class="iot-chart-label">${label} <span class="iot-help" title="${esc(desc)}">ⓘ</span></div>${lineChart(s,200,48,{labels,unit:units[key]||''})}</div>`;
+    return `<div class="iot-chart-wrap"><div class="iot-chart-label">${label} <span class="iot-help" title="Clic para ver la explicación">ⓘ</span></div>${lineChart(s,200,48,{labels,unit:units[key]||''})}<div class="iot-explain">${esc(desc)}</div></div>`;
   };
   const lv = d => (d && d.last) ? `Hum. 20 cm ${_pct(d.last.wc20)} · 50 cm ${_pct(d.last.wc50)} · Tª suelo 20 cm ${_tc(d.last.st20)} · 50 cm ${_tc(d.last.st50)} · Tª aire ${_tc(d.last.at)}` : 'sin datos';
   const ult = (((dt&&dt.last&&dt.last.t)||(dc&&dc.last&&dc.last.t))||'').replace('T',' ');
@@ -1020,6 +1022,11 @@ setTimeout(updateZoomScale, 0);
   }
   document.addEventListener('mousemove', onMove);
   document.addEventListener('scroll', hide, true);
+  // Clic en la gráfica: desplegar/ocultar la explicación
+  document.addEventListener('click', e => {
+    const wrap = e.target.closest ? e.target.closest('.iot-chart-wrap') : null;
+    if (wrap) wrap.classList.toggle('open');
+  });
 })();
 // Lightbox + galería completa de fotos
 (function(){

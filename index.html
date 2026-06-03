@@ -811,10 +811,10 @@ function openInfoPanelByExps(exps) {
 function addLayers() {
   ZONES.forEach(z => {
     const halo = L.polygon(z.coords, { color:'#ffffff', weight:9, opacity:.9, fill:false, interactive:false });
-    const poly = L.polygon(z.coords, { color:colorFor(z.group), weight:4.5, opacity:1, fillColor:fillFor(z.group), fillOpacity:.32, lineJoin:'round' });
-    poly.on('click', (e) => { L.DomEvent.stopPropagation(e); openInfoPanel(z); });
-    poly.on('mouseover', () => poly.setStyle({weight:7, fillOpacity:.45}));
-    poly.on('mouseout', () => poly.setStyle({weight:4.5, fillOpacity:.32}));
+    const poly = L.polygon(z.coords, Object.assign({lineJoin:'round'}, polyStyle(z)));
+    poly.on('click', (e) => { L.DomEvent.stopPropagation(e); selectFarmMap(z.exps); });
+    poly.on('mouseover', () => poly.setStyle({weight:7, fillOpacity:.45, opacity:1}));
+    poly.on('mouseout', () => poly.setStyle(polyStyle(z)));
     polyLayers.push({zone:z, halo, poly});
     z.vertices.forEach(v => {
       const marker = L.marker([v.lat, v.lon], { icon: L.divIcon({ className:'vertex-marker', iconSize:[10,10] }) }).bindPopup(`<b>${esc(z.finca)}</b><br>${z.group} · V${v.n}<br>${v.lat.toFixed(8)}, ${v.lon.toFixed(8)}`);
@@ -854,12 +854,22 @@ function matches(z) {
   const showControl = document.getElementById('showControl').checked;
   if (z.group === 'TEST' && !showTest) return false;
   if (z.group === 'CONTROL' && !showControl) return false;
-  if (selectedFarm && String(z.exps) !== String(selectedFarm)) return false;
   if (currentProvince && z.provincia !== currentProvince) return false;
   const q = currentQuery.trim().toLowerCase();
   if (!q) return true;
   const hay = [z.finca,z.zone,z.municipio,z.provincia,z.panel,'exps'+z.exps].join(' ').toLowerCase();
   return hay.includes(q);
+}
+function polyStyle(z){
+  if (selectedFarm && String(z.exps)!==String(selectedFarm))
+    return {color:'#8a9d97', weight:2, opacity:.6, fillColor:'#aebab4', fillOpacity:.10};
+  return {color:colorFor(z.group), weight:4.5, opacity:1, fillColor:fillFor(z.group), fillOpacity:.32};
+}
+function selectFarmMap(exps){
+  selectedFarm = String(exps);
+  const ff=document.getElementById('farmFilter'); if(ff) ff.value=selectedFarm;
+  refreshMap(true);
+  openInfoPanelByExps(selectedFarm);
 }
 function refreshMap(refit) {
   if (refit === undefined) refit = true;
@@ -872,8 +882,14 @@ function refreshMap(refit) {
   const showTest = document.getElementById('showTest').checked;
   const showControl = document.getElementById('showControl').checked;
   const bounds=[];
-  polyLayers.forEach(o => { if (matches(o.zone)) { o.halo.addTo(map); o.poly.addTo(map); bounds.push(...o.zone.coords); } });
-  if (showN) vertexLayers.forEach(o => { if (matches(o.zone)) o.label.addTo(map); });
+  polyLayers.forEach(o => {
+    if (!matches(o.zone)) return;
+    const isSel = !selectedFarm || String(o.zone.exps) === String(selectedFarm);
+    if (isSel) { o.halo.addTo(map); bounds.push(...o.zone.coords); }
+    o.poly.setStyle(polyStyle(o.zone));
+    o.poly.addTo(map);
+  });
+  if (showN) vertexLayers.forEach(o => { if (matches(o.zone) && (!selectedFarm || String(o.zone.exps)===String(selectedFarm))) o.label.addTo(map); });
   if (showP) puntoLayers.forEach(o => {
     if (!passesFarm(o.exps)) return;
     if (o.tipo === 'test' && !showTest) return;
@@ -903,7 +919,7 @@ function refreshSensores() {
 }
 function renderList() {
   const q=currentQuery.trim().toLowerCase();
-  let farms=FINCAS.filter(f => (!currentProvince || f.provincia===currentProvince) && (!selectedFarm || String(f.exps)===String(selectedFarm)));
+  let farms=FINCAS.filter(f => (!currentProvince || f.provincia===currentProvince));
   if (q) farms=farms.filter(f => [f.finca,f.municipio,f.provincia,'exps'+f.exps].join(' ').toLowerCase().includes(q));
   farms.sort((a,b) => a.exps - b.exps);
   document.getElementById('listCount').textContent = farms.length + ' fincas';

@@ -83,6 +83,9 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .sol-note { font-size:11px; color:var(--muted); margin-top:4px; font-style:italic; }
 .iot-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:2px; }
 .iot-table td { padding:4px 4px; border-bottom:1px solid var(--line); }
+.iot-table a { color:var(--green); font-weight:800; text-decoration:none; }
+.iot-table a:hover { text-decoration:underline; }
+.popup-btn.iot-web { display:flex; align-items:center; justify-content:center; margin-top:8px; text-decoration:none !important; }
 .iot-zona { display:inline-block; border-radius:999px; padding:1px 8px; font-size:10.5px; font-weight:800; text-transform:uppercase; }
 .iot-zona.test { color:#007c52; background:#e8fff3; border:1px solid #b8eed1; }
 .iot-zona.control { color:#bd2727; background:#fff0f0; border:1px solid #ffd1d1; }
@@ -326,6 +329,7 @@ const IOT = {
   "15": {periodo:"2026-04-21 → 2026-06-03", sensores:[{id:"z6-32748",zona:"test",h:532,lat:36.9265414,lon:-5.2559243},{id:"z6-32732",zona:"control",h:539,lat:36.9272598,lon:-5.2565471}]},
   "16": {periodo:"—", sensores:[]}
 };
+const WEB_IOT = 'https://livinglabandalucia.ujaen.es/iot/listado';
 function solucionesHtml(exps) {
   const s = SOLUCIONES[exps];
   if (!s) return '';
@@ -347,8 +351,8 @@ function iotHtml(exps) {
   if (!io || !io.sensores || !io.sensores.length) {
     return `<div class="iot-block"><div class="sol-head">Sensores IoT</div><div class="sol-empty">Sin sensores instalados.</div></div>`;
   }
-  const rows = io.sensores.map(s => `<tr><td>${esc(s.id)}</td><td><span class="iot-zona ${s.zona}">${esc(s.zona)}</span></td><td>${s.h} m</td></tr>`).join('');
-  return `<div class="iot-block"><div class="sol-head">Sensores IoT<span class="iot-sub">${esc(io.periodo)}</span></div><table class="iot-table">${rows}</table></div>`;
+  const rows = io.sensores.map(s => `<tr><td><a href="${WEB_IOT}" target="_blank" rel="noopener" title="Ver muestras de ${esc(s.id)} en LivingSoiLL (pulsa «Ver detalle» en la tabla)">${esc(s.id)}</a></td><td><span class="iot-zona ${s.zona}">${esc(s.zona)}</span></td><td>${s.h} m</td></tr>`).join('');
+  return `<div class="iot-block"><div class="sol-head">Sensores IoT<span class="iot-sub">${esc(io.periodo)}</span></div><table class="iot-table">${rows}</table><a class="popup-btn maps iot-web" target="_blank" rel="noopener" href="${WEB_IOT}">📊 Ver muestras en LivingSoiLL</a></div>`;
 }
 const colorFor = g => g === 'TEST' ? '#00a86b' : '#e24444';
 const fillFor = g => g === 'TEST' ? '#c9f7df' : '#ffd2d2';
@@ -700,7 +704,7 @@ function addLayers() {
       if (s.lat == null || s.lon == null) return;
       const zonaTxt = s.zona === 'test' ? 'TEST (tratada)' : 'CONTROL';
       const marker = L.marker([s.lat, s.lon], { icon: L.divIcon({ className:'sensor-marker '+s.zona, html:sensorSvg, iconSize:[24,24], iconAnchor:[12,12] }), zIndexOffset:1000 })
-        .bindPopup(`<div class="popup"><h3 style="font-size:14px;margin:0 0 3px">📡 ${esc(s.id)}</h3><div class="sub">Sensor de suelo · ${zonaTxt}<br>${finca?esc(finca.municipio):''} · EXPS${String(exps).padStart(2,'0')}</div><div style="font-size:11px;margin-top:5px;color:#667085">Altitud: ${s.h} m · Lecturas: ${esc(io.periodo)}</div><div class="coords"><div><b>Latitud</b><span>${s.lat.toFixed(6)}</span></div><div><b>Longitud</b><span>${s.lon.toFixed(6)}</span></div></div></div>`, {maxWidth:260})
+        .bindPopup(`<div class="popup"><h3 style="font-size:14px;margin:0 0 3px">📡 ${esc(s.id)}</h3><div class="sub">Sensor de suelo · ${zonaTxt}<br>${finca?esc(finca.municipio):''} · EXPS${String(exps).padStart(2,'0')}</div><div style="font-size:11px;margin-top:5px;color:#667085">Altitud: ${s.h} m · Lecturas: ${esc(io.periodo)}</div><div class="coords"><div><b>Latitud</b><span>${s.lat.toFixed(6)}</span></div><div><b>Longitud</b><span>${s.lon.toFixed(6)}</span></div></div><div class="popup-actions" style="margin-top:8px"><a class="popup-btn maps" target="_blank" rel="noopener" href="${WEB_IOT}">📊 Ver muestras en la web</a></div></div>`, {maxWidth:260})
         .bindTooltip(esc(s.id), { permanent:true, direction:'top', offset:[0,-12], className:'sensor-coord', opacity:1 });
       sensorLayers.push({exps:Number(exps), zona:s.zona, marker});
     });
@@ -726,7 +730,6 @@ function refreshMap(refit) {
   sensorLayers.forEach(o => map.removeLayer(o.marker));
   const showN = document.getElementById('showNumbers').checked;
   const showP = document.getElementById('showPuntos').checked;
-  const showS = document.getElementById('showSensores').checked;
   const showTest = document.getElementById('showTest').checked;
   const showControl = document.getElementById('showControl').checked;
   const bounds=[];
@@ -738,14 +741,26 @@ function refreshMap(refit) {
     if (o.tipo === 'control' && !showControl) return;
     o.marker.addTo(map);
   });
-  if (showS) sensorLayers.forEach(o => {
-    if (!passesFarm(o.exps)) return;
-    if (o.zona === 'test' && !showTest) return;
-    if (o.zona === 'control' && !showControl) return;
-    o.marker.addTo(map);
-  });
+  refreshSensores();
   if (refit && bounds.length) map.fitBounds(bounds, {padding:[32,32], maxZoom:17});
   renderList();
+}
+// Los sensores solo se muestran al acercar el zoom (o con una finca seleccionada),
+// para que no tapen el clic de selección de las parcelas en la vista general.
+function sensoresVisibles() {
+  const cb = document.getElementById('showSensores');
+  return !!(cb && cb.checked) && (!!selectedFarm || map.getZoom() >= 13);
+}
+function refreshSensores() {
+  const show = sensoresVisibles();
+  const showTest = document.getElementById('showTest').checked;
+  const showControl = document.getElementById('showControl').checked;
+  sensorLayers.forEach(o => {
+    const vis = show && passesFarm(o.exps)
+      && !(o.zona === 'test' && !showTest)
+      && !(o.zona === 'control' && !showControl);
+    if (vis) o.marker.addTo(map); else map.removeLayer(o.marker);
+  });
 }
 function renderList() {
   const q=currentQuery.trim().toLowerCase();
@@ -896,6 +911,8 @@ function updateZoomScale() {
   });
   // Coordenadas de los puntos de muestreo: solo visibles con zoom alto (dentro de una finca)
   puntoLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 15 ? '' : 'none'; });
+  // Mostrar/ocultar sensores según el zoom (no deben tapar el clic de las parcelas en vista general)
+  refreshSensores();
   // Etiqueta (ID) de los sensores: visible a zoom medio-alto
   sensorLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 13 ? '' : 'none'; });
 }

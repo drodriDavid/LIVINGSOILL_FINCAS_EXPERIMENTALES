@@ -38,6 +38,7 @@ El lanzador usa, en este orden:
 - Botón **Ver todas las fincas** para encuadrar el mapa.
 - Botón **Descargar vértices CSV** para exportar todas las coordenadas.
 - Ficha de cada finca con **Soluciones aplicadas** (compost de alpeorujo/estiércol, biochar, cubiertas vegetales, hidroinfiltradores…) y **Sensores IoT** (zona test/control, altitud y periodo de lecturas).
+- Los **sensores de suelo** se dibujan en el mapa (icono de antena, verde=test / rojo=control) y aparecen al acercar el zoom a una parcela (ocultos en la vista general para no tapar la selección de fincas). Desde la ficha o el popup del sensor, **«Ver muestras en LivingSoiLL»** abre la web del IoT con las lecturas. Nota: la API de lecturas no permite CORS, por lo que las muestras no se incrustan en el visor; se consultan en la web oficial.
 
 ## Datos de soluciones aplicadas e IoT
 

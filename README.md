@@ -38,7 +38,9 @@ El lanzador usa, en este orden:
 - Botón **Ver todas las fincas** para encuadrar el mapa.
 - Botón **Descargar vértices CSV** para exportar todas las coordenadas.
 - Ficha de cada finca con **Soluciones aplicadas** (compost de alpeorujo/estiércol, biochar, cubiertas vegetales, hidroinfiltradores…) y **Sensores IoT** (zona test/control, altitud y periodo de lecturas).
-- Los **sensores de suelo** se dibujan en el mapa (icono de antena, verde=test / rojo=control) y aparecen al acercar el zoom a una parcela (ocultos en la vista general para no tapar la selección de fincas). Desde la ficha o el popup del sensor, **«Ver muestras en LivingSoiLL»** abre la web del IoT con las lecturas. Nota: la API de lecturas no permite CORS, por lo que las muestras no se incrustan en el visor; se consultan en la web oficial.
+- Los **sensores de suelo** se dibujan en el mapa (icono de antena, verde=test / rojo=control) y aparecen al acercar el zoom a una parcela (ocultos en la vista general para no tapar la selección de fincas).
+- La ficha muestra las **muestras de cada sensor directamente** (gráficas de humedad y temperatura de suelo a 20 cm y temperatura del aire, comparando test vs control, con los valores actuales). Los datos son un snapshot semanal (cada 6 h) guardado en [`data/iot_muestras.json`](data/iot_muestras.json), extraído de la API del IoT (`/se/v2/iot/sensors/{id}/window`). Se usa un snapshot porque esa API no admite CORS y requiere sesión, por lo que el visor no puede consultarla en vivo; para actualizar las muestras hay que regenerar ese JSON.
+- El panel lateral de la ficha es **más ancho y redimensionable** (arrastra el borde para cambiar su anchura).
 
 ## Datos de soluciones aplicadas e IoT
 

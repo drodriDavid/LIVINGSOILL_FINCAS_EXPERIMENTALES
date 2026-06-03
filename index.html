@@ -61,7 +61,8 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .map-title b { color:var(--green); font-size:16px; }
 .map-title p { margin:4px 0 0; color:var(--muted); font-size:12px; }
 .legend { position:absolute; right:18px; bottom:18px; z-index:650; background:rgba(255,255,255,.94); border:1px solid var(--line); border-radius:16px; padding:12px; box-shadow:0 12px 30px rgba(0,0,0,.12); font-size:13px; min-width:180px; }
-.info-panel { position:absolute; top:140px; right:18px; bottom:130px; width:300px; max-width:calc(100vw - 480px); z-index:1100; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:12px 14px 14px; overflow-y:auto; transform:translateX(120%); opacity:0; pointer-events:none; }
+.info-panel { position:absolute; top:140px; right:18px; bottom:130px; width:380px; min-width:300px; max-width:calc(100vw - 60px); resize:horizontal; direction:rtl; z-index:1100; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:12px 14px 14px; overflow:auto; transform:translateX(120%); opacity:0; pointer-events:none; }
+.info-panel > * { direction:ltr; }
 .info-panel.open { transform:translateX(0); opacity:1; pointer-events:auto; }
 .info-panel .close-x { position:sticky; float:right; top:0; width:26px; height:26px; border:0; background:#f3f8f5; cursor:pointer; font-size:18px; color:var(--muted); line-height:1; font-weight:700; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-left:6px; }
 .info-panel .close-x:hover { background:var(--green); color:#fff; }
@@ -86,6 +87,15 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .iot-table a { color:var(--green); font-weight:800; text-decoration:none; }
 .iot-table a:hover { text-decoration:underline; }
 .popup-btn.iot-web { display:flex; align-items:center; justify-content:center; margin-top:8px; text-decoration:none !important; }
+.muestras-block { margin-top:8px; }
+.iot-chart-wrap { margin:7px 0 4px; }
+.iot-chart-label { font-size:10.5px; color:var(--muted); font-weight:700; margin-bottom:2px; }
+.iot-chart { width:100%; height:48px; display:block; background:#f5faf8; border:1px solid var(--line); border-radius:8px; }
+.iot-axis { display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-top:1px; }
+.muestras-leg { font-size:11px; color:var(--ink); margin-top:7px; line-height:1.7; }
+.muestras-leg .iot-zona { margin-right:4px; }
+.muestras-note { font-size:10px; color:var(--muted); margin-top:4px; font-style:italic; }
+.iot-marker-hint { font-size:11px; color:var(--green); margin-top:8px; font-weight:700; }
 .iot-zona { display:inline-block; border-radius:999px; padding:1px 8px; font-size:10.5px; font-weight:800; text-transform:uppercase; }
 .iot-zona.test { color:#007c52; background:#e8fff3; border:1px solid #b8eed1; }
 .iot-zona.control { color:#bd2727; background:#fff0f0; border:1px solid #ffd1d1; }
@@ -329,7 +339,48 @@ const IOT = {
   "15": {periodo:"2026-04-21 → 2026-06-03", sensores:[{id:"z6-32748",zona:"test",h:532,lat:36.9265414,lon:-5.2559243},{id:"z6-32732",zona:"control",h:539,lat:36.9272598,lon:-5.2565471}]},
   "16": {periodo:"—", sensores:[]}
 };
-const WEB_IOT = 'https://livinglabandalucia.ujaen.es/iot/listado';
+// Muestras de los sensores (snapshot semanal, cada 6 h) cargadas desde data/iot_muestras.json
+let MUESTRAS = null;
+let _openZone = null;
+fetch('data/iot_muestras.json').then(r => r.ok ? r.json() : null).then(d => { MUESTRAS = d; if (_openZone) openInfoPanel(_openZone); }).catch(() => {});
+function _pct(v){ return v==null ? '—' : (v*100).toFixed(1)+'%'; }
+function _tc(v){ return v==null ? '—' : v+' °C'; }
+function lineChart(series, w, h){
+  const all = series.flatMap(s => s.vals || []).filter(v => v != null);
+  if (!all.length) return '<div class="sol-empty">Sin datos.</div>';
+  let mn = Math.min(...all), mx = Math.max(...all); if (mn === mx) { mn -= 1; mx += 1; }
+  const n = Math.max(...series.map(s => (s.vals || []).length));
+  const X = i => n <= 1 ? 3 : (i/(n-1))*(w-6)+3;
+  const Y = v => (h-4) - ((v-mn)/(mx-mn))*(h-8);
+  const paths = series.map(s => {
+    let d=''; (s.vals||[]).forEach((v,i)=>{ if(v==null) return; d += (d?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)+' '; });
+    return d ? `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.7" stroke-linejoin="round"/>` : '';
+  }).join('');
+  const dec = (mx-mn) < 3 ? 2 : 1;
+  return `<svg viewBox="0 0 ${w} ${h}" class="iot-chart" preserveAspectRatio="none">${paths}</svg><div class="iot-axis"><span>mín ${mn.toFixed(dec)}</span><span>máx ${mx.toFixed(dec)}</span></div>`;
+}
+function muestrasHtml(exps){
+  const io = IOT[exps]; if (!io || !io.sensores.length) return '';
+  if (MUESTRAS === null) return '<div class="muestras-block"><div class="sol-head">Muestras de suelo</div><div class="sol-empty">Cargando muestras…</div></div>';
+  const t = io.sensores.find(s => s.zona==='test'), c = io.sensores.find(s => s.zona==='control');
+  const dt = t && MUESTRAS[t.id], dc = c && MUESTRAS[c.id];
+  if (!dt && !dc) return '';
+  const range = (((dt||dc).range)||[]).join(' → ');
+  const chart = (key,label) => {
+    const s=[]; if(dt) s.push({vals:dt[key],color:'#00a86b'}); if(dc) s.push({vals:dc[key],color:'#e24444'});
+    return `<div class="iot-chart-wrap"><div class="iot-chart-label">${label}</div>${lineChart(s,200,48)}</div>`;
+  };
+  const lv = d => (d && d.last) ? `Hum. 20 cm ${_pct(d.last.wc20)} · 50 cm ${_pct(d.last.wc50)} · Tª suelo 20 cm ${_tc(d.last.st20)} · 50 cm ${_tc(d.last.st50)} · Tª aire ${_tc(d.last.at)}` : 'sin datos';
+  const ult = (((dt&&dt.last&&dt.last.t)||(dc&&dc.last&&dc.last.t))||'').replace('T',' ');
+  return `<div class="muestras-block">
+    <div class="sol-head">Muestras de suelo<span class="iot-sub">${esc(range)} · cada 6 h</span></div>
+    ${chart('wc20','Humedad del suelo a 20 cm (m³/m³)')}
+    ${chart('st20','Temperatura del suelo a 20 cm (°C)')}
+    ${chart('at','Temperatura del aire (°C)')}
+    <div class="muestras-leg"><div><span class="iot-zona test">test</span> ${esc(lv(dt))}</div><div><span class="iot-zona control">control</span> ${esc(lv(dc))}</div></div>
+    ${ult ? `<div class="muestras-note">Última lectura: ${esc(ult)}</div>` : ''}
+  </div>`;
+}
 function solucionesHtml(exps) {
   const s = SOLUCIONES[exps];
   if (!s) return '';
@@ -351,8 +402,8 @@ function iotHtml(exps) {
   if (!io || !io.sensores || !io.sensores.length) {
     return `<div class="iot-block"><div class="sol-head">Sensores IoT</div><div class="sol-empty">Sin sensores instalados.</div></div>`;
   }
-  const rows = io.sensores.map(s => `<tr><td><a href="${WEB_IOT}" target="_blank" rel="noopener" title="Ver muestras de ${esc(s.id)} en LivingSoiLL (pulsa «Ver detalle» en la tabla)">${esc(s.id)}</a></td><td><span class="iot-zona ${s.zona}">${esc(s.zona)}</span></td><td>${s.h} m</td></tr>`).join('');
-  return `<div class="iot-block"><div class="sol-head">Sensores IoT<span class="iot-sub">${esc(io.periodo)}</span></div><table class="iot-table">${rows}</table><a class="popup-btn maps iot-web" target="_blank" rel="noopener" href="${WEB_IOT}">📊 Ver muestras en LivingSoiLL</a></div>`;
+  const rows = io.sensores.map(s => `<tr><td>${esc(s.id)}</td><td><span class="iot-zona ${s.zona}">${esc(s.zona)}</span></td><td>${s.h} m</td></tr>`).join('');
+  return `<div class="iot-block"><div class="sol-head">Sensores IoT<span class="iot-sub">${esc(io.periodo)}</span></div><table class="iot-table">${rows}</table>${muestrasHtml(exps)}</div>`;
 }
 const colorFor = g => g === 'TEST' ? '#00a86b' : '#e24444';
 const fillFor = g => g === 'TEST' ? '#c9f7df' : '#ffd2d2';
@@ -643,6 +694,7 @@ window.openLightbox = function(src) {
 window.closeLightbox = function() { document.getElementById('lightbox').classList.remove('open'); };
 function panelIsMobile() { return window.matchMedia('(max-width: 980px)').matches; }
 window.openInfoPanel = function(z) {
+  _openZone = z;
   const body = document.getElementById('infoPanelBody');
   body.innerHTML = popupHtml(z);
   renderFotos(z.exps);
@@ -655,6 +707,7 @@ window.openInfoPanel = function(z) {
   panel.scrollTop = 0;
 };
 window.closeInfoPanel = function() {
+  _openZone = null;
   const panel = document.getElementById('infoPanel');
   panel.classList.remove('open');
   panel.style.setProperty('transform', panelIsMobile() ? 'translateY(115%)' : 'translateX(120%)','important');
@@ -704,7 +757,7 @@ function addLayers() {
       if (s.lat == null || s.lon == null) return;
       const zonaTxt = s.zona === 'test' ? 'TEST (tratada)' : 'CONTROL';
       const marker = L.marker([s.lat, s.lon], { icon: L.divIcon({ className:'sensor-marker '+s.zona, html:sensorSvg, iconSize:[24,24], iconAnchor:[12,12] }), zIndexOffset:1000 })
-        .bindPopup(`<div class="popup"><h3 style="font-size:14px;margin:0 0 3px">📡 ${esc(s.id)}</h3><div class="sub">Sensor de suelo · ${zonaTxt}<br>${finca?esc(finca.municipio):''} · EXPS${String(exps).padStart(2,'0')}</div><div style="font-size:11px;margin-top:5px;color:#667085">Altitud: ${s.h} m · Lecturas: ${esc(io.periodo)}</div><div class="coords"><div><b>Latitud</b><span>${s.lat.toFixed(6)}</span></div><div><b>Longitud</b><span>${s.lon.toFixed(6)}</span></div></div><div class="popup-actions" style="margin-top:8px"><a class="popup-btn maps" target="_blank" rel="noopener" href="${WEB_IOT}">📊 Ver muestras en la web</a></div></div>`, {maxWidth:260})
+        .bindPopup(`<div class="popup"><h3 style="font-size:14px;margin:0 0 3px">📡 ${esc(s.id)}</h3><div class="sub">Sensor de suelo · ${zonaTxt}<br>${finca?esc(finca.municipio):''} · EXPS${String(exps).padStart(2,'0')}</div><div style="font-size:11px;margin-top:5px;color:#667085">Altitud: ${s.h} m · Lecturas: ${esc(io.periodo)}</div><div class="coords"><div><b>Latitud</b><span>${s.lat.toFixed(6)}</span></div><div><b>Longitud</b><span>${s.lon.toFixed(6)}</span></div></div><div class="iot-marker-hint">Abre la ficha de la finca para ver sus muestras 📊</div></div>`, {maxWidth:260})
         .bindTooltip(esc(s.id), { permanent:true, direction:'top', offset:[0,-12], className:'sensor-coord', opacity:1 });
       sensorLayers.push({exps:Number(exps), zona:s.zona, marker});
     });

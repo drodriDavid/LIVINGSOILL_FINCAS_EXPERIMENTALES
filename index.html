@@ -436,24 +436,37 @@ function _costeSol(intervs){
   (intervs||[]).forEach(i=>{ (String(i.detalle).match(/[\d.,]+\s*€/g)||[]).forEach(x=>{ const n=parseFloat(x.replace(/[^\d.,]/g,'').replace(/\./g,'').replace(',','.')); if(!isNaN(n)){t+=n;found=true;} }); });
   return found ? Math.round(t) : null;
 }
+function iotCoste(exps){
+  const io = IOT[exps];
+  if (!io || !io.sensores || !io.sensores.length) return 0;
+  // 2 estaciones de suelo (ZL6 898 + TEROS-11 20cm 268 + TEROS-11 50cm 268 = 1434 c/u) + 1 climática (ATMOS-14 419 + licencia 130 + pluviómetro 114 = 663)
+  return 2*1434 + 663;
+}
 function solucionesHtml(exps) {
   const s = SOLUCIONES[exps];
   if (!s) return '';
   const ent = (s.entidad && s.entidad !== '—') ? ' · ' + esc(s.entidad) : '';
-  let body, inv='';
+  let body;
   if (s.estado === 'no_actuado') {
     body = `<div class="sol-empty">No se ha actuado todavía en esta finca.${s.nota?' '+esc(s.nota):''}</div>`;
-    inv = `<div class="sol-inv">Inversión (fase 1) · <b>0 €</b></div>`;
   } else if (s.estado === 'sin_datos') {
     body = `<div class="sol-empty">${esc(s.nota || 'Sin datos de actuación disponibles.')}</div>`;
   } else {
     const items = (s.intervenciones || []).map(i => `<li><b>${esc(i.tipo)}.</b> ${esc(i.detalle)}</li>`).join('');
     body = items ? `<ul class="chars sol-list">${items}</ul>` : '';
     if (s.nota) body += `<div class="sol-note">${esc(s.nota)}</div>`;
-    const c = _costeSol(s.intervenciones);
-    inv = (c!=null)
-      ? `<div class="sol-inv">Inversión (fase 1) · <b>≈ ${c.toLocaleString('es-ES')} €</b> <span class="sol-inv-n">en soluciones</span></div>`
-      : `<div class="sol-inv">Inversión (fase 1) · <b>sin datos de coste</b></div>`;
+  }
+  const eur = n => n.toLocaleString('es-ES');
+  const cs = (s.estado === 'actuado') ? _costeSol(s.intervenciones) : (s.estado === 'no_actuado' ? 0 : null);
+  const ci = iotCoste(exps);
+  let inv = '';
+  if (cs !== null || ci) {
+    const total = (cs || 0) + ci;
+    const det = [];
+    if (cs !== null) det.push(`soluciones ≈ ${eur(cs)} €`);
+    else if (s.estado === 'actuado') det.push('soluciones (sin importe)');
+    if (ci) det.push(`sensores IoT ≈ ${eur(ci)} €`);
+    inv = `<div class="sol-inv">Inversión (fase 1) · <b>≈ ${eur(total)} €</b><div class="sol-inv-n">${det.join(' + ')}</div></div>`;
   }
   return `<div class="sol-block"><div class="sol-head">Soluciones aplicadas${ent}</div>${body}${inv}</div>`;
 }

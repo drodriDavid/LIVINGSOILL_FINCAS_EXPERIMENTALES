@@ -85,6 +85,17 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .sol-note { font-size:11px; color:var(--muted); margin-top:4px; font-style:italic; }
 .iot-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:2px; }
 .iot-table td { padding:4px 4px; border-bottom:1px solid var(--line); }
+.iot-table thead th { text-align:left; font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:900; padding:2px 4px; border-bottom:1px solid var(--line); }
+.iot-table thead th:last-child, .iot-table .iot-h { text-align:right; }
+.iot-foot { font-size:9.5px; color:var(--muted); font-style:italic; margin-top:3px; }
+.now-table { width:100%; border-collapse:collapse; font-size:11.5px; margin-top:3px; }
+.now-table th, .now-table td { padding:3px 5px; text-align:right; border-bottom:1px solid var(--line); }
+.now-table th:first-child, .now-table td:first-child { text-align:left; color:var(--muted); font-weight:600; }
+.now-table thead th { font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; font-weight:900; }
+.now-th-test { color:#007c52; }
+.now-th-ctrl { color:#bd2727; }
+.now-table tbody td:nth-child(2) { color:#007c52; font-weight:800; }
+.now-table tbody td:nth-child(3) { color:#bd2727; font-weight:800; }
 .iot-table a { color:var(--green); font-weight:800; text-decoration:none; }
 .iot-table a:hover { text-decoration:underline; }
 .popup-btn.iot-web { display:flex; align-items:center; justify-content:center; margin-top:8px; text-decoration:none !important; }
@@ -226,9 +237,12 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   #map { height:55vh; }
   .map-title { display:none; }
   /* Panel info: full-height casi total para que se vean los botones del final */
-  .info-panel { top:10px; right:10px; left:10px; bottom:10px; width:auto; max-width:none; height:auto; max-height:none; padding:12px 14px 14px; border-radius:14px; z-index:2000; }
-  .info-panel .close-x { width:36px; height:36px; font-size:22px; }
+  .info-panel { top:10px; right:10px; left:10px; bottom:10px; width:auto; min-width:0; max-width:none; height:auto; max-height:none; padding:0 14px 14px; border-radius:14px; z-index:2000; resize:none; direction:ltr; }
+  .info-panel .close-x { width:36px; height:36px; font-size:22px; top:11px; }
+  .info-panel .popup h3 { font-size:16px; padding:11px 44px 9px 14px; }
   .info-panel .popup .popup-btn { padding:10px 12px; font-size:13px; }
+  .info-panel .popup .meta-grid, .iot-table, .now-table { font-size:13px; }
+  .iot-chart { height:60px; }
   .foto-thumb .foto-rm { opacity:1; background:rgba(0,0,0,.65); width:24px; height:24px; font-size:15px; }
   .map-toggles { font-size:10.5px; padding:5px 9px; gap:5px 11px; flex-wrap:wrap; max-width:calc(100vw - 16px); }
   .map-toggles .eye { padding-right:0; border-right:0; margin-right:0; flex-basis:100%; display:none; }
@@ -381,15 +395,22 @@ function muestrasHtml(exps){
     const labels = (dt&&dt.t) || (dc&&dc.t) || [];
     return `<div class="iot-chart-wrap"><div class="iot-chart-label">${label} <span class="iot-help" title="Clic para ver la explicación">ⓘ</span></div>${lineChart(s,200,48,{labels,unit:units[key]||''})}<div class="iot-explain">${esc(desc)}</div></div>`;
   };
-  const lv = d => (d && d.last) ? `Hum. 20 cm ${_pct(d.last.wc20)} · 50 cm ${_pct(d.last.wc50)} · Tª suelo 20 cm ${_tc(d.last.st20)} · 50 cm ${_tc(d.last.st50)} · Tª aire ${_tc(d.last.at)}` : 'sin datos';
+  const cell = (d,key,fmt) => (d && d.last && d.last[key]!=null) ? esc(fmt(d.last[key])) : '—';
+  const vr = (label,key,fmt) => `<tr><td>${label}</td><td>${cell(dt,key,fmt)}</td><td>${cell(dc,key,fmt)}</td></tr>`;
   const ult = (((dt&&dt.last&&dt.last.t)||(dc&&dc.last&&dc.last.t))||'').replace('T',' ');
   return `<div class="muestras-block">
     <div class="sol-head">Muestras de suelo<span class="iot-sub">${esc(range)} · cada 6 h</span></div>
     ${chart('wc20','Humedad del suelo a 20 cm (m³/m³)','Humedad volumétrica del suelo a 20 cm de profundidad (m³ de agua por m³ de suelo). Línea verde = zona tratada (test); roja = zona control. Si baja, el suelo se va secando. Una lectura cada 6 h durante la última semana.')}
     ${chart('st20','Temperatura del suelo a 20 cm (°C)','Temperatura del suelo a 20 cm de profundidad (°C). Verde = zona tratada (test); roja = control. Suele subir de día y bajar de noche. Una lectura cada 6 h durante la última semana.')}
     ${chart('at','Temperatura del aire (°C)','Temperatura del aire junto al sensor (°C). Verde = zona tratada (test); roja = control. Se aprecia el ciclo día/noche. Una lectura cada 6 h durante la última semana.')}
-    <div class="muestras-leg"><div><span class="iot-zona test">test</span> ${esc(lv(dt))}</div><div><span class="iot-zona control">control</span> ${esc(lv(dc))}</div></div>
-    ${ult ? `<div class="muestras-note">Última lectura: ${esc(ult)}</div>` : ''}
+    <div class="sol-head" style="margin-top:10px">Valores actuales${ult?`<span class="iot-sub">${esc(ult)}</span>`:''}</div>
+    <table class="now-table"><thead><tr><th></th><th class="now-th-test">test</th><th class="now-th-ctrl">control</th></tr></thead><tbody>
+      ${vr('Humedad 20 cm','wc20',_pct)}
+      ${vr('Humedad 50 cm','wc50',_pct)}
+      ${vr('Tª suelo 20 cm','st20',_tc)}
+      ${vr('Tª suelo 50 cm','st50',_tc)}
+      ${vr('Tª aire','at',_tc)}
+    </tbody></table>
   </div>`;
 }
 function solucionesHtml(exps) {
@@ -413,8 +434,11 @@ function iotHtml(exps) {
   if (!io || !io.sensores || !io.sensores.length) {
     return `<div class="iot-block"><div class="sol-head">Sensores IoT</div><div class="sol-empty">Sin sensores instalados.</div></div>`;
   }
-  const rows = io.sensores.map(s => `<tr><td>${esc(s.id)}</td><td><span class="iot-zona ${s.zona}">${esc(s.zona)}</span></td><td>${s.h} m</td></tr>`).join('');
-  return `<div class="iot-block"><div class="sol-head">Sensores IoT<span class="iot-sub">${esc(io.periodo)}</span></div><table class="iot-table">${rows}</table>${muestrasHtml(exps)}</div>`;
+  const rows = io.sensores.map(s => `<tr><td>${esc(s.id)}</td><td><span class="iot-zona ${s.zona}">${esc(s.zona)}</span></td><td class="iot-h">${s.h} m</td></tr>`).join('');
+  return `<div class="iot-block"><div class="sol-head">Sensores IoT<span class="iot-sub">lecturas ${esc(io.periodo)}</span></div>` +
+    `<table class="iot-table"><thead><tr><th>Sensor</th><th>Zona</th><th>Altitud</th></tr></thead><tbody>${rows}</tbody></table>` +
+    `<div class="iot-foot">Altitud = altura del sensor sobre el nivel del mar.</div>` +
+    `${muestrasHtml(exps)}</div>`;
 }
 const colorFor = g => g === 'TEST' ? '#00a86b' : '#e24444';
 const fillFor = g => g === 'TEST' ? '#c9f7df' : '#ffd2d2';
@@ -524,6 +548,7 @@ function popupHtml(z) {
         <b>Muestreo</b><span>${cnt.total ? muestreoTxt : '—'}</span>
         <b>Fechas</b><span>${fechaTxt}</span>
       </div>
+      <div class="sol-head" style="margin-top:9px">Problemas y características del suelo</div>
       <ul class="chars">${chars || '<li><i>Sin características catalogadas.</i></li>'}</ul>
       ${solucionesHtml(z.exps)}
       ${iotHtml(z.exps)}

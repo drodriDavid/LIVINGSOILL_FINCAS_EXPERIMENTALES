@@ -66,26 +66,33 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .info-panel .close-x { position:sticky; float:right; top:0; width:26px; height:26px; border:0; background:#f3f8f5; cursor:pointer; font-size:18px; color:var(--muted); line-height:1; font-weight:700; border-radius:8px; display:flex; align-items:center; justify-content:center; margin-left:6px; }
 .info-panel .close-x:hover { background:var(--green); color:#fff; }
 .info-panel .popup { font-family:inherit; color:var(--ink); }
-.info-panel .popup h3 { font-size:13px; line-height:1.25; padding-right:6px; margin:0 0 3px; }
-.info-panel .popup .sub { font-size:11px; margin-bottom:6px; }
-.info-panel .popup .pill { font-size:10px; padding:2px 6px; }
-.info-panel .popup .meta-grid { font-size:10.5px; gap:2px 8px; }
-.info-panel .popup .chars { font-size:11.5px; line-height:1.4; padding-left:16px; margin:6px 0 4px; }
-.info-panel .popup .chars li { margin-bottom:2px; }
-.info-panel .popup table { font-size:10.5px; }
+.info-panel .popup h3 { font-size:15px; line-height:1.25; padding-right:6px; margin:0 0 3px; }
+.info-panel .popup .sub { font-size:12.5px; margin-bottom:6px; }
+.info-panel .popup .pill { font-size:11px; padding:2px 7px; }
+.info-panel .popup .meta-grid { font-size:12px; gap:3px 8px; }
+.info-panel .popup .chars { font-size:13px; line-height:1.45; padding-left:16px; margin:6px 0 4px; }
+.info-panel .popup .chars li { margin-bottom:3px; }
+.info-panel .popup table { font-size:12px; }
 .info-panel .popup th, .info-panel .popup td { padding:3px 4px; }
-.info-panel .popup .popup-btn { padding:6px 9px; font-size:11px; }
+.info-panel .popup .popup-btn { padding:6px 9px; font-size:12px; }
 .sol-block, .iot-block { margin:9px 0 2px; border-top:1px solid var(--line); padding-top:7px; }
-.sol-head { font-size:9.5px; color:var(--green); text-transform:uppercase; font-weight:900; letter-spacing:.05em; margin-bottom:4px; }
-.iot-sub { font-weight:600; text-transform:none; letter-spacing:0; color:var(--muted); margin-left:4px; font-size:10px; }
+.sol-head { font-size:11px; color:var(--green); text-transform:uppercase; font-weight:900; letter-spacing:.05em; margin-bottom:5px; }
+.iot-sub { font-weight:600; text-transform:none; letter-spacing:0; color:var(--muted); margin-left:4px; font-size:11px; }
 .popup .chars.sol-list { margin:2px 0 4px; }
-.sol-empty { font-size:11px; color:var(--muted); font-style:italic; }
-.sol-note { font-size:10px; color:var(--muted); margin-top:3px; font-style:italic; }
-.iot-table { width:100%; border-collapse:collapse; font-size:10.5px; margin-top:2px; }
-.iot-table td { padding:3px 4px; border-bottom:1px solid var(--line); }
-.iot-zona { display:inline-block; border-radius:999px; padding:1px 7px; font-size:9px; font-weight:800; text-transform:uppercase; }
+.sol-empty { font-size:12.5px; color:var(--muted); font-style:italic; }
+.sol-note { font-size:11px; color:var(--muted); margin-top:4px; font-style:italic; }
+.iot-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:2px; }
+.iot-table td { padding:4px 4px; border-bottom:1px solid var(--line); }
+.iot-zona { display:inline-block; border-radius:999px; padding:1px 8px; font-size:10.5px; font-weight:800; text-transform:uppercase; }
 .iot-zona.test { color:#007c52; background:#e8fff3; border:1px solid #b8eed1; }
 .iot-zona.control { color:#bd2727; background:#fff0f0; border:1px solid #ffd1d1; }
+.sensor-marker { display:flex; align-items:center; justify-content:center; width:24px!important; height:24px!important; border-radius:7px; border:2px solid #fff; box-shadow:0 2px 7px rgba(0,0,0,.5); transform:rotate(0deg); }
+.sensor-marker svg { width:15px; height:15px; }
+.sensor-marker.test { background:#00a86b; }
+.sensor-marker.control { background:#e24444; }
+.dot.sensor { background:linear-gradient(90deg,#00a86b 0 50%,#e24444 50% 100%); border-radius:3px; border:1px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.15); }
+.leaflet-tooltip.sensor-coord { background:rgba(20,51,49,.92); color:#fff; border:0; border-radius:5px; padding:1px 6px; font-size:10px; font-weight:800; box-shadow:0 1px 4px rgba(0,0,0,.4); white-space:nowrap; }
+.leaflet-tooltip.sensor-coord::before { display:none !important; }
 .popup .popup-btn.maps, .info-panel .popup .popup-btn.maps { text-decoration:none !important; display:flex; align-items:center; justify-content:center; background:#fff; color:var(--green); border:1px solid var(--green); }
 .popup .popup-btn.maps:hover, .info-panel .popup .popup-btn.maps:hover { background:#f0f7f3; color:var(--green); }
 .popup-fotos { margin-top:10px; }
@@ -302,21 +309,21 @@ const SOLUCIONES = {
 // === Sensores IoT por finca (fuente: livinglabandalucia.ujaen.es/iot · API /se/v2/iot/sensors) ===
 // Cada finca con sensores tiene uno en la zona test (tratada) y otro en la zona control. h = altitud (m). Última lectura: 2026-06-03.
 const IOT = {
-  "1":  {periodo:"2025-11-26 → 2026-06-03", sensores:[{id:"z6-32726",zona:"test",h:504},{id:"z6-32730",zona:"control",h:503}]},
-  "2":  {periodo:"2025-11-27 → 2026-06-03", sensores:[{id:"z6-32724",zona:"test",h:407},{id:"z6-32656",zona:"control",h:400}]},
-  "3":  {periodo:"2025-11-19 → 2026-06-03", sensores:[{id:"z6-32529",zona:"test",h:481},{id:"z6-32723",zona:"control",h:491}]},
-  "4":  {periodo:"2025-11-12 → 2026-06-03", sensores:[{id:"z6-32524",zona:"test",h:297},{id:"z6-32725",zona:"control",h:301}]},
-  "5":  {periodo:"2025-11-28 → 2026-06-03", sensores:[{id:"z6-32530",zona:"test",h:616},{id:"z6-32722",zona:"control",h:627}]},
-  "6":  {periodo:"2025-12-18 → 2026-06-03", sensores:[{id:"z6-32525",zona:"test",h:754},{id:"z6-32721",zona:"control",h:764}]},
-  "7":  {periodo:"2025-05-30 → 2026-06-03", sensores:[{id:"z6-32734",zona:"test",h:397},{id:"z6-32526",zona:"control",h:466}]},
-  "8":  {periodo:"2026-03-20 → 2026-06-03", sensores:[{id:"z6-32745",zona:"test",h:284},{id:"z6-32527",zona:"control",h:276}]},
-  "9":  {periodo:"2026-03-19 → 2026-06-03", sensores:[{id:"z6-32528",zona:"test",h:558},{id:"z6-32746",zona:"control",h:555}]},
-  "10": {periodo:"2026-04-10 → 2026-06-03", sensores:[{id:"z6-32747",zona:"test",h:38},{id:"z6-32744",zona:"control",h:35}]},
-  "11": {periodo:"2026-04-17 → 2026-06-03", sensores:[{id:"z6-32729",zona:"test",h:180},{id:"z6-32661",zona:"control",h:153}]},
-  "12": {periodo:"2026-04-07 → 2026-06-03", sensores:[{id:"z6-32531",zona:"test",h:79},{id:"z6-32731",zona:"control",h:82}]},
-  "13": {periodo:"2026-04-22 → 2026-06-03", sensores:[{id:"z6-32733",zona:"test",h:553},{id:"z6-32720",zona:"control",h:552}]},
-  "14": {periodo:"2025-12-10 → 2026-06-03", sensores:[{id:"z6-32728",zona:"test",h:912},{id:"z6-32727",zona:"control",h:916}]},
-  "15": {periodo:"2026-04-21 → 2026-06-03", sensores:[{id:"z6-32748",zona:"test",h:532},{id:"z6-32732",zona:"control",h:539}]},
+  "1":  {periodo:"2025-11-26 → 2026-06-03", sensores:[{id:"z6-32726",zona:"test",h:504,lat:37.8147716,lon:-3.8372101},{id:"z6-32730",zona:"control",h:503,lat:37.8147305,lon:-3.8383989}]},
+  "2":  {periodo:"2025-11-27 → 2026-06-03", sensores:[{id:"z6-32724",zona:"test",h:407,lat:38.008103,lon:-3.5653722},{id:"z6-32656",zona:"control",h:400,lat:38.0078037,lon:-3.5659935}]},
+  "3":  {periodo:"2025-11-19 → 2026-06-03", sensores:[{id:"z6-32529",zona:"test",h:481,lat:38.1424456,lon:-2.968598},{id:"z6-32723",zona:"control",h:491,lat:38.1427708,lon:-2.9682116}]},
+  "4":  {periodo:"2025-11-12 → 2026-06-03", sensores:[{id:"z6-32524",zona:"test",h:297,lat:37.9266441,lon:-4.2645609},{id:"z6-32725",zona:"control",h:301,lat:37.9272009,lon:-4.2644531}]},
+  "5":  {periodo:"2025-11-28 → 2026-06-03", sensores:[{id:"z6-32530",zona:"test",h:616,lat:38.0514645,lon:-3.028846},{id:"z6-32722",zona:"control",h:627,lat:38.0515882,lon:-3.0285014}]},
+  "6":  {periodo:"2025-12-18 → 2026-06-03", sensores:[{id:"z6-32525",zona:"test",h:754,lat:37.3326311,lon:-3.6106983},{id:"z6-32721",zona:"control",h:764,lat:37.3333586,lon:-3.6095854}]},
+  "7":  {periodo:"2025-05-30 → 2026-06-03", sensores:[{id:"z6-32734",zona:"test",h:397,lat:38.1009333,lon:-4.6053855},{id:"z6-32526",zona:"control",h:466,lat:38.1003567,lon:-4.6067855}]},
+  "8":  {periodo:"2026-03-20 → 2026-06-03", sensores:[{id:"z6-32745",zona:"test",h:284,lat:37.7427546,lon:-4.7450412},{id:"z6-32527",zona:"control",h:276,lat:37.7419431,lon:-4.7460829}]},
+  "9":  {periodo:"2026-03-19 → 2026-06-03", sensores:[{id:"z6-32528",zona:"test",h:558,lat:37.533032,lon:-4.5100701},{id:"z6-32746",zona:"control",h:555,lat:37.5330798,lon:-4.5110129}]},
+  "10": {periodo:"2026-04-10 → 2026-06-03", sensores:[{id:"z6-32747",zona:"test",h:38,lat:37.461444,lon:-5.8526228},{id:"z6-32744",zona:"control",h:35,lat:37.4612305,lon:-5.8514392}]},
+  "11": {periodo:"2026-04-17 → 2026-06-03", sensores:[{id:"z6-32729",zona:"test",h:180,lat:36.9497223,lon:-5.7000102},{id:"z6-32661",zona:"control",h:153,lat:36.9488234,lon:-5.700138}]},
+  "12": {periodo:"2026-04-07 → 2026-06-03", sensores:[{id:"z6-32531",zona:"test",h:79,lat:37.2956297,lon:-6.3605712},{id:"z6-32731",zona:"control",h:82,lat:37.2968007,lon:-6.3599959}]},
+  "13": {periodo:"2026-04-22 → 2026-06-03", sensores:[{id:"z6-32733",zona:"test",h:553,lat:37.0102021,lon:-4.6910703},{id:"z6-32720",zona:"control",h:552,lat:37.0092699,lon:-4.6913718}]},
+  "14": {periodo:"2025-12-10 → 2026-06-03", sensores:[{id:"z6-32728",zona:"test",h:912,lat:37.5927841,lon:-2.0096108},{id:"z6-32727",zona:"control",h:916,lat:37.5926593,lon:-2.0104992}]},
+  "15": {periodo:"2026-04-21 → 2026-06-03", sensores:[{id:"z6-32748",zona:"test",h:532,lat:36.9265414,lon:-5.2559243},{id:"z6-32732",zona:"control",h:539,lat:36.9272598,lon:-5.2565471}]},
   "16": {periodo:"—", sensores:[]}
 };
 function solucionesHtml(exps) {
@@ -379,7 +386,8 @@ togCtrl.onAdd = () => {
     <label><input id="showTest" type="checkbox" checked><span class="dot test"></span>TEST</label>
     <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
     <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
-    <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>`;
+    <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
+    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
   return d;
@@ -402,6 +410,7 @@ ZONES.forEach(z => {
 const polyLayers = [];
 const vertexLayers = [];
 const puntoLayers = [];
+const sensorLayers = [];
 let selectedFarm = '';
 let currentQuery = '';
 let currentProvince = '';
@@ -682,6 +691,20 @@ function addLayers() {
       puntoLayers.push({exps:Number(exps), tipo:p.tipo, marker});
     });
   });
+  // Sensores IoT de suelo (test / control)
+  const sensorSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"><circle cx="12" cy="12" r="2.4" fill="#fff" stroke="none"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/></svg>';
+  Object.keys(IOT).forEach(exps => {
+    const io = IOT[exps]; if (!io || !io.sensores) return;
+    const finca = FINCAS.find(f => f.exps === Number(exps));
+    io.sensores.forEach(s => {
+      if (s.lat == null || s.lon == null) return;
+      const zonaTxt = s.zona === 'test' ? 'TEST (tratada)' : 'CONTROL';
+      const marker = L.marker([s.lat, s.lon], { icon: L.divIcon({ className:'sensor-marker '+s.zona, html:sensorSvg, iconSize:[24,24], iconAnchor:[12,12] }), zIndexOffset:1000 })
+        .bindPopup(`<div class="popup"><h3 style="font-size:14px;margin:0 0 3px">📡 ${esc(s.id)}</h3><div class="sub">Sensor de suelo · ${zonaTxt}<br>${finca?esc(finca.municipio):''} · EXPS${String(exps).padStart(2,'0')}</div><div style="font-size:11px;margin-top:5px;color:#667085">Altitud: ${s.h} m · Lecturas: ${esc(io.periodo)}</div><div class="coords"><div><b>Latitud</b><span>${s.lat.toFixed(6)}</span></div><div><b>Longitud</b><span>${s.lon.toFixed(6)}</span></div></div></div>`, {maxWidth:260})
+        .bindTooltip(esc(s.id), { permanent:true, direction:'top', offset:[0,-12], className:'sensor-coord', opacity:1 });
+      sensorLayers.push({exps:Number(exps), zona:s.zona, marker});
+    });
+  });
 }
 function matches(z) {
   const showTest = document.getElementById('showTest').checked;
@@ -700,8 +723,10 @@ function refreshMap(refit) {
   polyLayers.forEach(o => { map.removeLayer(o.halo); map.removeLayer(o.poly); });
   vertexLayers.forEach(o => { map.removeLayer(o.marker); map.removeLayer(o.label); });
   puntoLayers.forEach(o => map.removeLayer(o.marker));
+  sensorLayers.forEach(o => map.removeLayer(o.marker));
   const showN = document.getElementById('showNumbers').checked;
   const showP = document.getElementById('showPuntos').checked;
+  const showS = document.getElementById('showSensores').checked;
   const showTest = document.getElementById('showTest').checked;
   const showControl = document.getElementById('showControl').checked;
   const bounds=[];
@@ -711,6 +736,12 @@ function refreshMap(refit) {
     if (!passesFarm(o.exps)) return;
     if (o.tipo === 'test' && !showTest) return;
     if (o.tipo === 'control' && !showControl) return;
+    o.marker.addTo(map);
+  });
+  if (showS) sensorLayers.forEach(o => {
+    if (!passesFarm(o.exps)) return;
+    if (o.zona === 'test' && !showTest) return;
+    if (o.zona === 'control' && !showControl) return;
     o.marker.addTo(map);
   });
   if (refit && bounds.length) map.fitBounds(bounds, {padding:[32,32], maxZoom:17});
@@ -865,6 +896,8 @@ function updateZoomScale() {
   });
   // Coordenadas de los puntos de muestreo: solo visibles con zoom alto (dentro de una finca)
   puntoLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 15 ? '' : 'none'; });
+  // Etiqueta (ID) de los sensores: visible a zoom medio-alto
+  sensorLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 13 ? '' : 'none'; });
 }
 map.on('zoomend', updateZoomScale);
 map.on('click', () => closeInfoPanel());
@@ -899,7 +932,7 @@ setTimeout(updateZoomScale, 0);
   });
 })();
 document.getElementById('farmFilter').addEventListener('change', e => { selectedFarm=e.target.value; refreshMap(); openInfoPanelByExps(selectedFarm); });
-['showTest','showControl','showNumbers','showPuntos'].forEach(id => document.getElementById(id).addEventListener('change', () => refreshMap(false)));
+['showTest','showControl','showNumbers','showPuntos','showSensores'].forEach(id => document.getElementById(id).addEventListener('change', () => refreshMap(false)));
 document.getElementById('fitAll').addEventListener('click', () => { selectedFarm=''; currentProvince=''; currentQuery=''; document.getElementById('farmFilter').value=''; refreshMap(); closeInfoPanel(); });
 refreshMap();
 </script>

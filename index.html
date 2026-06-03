@@ -3,7 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>LivingSoiLL</title>
+<title>LivingSoiLL · Fincas experimentales</title>
+<meta name="description" content="Visor interactivo de las 16 fincas experimentales del Living Lab Andaluz (LivingSoiLL): zonas test/control, problemas del suelo, soluciones aplicadas, analítica de suelo, erosión RUSLE, sensores IoT y fotos de muestreo." />
+<meta name="theme-color" content="#00666a" />
+<meta property="og:title" content="LivingSoiLL · Fincas experimentales" />
+<meta property="og:description" content="Visor de las 16 fincas experimentales del Living Lab Andaluz: zonas, suelo, erosión, sensores IoT y fotos." />
+<meta property="og:type" content="website" />
 <link rel="icon" type="image/png" href="assets/logo_brote.png"/>
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css"/>
 <style>
@@ -272,7 +277,28 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   .brand p { font-size:11px; }
   /* Touch targets más grandes para los puntos de finca */
   .farm-dot-wrap { width:36px !important; height:36px !important; margin-left:-18px !important; margin-top:-18px !important; }
+  .controls-row { grid-template-columns:1fr 1fr; }
+  #searchBox { font-size:13px; }
 }
+/* --- Buscador, filtros y resumen (barra lateral) --- */
+#searchBox { width:100%; margin:2px 0 6px; padding:10px 12px 10px 34px; border-radius:14px; font-size:13px;
+  background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2300666a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>") no-repeat 11px center; }
+#searchBox::-webkit-search-cancel-button { cursor:pointer; }
+.controls-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.resumen { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin:8px 0 4px; }
+.resumen .rz { background:#fff; border:1px solid var(--line); border-radius:12px; padding:7px 9px; display:flex; flex-direction:column; gap:1px; }
+.resumen .rz b { color:var(--green); font-size:17px; font-weight:950; line-height:1; letter-spacing:-.02em; }
+.resumen .rz span { font-size:9.5px; color:var(--muted); text-transform:uppercase; font-weight:800; letter-spacing:.04em; }
+/* --- Capa de erosión: leyenda y swatch --- */
+.dot.ero { background:linear-gradient(90deg,#2e7d32 0 25%,#9e9d24 25% 50%,#ef6c00 50% 75%,#c62828 75% 100%); border-radius:2px; }
+.map-legend { background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:14px; padding:9px 11px; box-shadow:0 8px 22px rgba(0,0,0,.14); font-size:11px; font-weight:700; color:var(--ink); max-width:200px; }
+.map-legend .ml-h { font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--green); font-weight:950; margin-bottom:5px; }
+.map-legend .ml-row { display:flex; align-items:center; gap:7px; margin:3px 0; }
+.map-legend .ml-sw { width:13px; height:13px; border-radius:3px; flex-shrink:0; border:1px solid rgba(0,0,0,.12); }
+.map-legend .ml-u { font-size:9px; color:var(--muted); font-weight:700; margin-top:4px; }
+/* --- Accesibilidad: foco visible --- */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .farm-card:focus-visible { outline:3px solid rgba(0,102,106,.45); outline-offset:2px; }
+.farm-card:focus-visible { border-color:var(--green); }
 </style>
 </head>
 <body>
@@ -284,10 +310,16 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
       <div class="intro-fallback">Guarda la imagen en <code>assets/andalucia.png</code></div>
       <div class="intro-stats"><span><b>16</b> fincas</span><span><b>22</b> zonas test</span><span><b>20</b> zonas control</span></div>
     </div>
+    <input id="searchBox" type="search" placeholder="Buscar finca, municipio o EXPS…" aria-label="Buscar finca, municipio o código EXPS" autocomplete="off">
     <div class="controls">
-      <select id="farmFilter"><option value="">Todas las fincas</option></select>
-      <button class="btn" id="fitAll">Ver todas las fincas</button>
+      <select id="provFilter" aria-label="Filtrar por provincia"><option value="">Todas las provincias</option></select>
+      <select id="farmFilter" aria-label="Seleccionar finca"><option value="">Todas las fincas</option></select>
+      <div class="controls-row">
+        <button class="btn" id="fitAll">Ver todas</button>
+        <button class="btn secondary" id="dlCsv" title="Descargar las coordenadas de todos los vértices en CSV">Descargar CSV</button>
+      </div>
     </div>
+    <div id="resumen" class="resumen" aria-label="Resumen del proyecto"></div>
     <div class="section-title"><span>Fincas experimentales</span><span id="listCount"></span></div>
     <div id="farmList"></div>
   </aside>
@@ -554,12 +586,36 @@ togCtrl.onAdd = () => {
     <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
     <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
     <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
-    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>`;
+    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
+    <label title="Colorea las fincas según su nivel de erosión (modelo RUSLE)"><input id="showErosion" type="checkbox"><span class="dot ero"></span>Erosión</label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
   return d;
 };
 togCtrl.addTo(map);
+
+// Leyenda de la capa de erosión (solo visible en modo erosión)
+const eroLegend = L.control({position:'bottomleft'});
+eroLegend.onAdd = () => {
+  const d = L.DomUtil.create('div','map-legend');
+  d.id = 'eroLegend';
+  d.innerHTML = `<div class="ml-h">Erosión · RUSLE</div>`
+    + `<div class="ml-row"><span class="ml-sw" style="background:#2e7d32"></span>Baja (&lt; 5)</div>`
+    + `<div class="ml-row"><span class="ml-sw" style="background:#9e9d24"></span>Moderada (5–10)</div>`
+    + `<div class="ml-row"><span class="ml-sw" style="background:#ef6c00"></span>Alta (10–25)</div>`
+    + `<div class="ml-row"><span class="ml-sw" style="background:#c62828"></span>Muy alta (&gt; 25)</div>`
+    + `<div class="ml-row"><span class="ml-sw" style="background:#c2c9c6"></span>Sin datos</div>`
+    + `<div class="ml-u">t/ha·año · pérdida de suelo</div>`;
+  L.DomEvent.disableClickPropagation(d);
+  return d;
+};
+let eroLegendOn = false;
+function setErosionMode(on){
+  erosionMode = on;
+  if (on && !eroLegendOn){ eroLegend.addTo(map); eroLegendOn = true; }
+  else if (!on && eroLegendOn){ map.removeControl(eroLegend); eroLegendOn = false; }
+  refreshMap(false);
+}
 
 const PUNTOS = {"1":[{"id":"P01c","n":1,"tipo":"control","lat":37.814167,"lon":-3.838611,"fecha":"03/06/2025 08:47:17"},{"id":"P02c","n":2,"tipo":"control","lat":37.814167,"lon":-3.838056,"fecha":"03/06/2025 08:50:50"},{"id":"P03c","n":3,"tipo":"control","lat":37.814722,"lon":-3.838056,"fecha":"03/06/2025 08:55:15"},{"id":"P04c","n":4,"tipo":"control","lat":37.814444,"lon":-3.838611,"fecha":"03/06/2025 08:59:03"},{"id":"P05t","n":5,"tipo":"test","lat":37.815,"lon":-3.8375,"fecha":"03/06/2025 09:04:10"},{"id":"P06t","n":6,"tipo":"test","lat":37.815,"lon":-3.836944,"fecha":"03/06/2025 09:06:12"},{"id":"P07t","n":7,"tipo":"test","lat":37.814722,"lon":-3.836944,"fecha":"03/06/2025 09:10:17"},{"id":"P08t","n":8,"tipo":"test","lat":37.814444,"lon":-3.837222,"fecha":"03/06/2025 09:14:55"},{"id":"P09r","n":9,"tipo":"r","lat":37.822222,"lon":-3.8375,"fecha":"15/10/2025 07:40:15"},{"id":"P10r","n":10,"tipo":"r","lat":37.821944,"lon":-3.837222,"fecha":"15/10/2025 09:29:04"},{"id":"P11r","n":11,"tipo":"r","lat":37.821944,"lon":-3.837778,"fecha":"15/10/2025 09:46:25"}],"2":[{"id":"P01t","n":1,"tipo":"test","lat":38.008333,"lon":-3.566111,"fecha":"06/06/2025 09:34:06"},{"id":"P02t","n":2,"tipo":"test","lat":38.008056,"lon":-3.566111,"fecha":"06/06/2025 11:23:55"},{"id":"P03t","n":3,"tipo":"test","lat":38.008333,"lon":-3.565556,"fecha":"06/06/2025 13:08:14"},{"id":"P04t","n":4,"tipo":"test","lat":38.008056,"lon":-3.565,"fecha":"10/06/2025 08:11:19"},{"id":"P05c","n":5,"tipo":"control","lat":38.007778,"lon":-3.566111,"fecha":"10/06/2025 15:13:23"},{"id":"P06c","n":6,"tipo":"control","lat":38.0075,"lon":-3.565,"fecha":"10/06/2025 09:59:07"},{"id":"P07c","n":7,"tipo":"control","lat":38.007222,"lon":-3.565556,"fecha":"10/06/2025 11:21:46"},{"id":"P08c","n":8,"tipo":"control","lat":38.007222,"lon":-3.565278,"fecha":"10/06/2025 13:38:30"}],"3":[{"id":"P01t","n":1,"tipo":"test","lat":38.143611,"lon":-2.969444,"fecha":"17/06/2025 12:28:01"},{"id":"P02t","n":2,"tipo":"test","lat":38.143056,"lon":-2.969444,"fecha":"17/06/2025 11:50:00"},{"id":"P03t","n":3,"tipo":"test","lat":38.1425,"lon":-2.968889,"fecha":"17/06/2025 11:11:47"},{"id":"P04t","n":4,"tipo":"test","lat":38.142222,"lon":-2.968333,"fecha":"17/06/2025 10:02:27"},{"id":"P05c","n":5,"tipo":"control","lat":38.142222,"lon":-2.967778,"fecha":"17/06/2025 09:20:46"},{"id":"P06c","n":6,"tipo":"control","lat":38.143056,"lon":-2.967778,"fecha":"17/06/2025 07:45:21"},{"id":"P07c","n":7,"tipo":"control","lat":38.143611,"lon":-2.968889,"fecha":"17/06/2025 13:15:36"},{"id":"P08c","n":8,"tipo":"control","lat":38.142778,"lon":-2.967778,"fecha":"17/06/2025 08:30:38"},{"id":"P09r","n":9,"tipo":"r","lat":38.140278,"lon":-2.966111,"fecha":"21/10/2025 08:35:20"},{"id":"P10r","n":10,"tipo":"r","lat":38.14,"lon":-2.966667,"fecha":"21/10/2025 09:10:52"},{"id":"P11r","n":11,"tipo":"r","lat":38.14,"lon":-2.968333,"fecha":"21/10/2025 10:54:00"}],"4":[{"id":"P01t","n":1,"tipo":"test","lat":37.926667,"lon":-4.264444,"fecha":"13/04/2026 08:01:13"},{"id":"P02t","n":2,"tipo":"test","lat":37.926667,"lon":-4.264167,"fecha":"13/04/2026 08:02:28"},{"id":"P03t","n":3,"tipo":"test","lat":37.926944,"lon":-4.2625,"fecha":"13/04/2026 08:04:28"},{"id":"P04t","n":4,"tipo":"test","lat":37.926667,"lon":-4.2625,"fecha":"13/04/2026 08:05:34"},{"id":"P06c","n":6,"tipo":"control","lat":37.927222,"lon":-4.265,"fecha":"13/04/2026 08:06:47"},{"id":"P07c","n":7,"tipo":"control","lat":37.9275,"lon":-4.264444,"fecha":"28/05/2025 08:42:06"},{"id":"P08c","n":8,"tipo":"control","lat":37.9275,"lon":-4.263611,"fecha":"28/05/2025 09:49:41"},{"id":"P09c","n":9,"tipo":"control","lat":37.9275,"lon":-4.263333,"fecha":"13/04/2026 10:51:15"}],"5":[{"id":"P01c","n":1,"tipo":"control","lat":38.053333,"lon":-3.030556,"fecha":"24/06/2025 12:30:10"},{"id":"P02c","n":2,"tipo":"control","lat":38.053611,"lon":-3.030833,"fecha":"24/06/2025 11:43:36"},{"id":"P03t","n":3,"tipo":"test","lat":38.051111,"lon":-3.028889,"fecha":"24/06/2025 16:20:24"},{"id":"P04t","n":4,"tipo":"test","lat":38.052222,"lon":-3.029722,"fecha":"24/06/2025 09:24:50"},{"id":"P05c","n":5,"tipo":"control","lat":38.053889,"lon":-3.030278,"fecha":"24/06/2025 10:51:08"},{"id":"P06t","n":6,"tipo":"test","lat":38.053333,"lon":-3.03,"fecha":"24/06/2025 09:57:03"},{"id":"P07t","n":7,"tipo":"test","lat":38.052222,"lon":-3.029167,"fecha":"24/06/2025 08:54:24"},{"id":"P08c","n":8,"tipo":"control","lat":38.051111,"lon":-3.028333,"fecha":"24/06/2025 07:51:32"},{"id":"P09r","n":9,"tipo":"r","lat":38.051667,"lon":-3.016667,"fecha":"23/10/2025 09:42:24"},{"id":"P10r","n":10,"tipo":"r","lat":38.052778,"lon":-3.016111,"fecha":"23/10/2025 10:58:45"},{"id":"P11r","n":11,"tipo":"r","lat":38.052222,"lon":-3.018056,"fecha":"23/10/2025 11:12:32"}],"6":[{"id":"P01c","n":1,"tipo":"control","lat":37.333889,"lon":-3.610278,"fecha":"13/06/2025 09:42:19"},{"id":"P02c","n":2,"tipo":"control","lat":37.333333,"lon":-3.609722,"fecha":"13/06/2025 10:56:34"},{"id":"P03c","n":3,"tipo":"control","lat":37.3325,"lon":-3.61,"fecha":"19/06/2025 09:08:49"},{"id":"P04t","n":4,"tipo":"test","lat":37.333333,"lon":-3.610556,"fecha":"13/06/2025 13:15:27"},{"id":"P05t","n":5,"tipo":"test","lat":37.333333,"lon":-3.610278,"fecha":"13/06/2025 12:08:31"},{"id":"P06t","n":6,"tipo":"test","lat":37.334167,"lon":-3.610278,"fecha":"19/06/2025 15:59:09"},{"id":"P07t","n":7,"tipo":"test","lat":37.332778,"lon":-3.610833,"fecha":"19/06/2025 07:25:01"},{"id":"P08c","n":8,"tipo":"control","lat":37.333889,"lon":-3.609444,"fecha":"17/10/2025 07:41:36"},{"id":"P09r","n":9,"tipo":"r","lat":37.337778,"lon":-3.614722,"fecha":"26/06/2025 09:53:29"},{"id":"P10r","n":10,"tipo":"r","lat":37.337222,"lon":-3.615556,"fecha":"26/06/2025 08:55:07"},{"id":"P11r","n":11,"tipo":"r","lat":37.336667,"lon":-3.616944,"fecha":"24/06/2025 07:58:58"}],"7":[{"id":"P01t","n":1,"tipo":"test","lat":38.101111,"lon":-4.604444,"fecha":"04/07/2025 05:58:52"},{"id":"P02t","n":2,"tipo":"test","lat":38.101111,"lon":-4.604722,"fecha":"04/07/2025 06:30:08"},{"id":"P03t","n":3,"tipo":"test","lat":38.100833,"lon":-4.605,"fecha":"04/07/2025 07:16:55"},{"id":"P04t","n":4,"tipo":"test","lat":38.101111,"lon":-4.605556,"fecha":"04/07/2025 07:55:14"},{"id":"P05c","n":5,"tipo":"control","lat":38.100278,"lon":-4.606389,"fecha":"03/07/2025 06:28:15"},{"id":"P06c","n":6,"tipo":"control","lat":38.100278,"lon":-4.606111,"fecha":"03/07/2025 07:19:38"},{"id":"P07c","n":7,"tipo":"control","lat":38.100833,"lon":-4.606111,"fecha":"03/07/2025 08:00:59"},{"id":"P08c","n":8,"tipo":"control","lat":38.100833,"lon":-4.605833,"fecha":"03/07/2025 08:50:58"},{"id":"P09r","n":9,"tipo":"r","lat":38.092778,"lon":-4.598611,"fecha":"13/04/2026 08:25:50"},{"id":"P10r","n":10,"tipo":"r","lat":38.0925,"lon":-4.598611,"fecha":"13/04/2026 08:26:27"},{"id":"P11r","n":11,"tipo":"r","lat":38.092222,"lon":-4.599167,"fecha":"13/04/2026 08:26:48"}],"8":[{"id":"P01t","n":1,"tipo":"test","lat":37.743611,"lon":-4.744167,"fecha":"04/09/2025 08:04:39"},{"id":"P02t","n":2,"tipo":"test","lat":37.743056,"lon":-4.743333,"fecha":"04/09/2025 08:48:57"},{"id":"P03t","n":3,"tipo":"test","lat":37.743889,"lon":-4.744444,"fecha":"04/09/2025 09:34:11"},{"id":"P04t","n":4,"tipo":"test","lat":37.743333,"lon":-4.745278,"fecha":"04/09/2025 10:20:07"},{"id":"P05t","n":5,"tipo":"test","lat":37.743056,"lon":-4.744722,"fecha":"04/09/2025 11:11:32"},{"id":"P06t","n":6,"tipo":"test","lat":37.7425,"lon":-4.744167,"fecha":"05/09/2025 05:50:48"},{"id":"P07t","n":7,"tipo":"test","lat":37.742222,"lon":-4.744722,"fecha":"05/09/2025 06:41:15"},{"id":"P08t","n":8,"tipo":"test","lat":37.7425,"lon":-4.745278,"fecha":"05/09/2025 07:32:08"},{"id":"P09t","n":9,"tipo":"test","lat":37.742778,"lon":-4.746111,"fecha":"05/09/2025 08:17:39"},{"id":"P10c","n":10,"tipo":"control","lat":37.741667,"lon":-4.746944,"fecha":"05/09/2025 09:40:21"},{"id":"P11c","n":11,"tipo":"control","lat":37.741389,"lon":-4.746667,"fecha":"05/09/2025 10:34:20"},{"id":"P12c","n":12,"tipo":"control","lat":37.741111,"lon":-4.746111,"fecha":"05/09/2025 11:12:41"}],"9":[{"id":"P01t","n":1,"tipo":"test","lat":37.533056,"lon":-4.51,"fecha":"09/07/2025 07:21:32"},{"id":"P02t","n":2,"tipo":"test","lat":37.533056,"lon":-4.509444,"fecha":"09/07/2025 05:28:24"},{"id":"P03t","n":3,"tipo":"test","lat":37.533056,"lon":-4.510278,"fecha":"09/07/2025 08:25:27"},{"id":"P04t","n":4,"tipo":"test","lat":37.532778,"lon":-4.509722,"fecha":"09/07/2025 06:22:52"},{"id":"P05c","n":5,"tipo":"control","lat":37.533333,"lon":-4.511667,"fecha":"10/07/2025 07:19:09"},{"id":"P06c","n":6,"tipo":"control","lat":37.532778,"lon":-4.511944,"fecha":"10/07/2025 08:06:35"},{"id":"P07c","n":7,"tipo":"control","lat":37.532778,"lon":-4.511389,"fecha":"10/07/2025 06:08:30"},{"id":"P08c","n":8,"tipo":"control","lat":37.533056,"lon":-4.510833,"fecha":"10/07/2025 05:25:08"}],"10":[{"id":"P01c","n":1,"tipo":"control","lat":37.461944,"lon":-5.851944,"fecha":"09/09/2025 08:51:02"},{"id":"P02c","n":2,"tipo":"control","lat":37.462222,"lon":-5.8525,"fecha":"09/09/2025 08:56:40"},{"id":"P03c","n":3,"tipo":"control","lat":37.461389,"lon":-5.8525,"fecha":"09/09/2025 10:17:35"},{"id":"P04c","n":4,"tipo":"control","lat":37.461667,"lon":-5.853056,"fecha":"09/09/2025 11:28:00"},{"id":"P05t","n":5,"tipo":"test","lat":37.461667,"lon":-5.850833,"fecha":"09/09/2025 14:30:10"},{"id":"P06t","n":6,"tipo":"test","lat":37.461389,"lon":-5.850556,"fecha":"09/09/2025 15:29:21"},{"id":"P07t","n":7,"tipo":"test","lat":37.461389,"lon":-5.851111,"fecha":"09/09/2025 16:53:56"},{"id":"P08t","n":8,"tipo":"test","lat":37.461111,"lon":-5.851389,"fecha":"09/09/2025 18:02:11"}],"11":[{"id":"P01c","n":1,"tipo":"control","lat":36.95,"lon":-5.700278,"fecha":"08/09/2025 09:14:28"},{"id":"P02c","n":2,"tipo":"control","lat":36.949444,"lon":-5.7,"fecha":"08/09/2025 09:56:39"},{"id":"P03c","n":3,"tipo":"control","lat":36.95,"lon":-5.700556,"fecha":"08/09/2025 13:21:04"},{"id":"P04c","n":4,"tipo":"control","lat":36.949444,"lon":-5.700556,"fecha":"08/09/2025 14:05:35"},{"id":"P05t","n":5,"tipo":"test","lat":36.948889,"lon":-5.700556,"fecha":"08/09/2025 14:59:38"},{"id":"P06t","n":6,"tipo":"test","lat":36.948889,"lon":-5.7,"fecha":"10/09/2025 08:09:47"},{"id":"P07t","n":7,"tipo":"test","lat":36.948611,"lon":-5.7,"fecha":"10/09/2025 08:43:22"},{"id":"P08t","n":8,"tipo":"test","lat":36.948889,"lon":-5.700278,"fecha":"10/09/2025 09:38:49"},{"id":"P09r","n":9,"tipo":"r","lat":36.948056,"lon":-5.700278,"fecha":"17/04/2026 15:42:03"},{"id":"P10r","n":10,"tipo":"r","lat":36.9475,"lon":-5.698333,"fecha":"17/04/2026 16:37:10"},{"id":"P11r","n":11,"tipo":"r","lat":36.9475,"lon":-5.699167,"fecha":"17/04/2026 17:12:29"}],"12":[{"id":"P11t","n":11,"tipo":"test","lat":37.295833,"lon":-6.360278,"fecha":"09/04/2026 09:58:12"},{"id":"P12t","n":12,"tipo":"test","lat":37.295833,"lon":-6.361111,"fecha":"09/04/2026 09:58:12"},{"id":"P13t","n":13,"tipo":"test","lat":37.295556,"lon":-6.360833,"fecha":"09/04/2026 09:58:12"},{"id":"P14t","n":14,"tipo":"test","lat":37.295556,"lon":-6.36,"fecha":"09/04/2026 09:58:12"},{"id":"P15c","n":15,"tipo":"control","lat":37.296944,"lon":-6.359722,"fecha":"09/04/2026 09:58:12"},{"id":"P16c","n":16,"tipo":"control","lat":37.296389,"lon":-6.359722,"fecha":"09/04/2026 09:58:12"},{"id":"P17c","n":17,"tipo":"control","lat":37.295,"lon":-6.361389,"fecha":"09/04/2026 09:58:12"},{"id":"P18c","n":18,"tipo":"control","lat":37.294444,"lon":-6.3625,"fecha":"09/04/2026 09:58:12"},{"id":"P19r","n":19,"tipo":"r","lat":37.283611,"lon":-6.381667,"fecha":"09/04/2026 09:58:12"},{"id":"P20r","n":20,"tipo":"r","lat":37.283889,"lon":-6.380833,"fecha":"09/04/2026 09:58:12"},{"id":"P21r","n":21,"tipo":"r","lat":37.283333,"lon":-6.380556,"fecha":"09/04/2026 09:58:12"}],"13":[{"id":"P01t","n":1,"tipo":"test","lat":37.010278,"lon":-4.691111,"fecha":""},{"id":"P02t","n":2,"tipo":"test","lat":37.009722,"lon":-4.691111,"fecha":""},{"id":"P03t","n":3,"tipo":"test","lat":37.010278,"lon":-4.691944,"fecha":""},{"id":"P04t","n":4,"tipo":"test","lat":37.01,"lon":-4.692222,"fecha":""},{"id":"P05c","n":5,"tipo":"control","lat":37.009167,"lon":-4.690833,"fecha":""},{"id":"P06c","n":6,"tipo":"control","lat":37.008889,"lon":-4.690833,"fecha":""},{"id":"P07c","n":7,"tipo":"control","lat":37.009167,"lon":-4.691944,"fecha":""},{"id":"P08c","n":8,"tipo":"control","lat":37.009444,"lon":-4.691667,"fecha":""},{"id":"P09r","n":9,"tipo":"r","lat":37.012778,"lon":-4.696667,"fecha":""},{"id":"P10r","n":10,"tipo":"r","lat":37.006111,"lon":-4.694167,"fecha":""},{"id":"P11r","n":11,"tipo":"r","lat":37.006667,"lon":-4.693611,"fecha":""}],"14":[{"id":"P01t","n":1,"tipo":"test","lat":37.5925,"lon":-2.009167,"fecha":"28/07/2025 19:04:04"},{"id":"P02t","n":2,"tipo":"test","lat":37.592778,"lon":-2.009722,"fecha":"28/07/2025 18:31:16"},{"id":"P03t","n":3,"tipo":"test","lat":37.593611,"lon":-2.009722,"fecha":"28/07/2025 17:13:57"},{"id":"P04t","n":4,"tipo":"test","lat":37.593056,"lon":-2.009722,"fecha":"28/07/2025 17:50:36"},{"id":"P05c","n":5,"tipo":"control","lat":37.592778,"lon":-2.010556,"fecha":"29/07/2025 05:26:15"},{"id":"P06c","n":6,"tipo":"control","lat":37.5925,"lon":-2.011111,"fecha":"29/07/2025 05:58:03"},{"id":"P07c","n":7,"tipo":"control","lat":37.592222,"lon":-2.010833,"fecha":"29/07/2025 06:27:05"},{"id":"P08c","n":8,"tipo":"control","lat":37.593611,"lon":-2.01,"fecha":"29/07/2025 08:28:02"},{"id":"P09r","n":9,"tipo":"r","lat":37.592222,"lon":-2.014167,"fecha":"29/07/2025 07:15:25"},{"id":"P10r","n":10,"tipo":"r","lat":37.591389,"lon":-2.014167,"fecha":"29/07/2025 07:42:39"},{"id":"P11r","n":11,"tipo":"r","lat":37.588056,"lon":-1.998889,"fecha":"29/07/2025 09:35:33"}],"15":[{"id":"P01t","n":1,"tipo":"test","lat":36.927778,"lon":-5.256389,"fecha":"24/09/2025 08:03:02"},{"id":"P02t","n":2,"tipo":"test","lat":36.926389,"lon":-5.256667,"fecha":"24/09/2025 11:31:43"},{"id":"P03t","n":3,"tipo":"test","lat":36.927222,"lon":-5.256111,"fecha":"24/09/2025 10:17:34"},{"id":"P04t","n":4,"tipo":"test","lat":36.927778,"lon":-5.256111,"fecha":"24/09/2025 09:10:10"},{"id":"P05c","n":5,"tipo":"control","lat":36.926667,"lon":-5.256111,"fecha":"25/09/2025 08:04:21"},{"id":"P06c","n":6,"tipo":"control","lat":36.926111,"lon":-5.256111,"fecha":"25/09/2025 10:44:37"},{"id":"P07c","n":7,"tipo":"control","lat":36.927222,"lon":-5.255833,"fecha":"25/09/2025 06:59:17"},{"id":"P08c","n":8,"tipo":"control","lat":36.926111,"lon":-5.255833,"fecha":"25/09/2025 09:14:05"},{"id":"P09r","n":9,"tipo":"r","lat":36.926944,"lon":-5.268333,"fecha":"21/04/2026 13:15:43"},{"id":"P10r","n":10,"tipo":"r","lat":36.921389,"lon":-5.263611,"fecha":"21/04/2026 14:13:22"},{"id":"P11r","n":11,"tipo":"r","lat":36.921944,"lon":-5.268333,"fecha":"21/04/2026 15:45:21"}],"16":[{"id":"P11c","n":11,"tipo":"control","lat":37.917778,"lon":-3.661667,"fecha":"24/04/2026 08:54:28"},{"id":"P12c","n":12,"tipo":"control","lat":37.917778,"lon":-3.662778,"fecha":"24/04/2026 08:59:03"},{"id":"P13c","n":13,"tipo":"control","lat":37.917778,"lon":-3.662222,"fecha":"24/04/2026 09:00:53"},{"id":"P14c","n":14,"tipo":"control","lat":37.9175,"lon":-3.662778,"fecha":"24/04/2026 09:01:45"},{"id":"P15t","n":15,"tipo":"test","lat":37.918056,"lon":-3.66,"fecha":"04/05/2026 09:03:23"},{"id":"P16t","n":16,"tipo":"test","lat":37.918611,"lon":-3.659722,"fecha":"04/05/2026 09:04:53"},{"id":"P17t","n":17,"tipo":"test","lat":37.918333,"lon":-3.660833,"fecha":"04/05/2026 09:05:33"},{"id":"P18t","n":18,"tipo":"test","lat":37.918333,"lon":-3.661111,"fecha":"04/05/2026 09:06:16"}]};
 // Solo puntos test y control (se descartan los de remuestreo 'r')
@@ -581,6 +637,7 @@ const sensorLayers = [];
 let selectedFarm = '';
 let currentQuery = '';
 let currentProvince = '';
+let erosionMode = false;
 function passesFarm(exps) {
   if (selectedFarm && String(exps) !== String(selectedFarm)) return false;
   if (currentProvince) { const f = FINCAS.find(x => x.exps === Number(exps)); if (f && f.provincia !== currentProvince) return false; }
@@ -711,7 +768,7 @@ async function renderFotosSol(exps) {
   const block = grid.closest('.popup-fotos');
   if (!arr.length) { if (block) block.style.display = 'none'; return; }
   if (block) block.style.display = '';
-  grid.innerHTML = arr.map(f => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" onclick="lbUrls=window._solUrls;openLightbox(this.src)"></div>`).join('');
+  grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Aplicación de soluciones EXPS${String(exps).padStart(2,'0')} · foto ${i+1}" onclick="lbUrls=window._solUrls;openLightbox(this.src)"></div>`).join('');
   const btn = document.querySelector(`#infoPanelBody .fotos-gallery-btn-sol[data-exps="${exps}"]`);
   if (btn) { btn.style.display = ''; btn.textContent = `Ver galería (${arr.length})`; }
 }
@@ -797,7 +854,7 @@ async function renderFotos(exps) {
   if (String(grid.dataset.exps) !== String(exps)) return;
   window._muUrls = arr.map(f => f.url); lbUrls = window._muUrls;
   const canEdit = !!ghToken();
-  grid.innerHTML = arr.map(f => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" onclick="lbUrls=window._muUrls;openLightbox(this.src)">${canEdit?`<button class="foto-rm" onclick="removeFoto(${exps},'${esc(f.name)}','${f.sha}')" aria-label="Eliminar">×</button>`:''}</div>`).join('')
+  grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Muestreo de suelo EXPS${String(exps).padStart(2,'0')} · foto ${i+1}" onclick="lbUrls=window._muUrls;openLightbox(this.src)">${canEdit?`<button class="foto-rm" onclick="removeFoto(${exps},'${esc(f.name)}','${f.sha}')" aria-label="Eliminar">×</button>`:''}</div>`).join('')
     + `<label class="foto-cam" title="Hacer foto con la cámara"><input type="file" accept="image/*" capture="environment" onchange="onFotoChange(${exps},this)" hidden>📷</label>`
     + `<label class="foto-add" title="${canEdit?'Añadir foto desde galería/archivos':'Configura el token (🔑) para poder subir'}"><input type="file" accept="image/*" multiple onchange="onFotoChange(${exps},this)" hidden>+</label>`;
   const btn = document.querySelector(`#infoPanelBody .fotos-gallery-btn[data-exps="${exps}"]`);
@@ -817,7 +874,7 @@ window.openGallery = async function(exps, cat) {
   modal.querySelector('.gallery-count').textContent = `${arr.length} foto${arr.length === 1 ? '' : 's'}`;
   const grid = modal.querySelector('.gallery-grid');
   grid.innerHTML = arr.length
-    ? arr.map((f,i) => `<div class="gallery-thumb" onclick="openLightbox('${f.url}')"><img src="${f.url}" loading="lazy"><span class="gthumb-n">${i+1}</span><span class="gthumb-zoom">⤢</span></div>`).join('')
+    ? arr.map((f,i) => `<div class="gallery-thumb" onclick="openLightbox('${f.url}')"><img src="${f.url}" loading="lazy" alt="Foto ${i+1}"><span class="gthumb-n">${i+1}</span><span class="gthumb-zoom">⤢</span></div>`).join('')
     : '<div class="gallery-empty">Sin fotos todavía. Añade alguna desde el panel lateral (botón +).</div>';
 };
 window.closeGallery = function() {
@@ -934,6 +991,13 @@ function matches(z) {
   return hay.includes(q);
 }
 function polyStyle(z){
+  if (erosionMode){
+    const v = RUSLE[z.exps];
+    const sel = selectedFarm && String(z.exps)===String(selectedFarm);
+    if (v==null) return {color:'#9aa3a0', weight: sel?4:2, opacity:.85, fillColor:'#c2c9c6', fillOpacity:.18, dashArray:'4 3'};
+    const k = eroClase(v);
+    return {color:k.c, weight: sel?5.5:3, opacity:1, fillColor:k.c, fillOpacity: sel?.55:.42};
+  }
   if (selectedFarm && String(z.exps)!==String(selectedFarm))
     return {color:'#8a9d97', weight:2, opacity:.6, fillColor:'#aebab4', fillOpacity:.10};
   return {color:colorFor(z.group), weight:4.5, opacity:1, fillColor:fillFor(z.group), fillOpacity:.32};
@@ -996,9 +1060,13 @@ function renderList() {
   if (q) farms=farms.filter(f => [f.finca,f.municipio,f.provincia,'exps'+f.exps].join(' ').toLowerCase().includes(q));
   farms.sort((a,b) => a.exps - b.exps);
   document.getElementById('listCount').textContent = farms.length + ' fincas';
-  const html = farms.map(f => { const code='EXPS'+String(f.exps).padStart(2,'0'); const desc=(CARACTERISTICAS[f.exps]||[])[0]||`${f.n_zones} zonas · ${f.n_vertices} vértices`; return `<div class="farm-card${String(selectedFarm)===String(f.exps)?' active':''}" data-exps="${f.exps}"><div class="code">${code}</div><div class="farm-title">${esc(f.municipio)} <span class="prov-tag">${esc(f.provincia)}</span></div><div class="farm-meta">${esc(desc)}</div></div>`; }).join('');
+  const html = farms.map(f => { const code='EXPS'+String(f.exps).padStart(2,'0'); const desc=(CARACTERISTICAS[f.exps]||[])[0]||`${f.n_zones} zonas · ${f.n_vertices} vértices`; return `<div class="farm-card${String(selectedFarm)===String(f.exps)?' active':''}" data-exps="${f.exps}" tabindex="0" role="button" aria-label="${esc(code)} · ${esc(f.municipio)}, ${esc(f.provincia)}"><div class="code">${code}</div><div class="farm-title">${esc(f.municipio)} <span class="prov-tag">${esc(f.provincia)}</span></div><div class="farm-meta">${esc(desc)}</div></div>`; }).join('');
   document.getElementById('farmList').innerHTML = html || '<p style="color:#667085">No hay resultados.</p>';
-  document.querySelectorAll('.farm-card').forEach(el => el.addEventListener('click', () => { selectedFarm=el.dataset.exps; document.getElementById('farmFilter').value=selectedFarm; refreshMap(); openInfoPanelByExps(selectedFarm); }));
+  document.querySelectorAll('.farm-card').forEach(el => {
+    const sel = () => { selectedFarm=el.dataset.exps; document.getElementById('farmFilter').value=selectedFarm; refreshMap(); openInfoPanelByExps(selectedFarm); };
+    el.addEventListener('click', sel);
+    el.addEventListener('keydown', e => { if (e.key==='Enter' || e.key===' ') { e.preventDefault(); sel(); } });
+  });
 }
 function populateFilters() {
   const ff=document.getElementById('farmFilter');
@@ -1223,7 +1291,48 @@ setTimeout(updateZoomScale, 0);
 })();
 document.getElementById('farmFilter').addEventListener('change', e => { selectedFarm=e.target.value; refreshMap(); openInfoPanelByExps(selectedFarm); });
 ['showTest','showControl','showNumbers','showPuntos','showSensores'].forEach(id => document.getElementById(id).addEventListener('change', () => refreshMap(false)));
-document.getElementById('fitAll').addEventListener('click', () => { selectedFarm=''; currentProvince=''; currentQuery=''; document.getElementById('farmFilter').value=''; refreshMap(); closeInfoPanel(); });
+document.getElementById('fitAll').addEventListener('click', () => {
+  selectedFarm=''; currentProvince=''; currentQuery='';
+  document.getElementById('farmFilter').value='';
+  const sb=document.getElementById('searchBox'); if(sb) sb.value='';
+  const pf=document.getElementById('provFilter'); if(pf) pf.value='';
+  refreshMap(); closeInfoPanel();
+});
+
+// --- Buscador, filtro de provincia, descarga CSV y capa de erosión ---
+(function(){
+  const provSel = document.getElementById('provFilter');
+  if (provSel) [...new Set(FINCAS.map(f=>f.provincia))].sort((a,b)=>a.localeCompare(b,'es'))
+    .forEach(p => provSel.insertAdjacentHTML('beforeend', `<option value="${esc(p)}">${esc(p)}</option>`));
+  const search = document.getElementById('searchBox');
+  if (search) search.addEventListener('input', () => { currentQuery = search.value; refreshMap(false); });
+  if (provSel) provSel.addEventListener('change', () => {
+    currentProvince = provSel.value;
+    selectedFarm=''; document.getElementById('farmFilter').value='';
+    refreshMap(true); closeInfoPanel();
+  });
+  const dl = document.getElementById('dlCsv');
+  if (dl) dl.addEventListener('click', downloadCsv);
+  const ero = document.getElementById('showErosion');
+  if (ero) ero.addEventListener('change', () => setErosionMode(ero.checked));
+})();
+
+// --- Resumen del proyecto (barra lateral) ---
+function buildResumen(){
+  const el = document.getElementById('resumen'); if(!el) return;
+  const nF = FINCAS.length;
+  const nAct = Object.values(SOLUCIONES).filter(s => s && s.estado === 'actuado').length;
+  let nSens = 0; Object.values(IOT).forEach(io => { if (io && io.sensores) nSens += io.sensores.length; });
+  const ev = Object.values(RUSLE).filter(v => v != null);
+  const eroAvg = ev.length ? (ev.reduce((a,b)=>a+b,0)/ev.length) : null;
+  const card = (b,s,t) => `<div class="rz" title="${esc(t||'')}"><b>${b}</b><span>${s}</span></div>`;
+  el.innerHTML =
+    card(nF, 'fincas', 'Fincas experimentales del proyecto') +
+    card(nAct+'/'+nF, 'actuadas', 'Fincas con soluciones ya aplicadas (fase 1)') +
+    card(nSens, 'sensores IoT', 'Sensores de suelo instalados') +
+    card(eroAvg!=null ? eroAvg.toFixed(1) : '—', 'erosión media', 'Pérdida de suelo media (RUSLE, t/ha·año)');
+}
+buildResumen();
 refreshMap();
 </script>
 </body>

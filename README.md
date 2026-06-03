@@ -33,11 +33,14 @@ El lanzador usa, en este orden:
 ## Funcionalidad
 
 - Mapa Leaflet centrado sobre España con las 16 fincas.
-- Filtros por provincia, finca y búsqueda libre (nombre, municipio, EXPS).
-- Capas conmutables: TEST / CONTROL / Vértices / Numeración de vértices.
-- Botón **Ver todas las fincas** para encuadrar el mapa.
-- Botón **Descargar vértices CSV** para exportar todas las coordenadas.
-- Ficha de cada finca con **Soluciones aplicadas** (compost de alpeorujo/estiércol, biochar, cubiertas vegetales, hidroinfiltradores…) y **Sensores IoT** (zona test/control, altitud y periodo de lecturas).
+- **Buscador** libre (nombre, municipio, código EXPS) y **filtro por provincia** en la barra lateral.
+- Capas conmutables: TEST / CONTROL / Vértices / Muestreo / Sensores / **Erosión**.
+- **Capa de erosión (RUSLE)**: colorea cada finca por su nivel de pérdida de suelo (baja / moderada / alta / muy alta) con su leyenda; permite comparar todas las fincas de un vistazo.
+- **Resumen del proyecto** en la barra lateral (nº de fincas, fincas actuadas, sensores IoT y erosión media), calculado en vivo a partir de los datos.
+- Botón **Ver todas** para encuadrar el mapa y reiniciar filtros, y botón **Descargar CSV** para exportar las coordenadas de todos los vértices.
+- Ficha de cada finca con **Analítica de suelo** (pH, carbonatos, conductividad, nitrógeno, densidad aparente, fragmentos gruesos, textura) y **erosión RUSLE** (t/ha·año) con su clasificación de severidad.
+- Ficha de cada finca con **Soluciones aplicadas** (compost de alpeorujo/estiércol, biochar, cubiertas vegetales, hidroinfiltradores…), **inversión (fase 1)** y **Sensores IoT** (zona test/control, altitud y periodo de lecturas).
+- Galerías de **fotos de muestreo** (una por punto, campaña 2025) y de **aplicación de soluciones**, con visor a pantalla completa (flechas, teclado y contador).
 - Los **sensores de suelo** se dibujan en el mapa (icono de antena, verde=test / rojo=control) y aparecen al acercar el zoom a una parcela (ocultos en la vista general para no tapar la selección de fincas).
 - La ficha muestra las **muestras de cada sensor directamente** (gráficas de humedad y temperatura de suelo a 20 cm y temperatura del aire, comparando test vs control, con los valores actuales). Los datos son un snapshot semanal (cada 6 h) guardado en [`data/iot_muestras.json`](data/iot_muestras.json), extraído de la API del IoT (`/se/v2/iot/sensors/{id}/window`). Se usa un snapshot porque esa API no admite CORS y requiere sesión, por lo que el visor no puede consultarla en vivo; para actualizar las muestras hay que regenerar ese JSON.
 - El panel lateral de la ficha es **más ancho y redimensionable** (arrastra el borde para cambiar su anchura).

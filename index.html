@@ -286,7 +286,7 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   </aside>
   <main class="map-wrap">
     <div id="map"></div>
-    <div class="map-title"><b>LivingSoiLL · Fincas experimentales</b><p>Visor de las 16 fincas experimentales del Living Lab Andaluz. Selecciona una finca para ver sus zonas TEST/CONTROL y vértices, los <b>problemas</b> del suelo detectados, las <b>soluciones aplicadas</b>, las <b>muestras de suelo</b> y los <b>sensores IoT</b> (humedad y temperatura), además de las fotos de muestreo y de aplicación.</p></div>
+    <div class="map-title"><b>LivingSoiLL · Fincas experimentales</b><p>Visor de las 16 fincas experimentales del Living Lab Andaluz. Selecciona una finca para ver sus zonas, problemas del suelo, soluciones aplicadas, muestras de suelo, sensores IoT y fotos.</p></div>
     <aside id="infoPanel" class="info-panel" aria-hidden="true">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
       <div id="infoPanelBody"></div>
@@ -331,7 +331,11 @@ const SOLUCIONES = {
     {tipo:"Compost de alpeorujo", detalle:"Almedinilla (INGNIA S.L) · 16/04/2026 · 1200 kg · remolque esparcidor · bajo copa y parte de entrecalle (≈1650 m²) · 754,44 €"},
     {tipo:"Biochar", detalle:"Carboliva · 16/04/2026 · 1500 kg · remolque esparcidor · bajo copa y parte de entrecalle · coste pendiente"}
   ] },
-  "10": { estado:"no_actuado", entidad:"INFAOLIVA", intervenciones:[] },
+  "10": { estado:"actuado", entidad:"INFAOLIVA", intervenciones:[
+    {tipo:"Cubierta vegetal semillada", detalle:"Cantueso Natural Seeds · mezcla de gramíneas y leguminosas · 20 kg a voleo · 3 entrecalles (≈990 m²) · rastrillo y rulo · ≈116 €"},
+    {tipo:"Cubierta vegetal espontánea", detalle:"Toda la superficie excepto el ruedo · NPK 20:5:15 (20 kg)"},
+    {tipo:"Hidroinfiltradores", detalle:"93 árboles en zona test · orificio ≈50 cm para redirigir los flujos de agua · ≈1395 €"}
+  ], nota:"Compost y biochar: no procede. Semillado de cubierta e hidroinfiltradores pendientes por climatología." },
   "11": { estado:"no_actuado", entidad:"—", intervenciones:[] },
   "12": { estado:"no_actuado", entidad:"CITOLIVA", intervenciones:[] },
   "13": { estado:"sin_datos", entidad:"—", intervenciones:[], nota:"Sin carpeta ni registro de actuaciones en el Drive." },
@@ -354,12 +358,12 @@ const IOT = {
   "7":  {periodo:"2025-05-30 → 2026-06-03", sensores:[{id:"z6-32734",zona:"test",h:397,lat:38.1009333,lon:-4.6053855},{id:"z6-32526",zona:"control",h:466,lat:38.1003567,lon:-4.6067855}]},
   "8":  {periodo:"2026-03-20 → 2026-06-03", sensores:[{id:"z6-32745",zona:"test",h:284,lat:37.7427546,lon:-4.7450412},{id:"z6-32527",zona:"control",h:276,lat:37.7419431,lon:-4.7460829}]},
   "9":  {periodo:"2026-03-19 → 2026-06-03", sensores:[{id:"z6-32528",zona:"test",h:558,lat:37.533032,lon:-4.5100701},{id:"z6-32746",zona:"control",h:555,lat:37.5330798,lon:-4.5110129}]},
-  "10": {periodo:"2026-04-10 → 2026-06-03", sensores:[{id:"z6-32747",zona:"test",h:38,lat:37.461444,lon:-5.8526228},{id:"z6-32744",zona:"control",h:35,lat:37.4612305,lon:-5.8514392}]},
-  "11": {periodo:"2026-04-17 → 2026-06-03", sensores:[{id:"z6-32729",zona:"test",h:180,lat:36.9497223,lon:-5.7000102},{id:"z6-32661",zona:"control",h:153,lat:36.9488234,lon:-5.700138}]},
+  "10": {periodo:"2026-04-10 → 2026-06-03", sensores:[{id:"z6-32747",zona:"control",h:38,lat:37.461444,lon:-5.8526228},{id:"z6-32744",zona:"test",h:35,lat:37.4612305,lon:-5.8514392}]},
+  "11": {periodo:"2026-04-17 → 2026-06-03", sensores:[{id:"z6-32729",zona:"control",h:180,lat:36.9497223,lon:-5.7000102},{id:"z6-32661",zona:"test",h:153,lat:36.9488234,lon:-5.700138}]},
   "12": {periodo:"2026-04-07 → 2026-06-03", sensores:[{id:"z6-32531",zona:"test",h:79,lat:37.2956297,lon:-6.3605712},{id:"z6-32731",zona:"control",h:82,lat:37.2968007,lon:-6.3599959}]},
   "13": {periodo:"2026-04-22 → 2026-06-03", sensores:[{id:"z6-32733",zona:"test",h:553,lat:37.0102021,lon:-4.6910703},{id:"z6-32720",zona:"control",h:552,lat:37.0092699,lon:-4.6913718}]},
   "14": {periodo:"2025-12-10 → 2026-06-03", sensores:[{id:"z6-32728",zona:"test",h:912,lat:37.5927841,lon:-2.0096108},{id:"z6-32727",zona:"control",h:916,lat:37.5926593,lon:-2.0104992}]},
-  "15": {periodo:"2026-04-21 → 2026-06-03", sensores:[{id:"z6-32748",zona:"test",h:532,lat:36.9265414,lon:-5.2559243},{id:"z6-32732",zona:"control",h:539,lat:36.9272598,lon:-5.2565471}]},
+  "15": {periodo:"2026-04-21 → 2026-06-03", sensores:[{id:"z6-32748",zona:"control",h:532,lat:36.9265414,lon:-5.2559243},{id:"z6-32732",zona:"test",h:539,lat:36.9272598,lon:-5.2565471}]},
   "16": {periodo:"—", sensores:[]}
 };
 // Muestras de los sensores (snapshot semanal, cada 6 h) cargadas desde data/iot_muestras.json

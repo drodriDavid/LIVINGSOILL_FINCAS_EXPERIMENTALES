@@ -50,6 +50,17 @@ El lanzador usa, en este orden:
   - Sin registro en Drive: EXPS05 (Villacarrillo), EXPS13 (Antequera), EXPS15 (Olvera).
   - **Sin actuación**: EXPS07 Adamuz, EXPS10 La Rinconada, EXPS11 Utrera, EXPS12 Hinojos, EXPS16 Villatorres.
 - **Sensores IoT** (objeto `IOT` en el HTML): 30 sensores `z6-*` (15 fincas × test+control) de `livinglabandalucia.ujaen.es/iot` (API `/se/v2/iot/sensors`). EXPS16 (Villatorres) no tiene sensores.
+- **Muestras de los sensores** ([`data/iot_muestras.json`](data/iot_muestras.json)): snapshot semanal (cada 6 h) de humedad y temperatura de suelo (20/50 cm), temperatura del aire, VPD, presión y precipitación, por sensor. Se pinta como mini-gráficas en la ficha de cada finca.
+
+## Actualizar las muestras (snapshot periódico)
+
+Las muestras **no son en tiempo real**: son un snapshot que hay que regenerar de vez en cuando (p. ej. semanalmente). No se puede automatizar del todo porque la API del IoT requiere sesión iniciada y no admite acceso externo (CORS), así que el paso de descarga es manual desde el navegador:
+
+1. Inicia sesión en <https://livinglabandalucia.ujaen.es> y abre `/iot/listado`.
+2. Abre la consola del navegador (**F12 → Console**), pega el contenido de [`scripts/generar_muestras.js`](scripts/generar_muestras.js) y pulsa Enter. Se descargará `iot_muestras.json`.
+3. Ejecuta [`scripts/actualizar_muestras.ps1`](scripts/actualizar_muestras.ps1) (lo copia a `data/` y hace commit + push).
+
+> Consejo: puedes guardar `scripts/generar_muestras.js` como **marcador/bookmarklet** para regenerarlo con un clic mientras tengas la sesión abierta.
 
 ## Notas técnicas
 

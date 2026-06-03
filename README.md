@@ -37,6 +37,16 @@ El lanzador usa, en este orden:
 - Capas conmutables: TEST / CONTROL / Vértices / Numeración de vértices.
 - Botón **Ver todas las fincas** para encuadrar el mapa.
 - Botón **Descargar vértices CSV** para exportar todas las coordenadas.
+- Ficha de cada finca con **Soluciones aplicadas** (compost de alpeorujo/estiércol, biochar, cubiertas vegetales, hidroinfiltradores…) y **Sensores IoT** (zona test/control, altitud y periodo de lecturas).
+
+## Datos de soluciones aplicadas e IoT
+
+- **Soluciones aplicadas** (objeto `SOLUCIONES` en el HTML): extraídas de los `Registro actuaciones.xlsx` de cada finca en Drive.
+  - Con datos propios: EXPS01 (CAAND), EXPS02 (NUTESCA), EXPS09 (IFAPA), EXPS14 (NUTESCA).
+  - EXPS04/06/08 (UJA) comparten un registro común (`EXP3456`); EXPS03 (JAENCOOP) solo contiene una copia de ese registro común.
+  - Sin registro en Drive: EXPS05 (Villacarrillo), EXPS13 (Antequera), EXPS15 (Olvera).
+  - **Sin actuación**: EXPS07 Adamuz, EXPS10 La Rinconada, EXPS11 Utrera, EXPS12 Hinojos, EXPS16 Villatorres.
+- **Sensores IoT** (objeto `IOT` en el HTML): 30 sensores `z6-*` (15 fincas × test+control) de `livinglabandalucia.ujaen.es/iot` (API `/se/v2/iot/sensors`). EXPS16 (Villatorres) no tiene sensores.
 
 ## Notas técnicas
 

@@ -75,6 +75,17 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .info-panel .popup table { font-size:10.5px; }
 .info-panel .popup th, .info-panel .popup td { padding:3px 4px; }
 .info-panel .popup .popup-btn { padding:6px 9px; font-size:11px; }
+.sol-block, .iot-block { margin:9px 0 2px; border-top:1px solid var(--line); padding-top:7px; }
+.sol-head { font-size:9.5px; color:var(--green); text-transform:uppercase; font-weight:900; letter-spacing:.05em; margin-bottom:4px; }
+.iot-sub { font-weight:600; text-transform:none; letter-spacing:0; color:var(--muted); margin-left:4px; font-size:10px; }
+.popup .chars.sol-list { margin:2px 0 4px; }
+.sol-empty { font-size:11px; color:var(--muted); font-style:italic; }
+.sol-note { font-size:10px; color:var(--muted); margin-top:3px; font-style:italic; }
+.iot-table { width:100%; border-collapse:collapse; font-size:10.5px; margin-top:2px; }
+.iot-table td { padding:3px 4px; border-bottom:1px solid var(--line); }
+.iot-zona { display:inline-block; border-radius:999px; padding:1px 7px; font-size:9px; font-weight:800; text-transform:uppercase; }
+.iot-zona.test { color:#007c52; background:#e8fff3; border:1px solid #b8eed1; }
+.iot-zona.control { color:#bd2727; background:#fff0f0; border:1px solid #ffd1d1; }
 .popup .popup-btn.maps, .info-panel .popup .popup-btn.maps { text-decoration:none !important; display:flex; align-items:center; justify-content:center; background:#fff; color:var(--green); border:1px solid var(--green); }
 .popup .popup-btn.maps:hover, .info-panel .popup .popup-btn.maps:hover { background:#f0f7f3; color:var(--green); }
 .popup-fotos { margin-top:10px; }
@@ -246,6 +257,92 @@ const FINCAS = [{"exps": 1, "finca": "LL2-EXPS1: Polígono 14 Parcela 90, Recint
 const PROVINCES = ["Almería", "Cádiz", "Córdoba", "Granada", "Huelva", "Jaén", "Malaga", "Sevilla"];
 const CARACTERISTICAS = {"1":["Erosión laminar (≈9 t/ha/año)","Costras y ligera compactación","Pérdida severa de materia orgánica (0,8%)","Baja biodiversidad","Indicios de erosión laminar con raíces al descubierto y piedras"],"2":["Cambisoles vérticos sobre margas del Mioceno","Erosión en superficie y concentrada","Surcos y barrancos efímeros","Barranco permanente de 10x3 m. de ancho en el límite de la parcela: restauración urgente","Arcillas hinchables y vertisolización","Indicios incipientes de deslizamientos superficiales"],"3":["Cambisoles calcáreos","Bajo contenido en materia orgánica","Estructura poco desarrollada","Escasez de agua","Herbicida “Tavas” causó toxicidad","Mejorar la estructura del suelo y prevenir la erosión"],"4":["Regosoles calcáreos sobre margas y calcarenitas del Mioceno","Bajo contenido en materia orgánica","Compactación: costras y capas de arado","Erosión laminar y en surcos","Contenido muy elevado en carbonatos","Escasa biodiversidad del suelo y afectación por Verticilium dahliae"],"5":["Cambisoles calcáreos: (calcisol háplico) sobre maris jurásicos","Evidencia clara de erosión laminar y por surcos","Bajo contenido en materia orgánica","Compactación (formación de costras)","Pérdida de biodiversidad","Pendientes pronunciadas"],"6":["Problemas hídricos por acumulación de agua","Escorrentías","Encharcamiento local","Sequía estacional","Baja infiltración"],"7":["Regosol éutrico","Pendientes pronunciadas (erosión laminar)","Estructura del suelo deficiente","Escasez de nutrientes y agua","Severa sequía estival"],"8":["Erosión severa","Actuación sobre cárcavas profundas","Pérdida de tierra arable"],"9":["Erosión en ladera","Pérdida de fertilidad (acumulación de pesticidas y cobre)","Contaminación del suelo","Compactación del suelo","pH elevado"],"10":["Planosoles éutricos – Planosoles éutricos/gleicos sobre terrazas del Pleistoceno","Bajo contenido en materia orgánica","Escaso desarrollo de la estructura","Compactación (capa de arado)","Anegamiento"],"11":["Erosión grave del suelo en gran parte de la parte alta y baja de la finca","Presencia de tres barrancos en las zonas","Agregados de suelo inestables, especialmente en las zonas mas arcillosas"],"12":["Problemas de erosión","Degradación del suelo"],"13":["Cambisol vértico sobre margas de Triásico","Falta de materia orgánica","Falta de fertilidad del suelo","Compactación del suelo","Falta de productividad de los cultivos"],"14":["Regosoles éutricos sobre filitas","Muy bajo contenido en materia orgánica","Erosión del suelo","Grave escasez de agua","Alto contenido en grava"],"15":["Baja materia orgánica","Sin cubiertas","Manejo tradicional"],"16":["Degradación del suelo por erosión","Baja biodiversidad","Ausencia de cubierta espontánea","Intensa erosión laminar"]};
 
+// === Soluciones aplicadas por finca (fuente: Drive "Registro actuaciones.xlsx" de cada finca) ===
+// Fincas SIN actuación (indicación del proyecto): EXPS07 Adamuz, EXPS10 La Rinconada,
+// EXPS11 Utrera, EXPS12 Hinojos, EXPS16 Villatorres.
+// Las fincas gestionadas por UJA (EXPS04/06/08) comparten un mismo registro común ("EXP3456").
+const UJA_ACTUACIONES = [
+  {tipo:"Compost de alpeorujo", detalle:"Puerta de las Villas · 7–8/11/2025 · 1850 kg · remolque esparcidor · 5 entrecalles (≈1170 m²) · mezclado con colquilde (≈7 cm) · ≈424 €"},
+  {tipo:"Biochar", detalle:"Carbolivar · 10–11/11/2025 · 897 kg · remolque esparcidor · 3 entrecalles (≈990 m²) · mezclado con colquilde · ≈569 €"},
+  {tipo:"Cubierta vegetal semillada", detalle:"Cantueso Natural Seeds · 6/11/2025 · 70% gramíneas / 30% leguminosas · 15,5 kg a voleo + NPK 20:5:10 · rastrillo y rulo · ≈346 €"},
+  {tipo:"Cubierta vegetal espontánea", detalle:"Toda la superficie excepto el ruedo · NPK 20:5:15 (20 kg)"},
+  {tipo:"Hidroinfiltradores", detalle:"3–7/12/2025 · 93 árboles en zona test · orificio ≈50 cm y redirección de flujos de agua · ≈1395 €"}
+];
+const SOLUCIONES = {
+  "1": { estado:"actuado", entidad:"CAAND", intervenciones:[
+    {tipo:"Compost de alpeorujo + estiércol", detalle:"Compost de RSU (Planta Jaén Sierra Sur) + estiércol de ganado · 11/11/2025 · 30 t · remolque esparcidor · entrecalles (≈2520 m²) · ≈450 €+IVA"},
+    {tipo:"Cubierta vegetal semillada", detalle:"Cantueso Natural Seeds · 12/11/2025 · 70% gramíneas / 30% leguminosas · 20 kg a voleo + 25 kg NPK 18:5:18 · rulo · ≈116 €"}
+  ], nota:"Biochar e hidroinfiltradores: no aplicados." },
+  "2": { estado:"actuado", entidad:"NUTESCA", intervenciones:[
+    {tipo:"Compost de alpeorujo", detalle:"Puerta de las Villas · 10–11/11/2025 · 1850 kg · remolque esparcidor · 5 entrecalles · ≈424 €"},
+    {tipo:"Biochar", detalle:"Carbolivar · 20–21/11/2025 · 2400 kg · remolque esparcidor · ≈1720 €"},
+    {tipo:"Cubierta vegetal espontánea", detalle:"Toda la superficie incl. ruedo · sulfato amónico 21% + quelato de hierro"}
+  ] },
+  "3": { estado:"actuado", entidad:"JAENCOOP", intervenciones:[], nota:"La carpeta de Drive solo contiene una copia del registro común de UJA (EXP3456); no hay datos de actuación específicos de esta finca." },
+  "4": { estado:"actuado", entidad:"UJA", intervenciones:UJA_ACTUACIONES, nota:"Datos del registro común de UJA (EXP3456), compartido por las fincas gestionadas por UJA." },
+  "5": { estado:"sin_datos", entidad:"—", intervenciones:[], nota:"Sin carpeta ni registro de actuaciones en el Drive." },
+  "6": { estado:"actuado", entidad:"UJA", intervenciones:UJA_ACTUACIONES, nota:"Datos del registro común de UJA (EXP3456), compartido por las fincas gestionadas por UJA." },
+  "7": { estado:"no_actuado", entidad:"CITOLIVA", intervenciones:[] },
+  "8": { estado:"actuado", entidad:"UJA", intervenciones:UJA_ACTUACIONES, nota:"Datos del registro común de UJA (EXP3456), compartido por las fincas gestionadas por UJA." },
+  "9": { estado:"actuado", entidad:"IFAPA", intervenciones:[
+    {tipo:"Compost de alpeorujo", detalle:"Almedinilla (INGNIA S.L) · 16/04/2026 · 1200 kg · remolque esparcidor · bajo copa y parte de entrecalle (≈1650 m²) · 754,44 €"},
+    {tipo:"Biochar", detalle:"Carboliva · 16/04/2026 · 1500 kg · remolque esparcidor · bajo copa y parte de entrecalle · coste pendiente"}
+  ] },
+  "10": { estado:"no_actuado", entidad:"INFAOLIVA", intervenciones:[] },
+  "11": { estado:"no_actuado", entidad:"—", intervenciones:[] },
+  "12": { estado:"no_actuado", entidad:"CITOLIVA", intervenciones:[] },
+  "13": { estado:"sin_datos", entidad:"—", intervenciones:[], nota:"Sin carpeta ni registro de actuaciones en el Drive." },
+  "14": { estado:"actuado", entidad:"NUTESCA", intervenciones:[
+    {tipo:"Aplicación de estiércol", detalle:"Victoriano Navarro Rosales · 13/05/2026 · 25.000 kg · remolque esparcidor · 8 entrecalles · ≈1500 €"},
+    {tipo:"Cubierta vegetal espontánea", detalle:"Toda la superficie incl. ruedo"}
+  ], nota:"Planificado además compost de alpeorujo (cama+hoja) mejorado con yeso (3–4 t, cooperativa Picasat) por los suelos arcillosos." },
+  "15": { estado:"sin_datos", entidad:"—", intervenciones:[], nota:"Sin carpeta ni registro de actuaciones en el Drive." },
+  "16": { estado:"no_actuado", entidad:"UJA", intervenciones:[] }
+};
+// === Sensores IoT por finca (fuente: livinglabandalucia.ujaen.es/iot · API /se/v2/iot/sensors) ===
+// Cada finca con sensores tiene uno en la zona test (tratada) y otro en la zona control. h = altitud (m). Última lectura: 2026-06-03.
+const IOT = {
+  "1":  {periodo:"2025-11-26 → 2026-06-03", sensores:[{id:"z6-32726",zona:"test",h:504},{id:"z6-32730",zona:"control",h:503}]},
+  "2":  {periodo:"2025-11-27 → 2026-06-03", sensores:[{id:"z6-32724",zona:"test",h:407},{id:"z6-32656",zona:"control",h:400}]},
+  "3":  {periodo:"2025-11-19 → 2026-06-03", sensores:[{id:"z6-32529",zona:"test",h:481},{id:"z6-32723",zona:"control",h:491}]},
+  "4":  {periodo:"2025-11-12 → 2026-06-03", sensores:[{id:"z6-32524",zona:"test",h:297},{id:"z6-32725",zona:"control",h:301}]},
+  "5":  {periodo:"2025-11-28 → 2026-06-03", sensores:[{id:"z6-32530",zona:"test",h:616},{id:"z6-32722",zona:"control",h:627}]},
+  "6":  {periodo:"2025-12-18 → 2026-06-03", sensores:[{id:"z6-32525",zona:"test",h:754},{id:"z6-32721",zona:"control",h:764}]},
+  "7":  {periodo:"2025-05-30 → 2026-06-03", sensores:[{id:"z6-32734",zona:"test",h:397},{id:"z6-32526",zona:"control",h:466}]},
+  "8":  {periodo:"2026-03-20 → 2026-06-03", sensores:[{id:"z6-32745",zona:"test",h:284},{id:"z6-32527",zona:"control",h:276}]},
+  "9":  {periodo:"2026-03-19 → 2026-06-03", sensores:[{id:"z6-32528",zona:"test",h:558},{id:"z6-32746",zona:"control",h:555}]},
+  "10": {periodo:"2026-04-10 → 2026-06-03", sensores:[{id:"z6-32747",zona:"test",h:38},{id:"z6-32744",zona:"control",h:35}]},
+  "11": {periodo:"2026-04-17 → 2026-06-03", sensores:[{id:"z6-32729",zona:"test",h:180},{id:"z6-32661",zona:"control",h:153}]},
+  "12": {periodo:"2026-04-07 → 2026-06-03", sensores:[{id:"z6-32531",zona:"test",h:79},{id:"z6-32731",zona:"control",h:82}]},
+  "13": {periodo:"2026-04-22 → 2026-06-03", sensores:[{id:"z6-32733",zona:"test",h:553},{id:"z6-32720",zona:"control",h:552}]},
+  "14": {periodo:"2025-12-10 → 2026-06-03", sensores:[{id:"z6-32728",zona:"test",h:912},{id:"z6-32727",zona:"control",h:916}]},
+  "15": {periodo:"2026-04-21 → 2026-06-03", sensores:[{id:"z6-32748",zona:"test",h:532},{id:"z6-32732",zona:"control",h:539}]},
+  "16": {periodo:"—", sensores:[]}
+};
+function solucionesHtml(exps) {
+  const s = SOLUCIONES[exps];
+  if (!s) return '';
+  const ent = (s.entidad && s.entidad !== '—') ? ' · ' + esc(s.entidad) : '';
+  let body;
+  if (s.estado === 'no_actuado') {
+    body = `<div class="sol-empty">No se ha actuado en esta finca.</div>`;
+  } else if (s.estado === 'sin_datos') {
+    body = `<div class="sol-empty">${esc(s.nota || 'Sin datos de actuación disponibles.')}</div>`;
+  } else {
+    const items = (s.intervenciones || []).map(i => `<li><b>${esc(i.tipo)}.</b> ${esc(i.detalle)}</li>`).join('');
+    body = items ? `<ul class="chars sol-list">${items}</ul>` : '';
+    if (s.nota) body += `<div class="sol-note">${esc(s.nota)}</div>`;
+  }
+  return `<div class="sol-block"><div class="sol-head">Soluciones aplicadas${ent}</div>${body}</div>`;
+}
+function iotHtml(exps) {
+  const io = IOT[exps];
+  if (!io || !io.sensores || !io.sensores.length) {
+    return `<div class="iot-block"><div class="sol-head">Sensores IoT</div><div class="sol-empty">Sin sensores instalados.</div></div>`;
+  }
+  const rows = io.sensores.map(s => `<tr><td>${esc(s.id)}</td><td><span class="iot-zona ${s.zona}">${esc(s.zona)}</span></td><td>${s.h} m</td></tr>`).join('');
+  return `<div class="iot-block"><div class="sol-head">Sensores IoT<span class="iot-sub">${esc(io.periodo)}</span></div><table class="iot-table">${rows}</table></div>`;
+}
 const colorFor = g => g === 'TEST' ? '#00a86b' : '#e24444';
 const fillFor = g => g === 'TEST' ? '#c9f7df' : '#ffd2d2';
 const map = L.map('map', { zoomControl: true, preferCanvas: true, attributionControl: false });
@@ -353,6 +450,8 @@ function popupHtml(z) {
         <b>Fechas</b><span>${fechaTxt}</span>
       </div>
       <ul class="chars">${chars || '<li><i>Sin características catalogadas.</i></li>'}</ul>
+      ${solucionesHtml(z.exps)}
+      ${iotHtml(z.exps)}
       <div class="popup-fotos">
         <div class="fotos-head">
           <span class="fotos-label">Fotos</span>

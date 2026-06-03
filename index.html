@@ -299,6 +299,15 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 /* --- Accesibilidad: foco visible --- */
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, .farm-card:focus-visible { outline:3px solid rgba(0,102,106,.45); outline-offset:2px; }
 .farm-card:focus-visible { border-color:var(--green); }
+.resumen .rz-ero { cursor:pointer; transition:.15s ease; }
+.resumen .rz-ero:hover { border-color:var(--green); box-shadow:0 3px 10px rgba(0,102,106,.14); }
+.resumen .rz-ero.on { background:#eef6f1; border-color:var(--green); }
+.resumen .rz-ero::after { content:"●"; position:absolute; top:6px; right:8px; font-size:8px; color:var(--line); }
+.resumen .rz-ero.on::after { color:var(--green2); }
+.resumen .rz { position:relative; }
+.resumen-actions { margin:2px 0 6px; text-align:right; }
+.linklike { display:inline; width:auto; border:0; background:none; padding:0; color:var(--green); font-size:11px; font-weight:800; cursor:pointer; }
+.linklike:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -308,7 +317,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     <div class="intro-map">
       <img src="assets/andalucia.png" alt="16 fincas experimentales de Living Soill" onerror="this.parentElement.classList.add('no-image')">
       <div class="intro-fallback">Guarda la imagen en <code>assets/andalucia.png</code></div>
-      <div class="intro-stats"><span><b>16</b> fincas</span><span><b>22</b> zonas test</span><span><b>20</b> zonas control</span></div>
+      <div class="intro-stats" id="introStats"><span><b>16</b> fincas</span><span><b>22</b> zonas test</span><span><b>20</b> zonas control</span></div>
     </div>
     <input id="searchBox" type="search" placeholder="Buscar finca, municipio o EXPS…" aria-label="Buscar finca, municipio o código EXPS" autocomplete="off">
     <div class="controls">
@@ -320,6 +329,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
       </div>
     </div>
     <div id="resumen" class="resumen" aria-label="Resumen del proyecto"></div>
+    <div class="resumen-actions"><button id="dlResumen" class="linklike" title="Descargar un CSV con el resumen por finca (provincia, estado, sensores, erosión…)">⤓ Resumen por finca (CSV)</button></div>
     <div class="section-title"><span>Fincas experimentales</span><span id="listCount"></span></div>
     <div id="farmList"></div>
   </aside>
@@ -612,6 +622,8 @@ eroLegend.onAdd = () => {
 let eroLegendOn = false;
 function setErosionMode(on){
   erosionMode = on;
+  const cb = document.getElementById('showErosion'); if (cb) cb.checked = on;
+  const ec = document.querySelector('.rz-ero'); if (ec) ec.classList.toggle('on', on);
   if (on && !eroLegendOn){ eroLegend.addTo(map); eroLegendOn = true; }
   else if (!on && eroLegendOn){ map.removeControl(eroLegend); eroLegendOn = false; }
   refreshMap(false);
@@ -921,6 +933,7 @@ window.openInfoPanel = function(z) {
   panel.style.setProperty('pointer-events','auto','important');
   panel.setAttribute('aria-hidden','false');
   panel.scrollTop = 0;
+  try { history.replaceState(null, '', '#EXPS' + String(z.exps).padStart(2,'0')); } catch(_) {}
 };
 window.closeInfoPanel = function() {
   _openZone = null;
@@ -930,6 +943,7 @@ window.closeInfoPanel = function() {
   panel.style.setProperty('opacity','0','important');
   panel.style.setProperty('pointer-events','none','important');
   panel.setAttribute('aria-hidden','true');
+  try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch(_) {}
 };
 function openInfoPanelByExps(exps) {
   if (!exps) { closeInfoPanel(); return; }
@@ -1325,15 +1339,56 @@ function buildResumen(){
   let nSens = 0; Object.values(IOT).forEach(io => { if (io && io.sensores) nSens += io.sensores.length; });
   const ev = Object.values(RUSLE).filter(v => v != null);
   const eroAvg = ev.length ? (ev.reduce((a,b)=>a+b,0)/ev.length) : null;
-  const card = (b,s,t) => `<div class="rz" title="${esc(t||'')}"><b>${b}</b><span>${s}</span></div>`;
+  const card = (b,s,t,cls) => `<div class="rz ${cls||''}" title="${esc(t||'')}"${cls==='rz-ero'?' role="button" tabindex="0"':''}><b>${b}</b><span>${s}</span></div>`;
   el.innerHTML =
     card(nF, 'fincas', 'Fincas experimentales del proyecto') +
     card(nAct+'/'+nF, 'actuadas', 'Fincas con soluciones ya aplicadas (fase 1)') +
     card(nSens, 'sensores IoT', 'Sensores de suelo instalados') +
-    card(eroAvg!=null ? eroAvg.toFixed(1) : '—', 'erosión media', 'Pérdida de suelo media (RUSLE, t/ha·año)');
+    card(eroAvg!=null ? eroAvg.toFixed(1) : '—', 'erosión media', 'Clic para activar la capa de erosión en el mapa (RUSLE, t/ha·año)', 'rz-ero');
+  const eroCard = el.querySelector('.rz-ero');
+  if (eroCard){
+    eroCard.classList.toggle('on', erosionMode);
+    eroCard.addEventListener('click', () => setErosionMode(!erosionMode));
+    eroCard.addEventListener('keydown', e => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); setErosionMode(!erosionMode); } });
+  }
+  // Estadísticas de la cabecera (intro) calculadas en vivo
+  const is = document.getElementById('introStats');
+  if (is){
+    const nTest = FINCAS.reduce((a,f)=>a+(f.n_test||0),0);
+    const nCtrl = FINCAS.reduce((a,f)=>a+(f.n_control||0),0);
+    is.innerHTML = `<span><b>${nF}</b> fincas</span><span><b>${nTest}</b> zonas test</span><span><b>${nCtrl}</b> zonas control</span>`;
+  }
 }
+function downloadResumenCsv(){
+  const head = 'exps,provincia,municipio,zonas,test,control,vertices,estado,sensores_iot,erosion_t_ha_anio,erosion_clase\n';
+  const rows = FINCAS.slice().sort((a,b)=>a.exps-b.exps).map(f=>{
+    const s = SOLUCIONES[f.exps] || {}; const io = IOT[f.exps];
+    const ns = io && io.sensores ? io.sensores.length : 0; const v = RUSLE[f.exps];
+    return ['EXPS'+String(f.exps).padStart(2,'0'), f.provincia, f.municipio, f.n_zones, f.n_test, f.n_control, f.n_vertices, (s.estado||''), ns, (v!=null?v:''), (v!=null?eroClase(v).t:'')]
+      .map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(',');
+  });
+  const blob = new Blob([head+rows.join('\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'resumen_fincas_living_soill.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+(function(){ const b=document.getElementById('dlResumen'); if(b) b.addEventListener('click', downloadResumenCsv); })();
 buildResumen();
 refreshMap();
+// Escape cierra la ficha (si no hay lightbox/galería abiertos)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const lb=document.getElementById('lightbox'), g=document.getElementById('gallery');
+  if ((lb&&lb.classList.contains('open')) || (g&&g.classList.contains('open'))) return;
+  const p=document.getElementById('infoPanel'); if (p && p.classList.contains('open')) closeInfoPanel();
+});
+// Enlace compartible: abrir finca indicada en el hash (#EXPS05), tanto al cargar como al cambiar el hash
+function openFromHash(){
+  const m = (location.hash||'').match(/EXPS\s*0*(\d{1,2})/i);
+  if (!m) return;
+  const ex = String(parseInt(m[1],10));
+  if (FINCAS.some(f=>String(f.exps)===ex) && String(selectedFarm)!==ex) selectFarmMap(ex);
+}
+window.addEventListener('hashchange', openFromHash);
+openFromHash();
 </script>
 </body>
 </html>

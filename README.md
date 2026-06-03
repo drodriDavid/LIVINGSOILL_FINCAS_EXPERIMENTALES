@@ -41,6 +41,9 @@ El lanzador usa, en este orden:
 - Ficha de cada finca con **Analítica de suelo** (pH, carbonatos, conductividad, nitrógeno, densidad aparente, fragmentos gruesos, textura) y **erosión RUSLE** (t/ha·año) con su clasificación de severidad.
 - Ficha de cada finca con **Soluciones aplicadas** (compost de alpeorujo/estiércol, biochar, cubiertas vegetales, hidroinfiltradores…), **inversión (fase 1)** y **Sensores IoT** (zona test/control, altitud y periodo de lecturas).
 - Galerías de **fotos de muestreo** (una por punto, campaña 2025) y de **aplicación de soluciones**, con visor a pantalla completa (flechas, teclado y contador).
+- **Enlaces compartibles**: el visor refleja la finca abierta en la URL (p. ej. `…/index.html#EXPS05`); abrir ese enlace selecciona y centra directamente esa finca.
+- Botón **Resumen por finca (CSV)** que exporta una tabla con provincia, municipio, estado de actuación, nº de sensores y erosión (RUSLE) por finca.
+- **Accesibilidad**: navegación por teclado del listado y galerías, `Esc` para cerrar la ficha, textos alternativos en las fotos y foco visible.
 - Los **sensores de suelo** se dibujan en el mapa (icono de antena, verde=test / rojo=control) y aparecen al acercar el zoom a una parcela (ocultos en la vista general para no tapar la selección de fincas).
 - La ficha muestra las **muestras de cada sensor directamente** (gráficas de humedad y temperatura de suelo a 20 cm y temperatura del aire, comparando test vs control, con los valores actuales). Los datos son un snapshot semanal (cada 6 h) guardado en [`data/iot_muestras.json`](data/iot_muestras.json), extraído de la API del IoT (`/se/v2/iot/sensors/{id}/window`). Se usa un snapshot porque esa API no admite CORS y requiere sesión, por lo que el visor no puede consultarla en vivo; para actualizar las muestras hay que regenerar ese JSON.
 - El panel lateral de la ficha es **más ancho y redimensionable** (arrastra el borde para cambiar su anchura).

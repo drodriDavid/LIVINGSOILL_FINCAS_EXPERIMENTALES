@@ -324,11 +324,17 @@ const SOLUCIONES = {
     {tipo:"Biochar", detalle:"Carbolivar · 20–21/11/2025 · 2400 kg · remolque esparcidor · ≈1720 €"},
     {tipo:"Cubierta vegetal espontánea", detalle:"Toda la superficie incl. ruedo · sulfato amónico 21% + quelato de hierro"}
   ] },
-  "3": { estado:"actuado", entidad:"JAENCOOP", intervenciones:[], nota:"La carpeta de Drive solo contiene una copia del registro común de UJA (EXP3456); no hay datos de actuación específicos de esta finca." },
+  "3": { estado:"actuado", entidad:"JAENCOOP", intervenciones:[
+    {tipo:"Compost de alperujo", detalle:"Puerta de las Villas · 4/11/2025"},
+    {tipo:"Cubierta vegetal espontánea", detalle:"Manejo de la cubierta espontánea"}
+  ], nota:"Según el seguimiento del proyecto; coste no detallado." },
   "4": { estado:"actuado", entidad:"UJA", intervenciones:UJA_ACTUACIONES, nota:"Datos del registro común de UJA (EXP3456), compartido por las fincas gestionadas por UJA." },
-  "5": { estado:"sin_datos", entidad:"—", intervenciones:[], nota:"Sin carpeta ni registro de actuaciones en el Drive." },
+  "5": { estado:"actuado", entidad:"CONSULE", intervenciones:[
+    {tipo:"Compost de alperujo", detalle:"Puerta de las Villas · 10/11/2025"},
+    {tipo:"Cubierta vegetal semillada", detalle:"Semilla FertiPadro"}
+  ], nota:"Posibles hidroinfiltradores (a confirmar). Coste no detallado." },
   "6": { estado:"actuado", entidad:"UJA", intervenciones:UJA_ACTUACIONES, nota:"Datos del registro común de UJA (EXP3456), compartido por las fincas gestionadas por UJA." },
-  "7": { estado:"no_actuado", entidad:"CITOLIVA", intervenciones:[] },
+  "7": { estado:"no_actuado", entidad:"CITOLIVA", intervenciones:[], nota:"Planificado: compost (INGNIA) y biochar (Carboliva), pendiente de aplicación." },
   "8": { estado:"actuado", entidad:"UJA", intervenciones:UJA_ACTUACIONES, nota:"Datos del registro común de UJA (EXP3456), compartido por las fincas gestionadas por UJA." },
   "9": { estado:"actuado", entidad:"IFAPA", intervenciones:[
     {tipo:"Compost de alpeorujo", detalle:"Almedinilla (INGNIA S.L) · 16/04/2026 · 1200 kg · remolque esparcidor · bajo copa y parte de entrecalle (≈1650 m²) · 754,44 €"},
@@ -339,14 +345,21 @@ const SOLUCIONES = {
     {tipo:"Cubierta vegetal espontánea", detalle:"Toda la superficie excepto el ruedo · NPK 20:5:15 (20 kg)"},
     {tipo:"Hidroinfiltradores", detalle:"93 árboles en zona test · orificio ≈50 cm para redirigir los flujos de agua · ≈1395 €"}
   ], nota:"Compost y biochar: no procede. Semillado de cubierta e hidroinfiltradores pendientes por climatología." },
-  "11": { estado:"no_actuado", entidad:"—", intervenciones:[] },
+  "11": { estado:"actuado", entidad:"IFAPA", intervenciones:[
+    {tipo:"Cubierta vegetal espontánea", detalle:"Semillada antes de las lluvias"}
+  ], nota:"Coste no detallado. Reparación de cárcavas pendiente." },
   "12": { estado:"no_actuado", entidad:"CITOLIVA", intervenciones:[] },
-  "13": { estado:"sin_datos", entidad:"—", intervenciones:[], nota:"Sin carpeta ni registro de actuaciones en el Drive." },
+  "13": { estado:"actuado", entidad:"Finca La Torre", intervenciones:[
+    {tipo:"Hidroinfiltradores + melaza + cubierta", detalle:"500 hidroinfiltradores · melaza 1.000 L · manejo de cubierta espontánea · ≈ 4.600 €"}
+  ] },
   "14": { estado:"actuado", entidad:"NUTESCA", intervenciones:[
     {tipo:"Aplicación de estiércol", detalle:"Victoriano Navarro Rosales · 13/05/2026 · 25.000 kg · remolque esparcidor · 8 entrecalles · ≈1500 €"},
     {tipo:"Cubierta vegetal espontánea", detalle:"Toda la superficie incl. ruedo"}
   ], nota:"Planificado además compost de alpeorujo (cama+hoja) mejorado con yeso (3–4 t, cooperativa Picasat) por los suelos arcillosos." },
-  "15": { estado:"sin_datos", entidad:"—", intervenciones:[], nota:"Sin carpeta ni registro de actuaciones en el Drive." },
+  "15": { estado:"actuado", entidad:"CAAND", intervenciones:[
+    {tipo:"Compost mejorado con yeso", detalle:"SCA Ntra. Sra. de los Remedios-Picasat · 29/4/2026"},
+    {tipo:"Triturado de restos de poda", detalle:"Incorporación al suelo"}
+  ], nota:"Coste no detallado." },
   "16": { estado:"no_actuado", entidad:"UJA", intervenciones:[] }
 };
 // === Sensores IoT por finca (fuente: livinglabandalucia.ujaen.es/iot · API /se/v2/iot/sensors) ===
@@ -432,7 +445,7 @@ function solucionesHtml(exps) {
   const ent = (s.entidad && s.entidad !== '—') ? ' · ' + esc(s.entidad) : '';
   let body, inv='';
   if (s.estado === 'no_actuado') {
-    body = `<div class="sol-empty">No se ha actuado en esta finca.</div>`;
+    body = `<div class="sol-empty">No se ha actuado todavía en esta finca.${s.nota?' '+esc(s.nota):''}</div>`;
     inv = `<div class="sol-inv">Inversión (fase 1) · <b>0 €</b></div>`;
   } else if (s.estado === 'sin_datos') {
     body = `<div class="sol-empty">${esc(s.nota || 'Sin datos de actuación disponibles.')}</div>`;

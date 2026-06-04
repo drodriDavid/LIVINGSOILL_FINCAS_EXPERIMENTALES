@@ -1244,11 +1244,16 @@ function polyStyle(z){
 function selectFarmMap(exps){
   selectedFarm = String(exps);
   const ff=document.getElementById('farmFilter'); if(ff) ff.value=selectedFarm;
-  // Cambiar de finca siempre vuelve a 2D (el 3D se abre luego con el botón).
-  if (document.body.classList.contains('mode-3d')) exit3d();   // exit3d ya hace refreshMap(true)
-  else refreshMap(true);
   openInfoPanelByExps(selectedFarm);
-  warm3d(selectedFarm);   // precarga en segundo plano el 3D alrededor de esta finca
+  if (document.body.classList.contains('mode-3d')) {
+    // Cambiar de finca manteniendo el 3D: solo refrescamos el resaltado de la
+    // lista (sin reconstruir el mapa 2D oculto) y volamos a la nueva finca.
+    renderList();
+    fly3dToFarm(selectedFarm);
+  } else {
+    refreshMap(true);
+    warm3d(selectedFarm);   // precarga en segundo plano el 3D alrededor de esta finca
+  }
 }
 function refreshMap(refit) {
   if (refit === undefined) refit = true;
@@ -1731,6 +1736,17 @@ function update3dFeatures(exps){
       add3dMarker(s.lon, s.lat, `<span class="m3d-tag sens ${zc}">📡 ${esc(s.id)}</span><span class="m3d-pin sensor-${zc}"></span>`);
     });
   } catch(e) { console.warn('update3dFeatures', e); }
+}
+// Cambiar de finca sin salir del 3D: vuela a la finca, la resalta y muestra sus
+// pines de puntos/sensores. Protegido para que no deje la vista en blanco.
+function fly3dToFarm(exps){
+  if (!map3d) return;
+  try {
+    const c = farmCentroid(Number(exps));
+    if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:15.8, pitch:52, bearing:18, duration:700, essential:true });
+    highlight3dFarm(exps);
+    update3dFeatures(exps);
+  } catch(e) { console.warn('fly3dToFarm', e); }
 }
 // Precarga silenciosa: mueve el mapa 3D (oculto) a la finca para que sus teselas
 // se descarguen en segundo plano y al pulsar "3D" abra al instante.

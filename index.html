@@ -791,12 +791,55 @@ togCtrl.onAdd = () => {
     <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
     <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
     <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
-    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>`;
+    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
+    <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
   return d;
 };
 togCtrl.addTo(map);
+
+// ===== Ortofotos de dron (capa activable, 2D + 3D) desde data/ortos.json =====
+let ORTOS = {};
+let ortoLayer2d = null;
+function _ortoBaseDir(){ return location.href.split(/[?#]/)[0].replace(/\/[^/]*$/, '/'); }
+function ortoTilesAbs(rel){ return _ortoBaseDir() + rel; }   // URL absoluta para MapLibre
+function sync3dOrto(){
+  if (!map3d || !map3d.isStyleLoaded()) return;
+  const on = !!(document.getElementById('showOrto') && document.getElementById('showOrto').checked);
+  Object.keys(ORTOS).forEach(k => { const lid='orto-'+k; if (map3d.getLayer(lid)) map3d.setLayoutProperty(lid,'visibility', on?'visible':'none'); });
+}
+function add3dOrtoLayers(){
+  if (!map3d || !Object.keys(ORTOS).length) return;
+  if (!map3d.isStyleLoaded()) { map3d.once('idle', add3dOrtoLayers); return; }   // espera a que el estilo cargue
+  const on = !!(document.getElementById('showOrto') && document.getElementById('showOrto').checked);
+  Object.keys(ORTOS).forEach(k => {
+    const o=ORTOS[k], sid='ortosrc-'+k, lid='orto-'+k;
+    try {
+      if (map3d.getLayer(lid)) return;
+      if (!map3d.getSource(sid)) map3d.addSource(sid, { type:'raster', tiles:[ortoTilesAbs(o.tiles)], tileSize:256, minzoom:o.minzoom||14, maxzoom:o.maxzoom||20, bounds:o.bounds });
+      const before = map3d.getLayer('zonas-fill') ? 'zonas-fill' : undefined;   // bajo las parcelas
+      map3d.addLayer({ id:lid, type:'raster', source:sid, layout:{ visibility: on?'visible':'none' } }, before);
+    } catch(e) { console.warn('add3dOrtoLayers', e); }
+  });
+}
+fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
+  ORTOS = j || {};
+  const keys = Object.keys(ORTOS);
+  if (!keys.length) return;
+  ortoLayer2d = L.layerGroup(keys.map(k => {
+    const o = ORTOS[k];
+    const b = L.latLngBounds([o.bounds[1], o.bounds[0]], [o.bounds[3], o.bounds[2]]);
+    return L.tileLayer(o.tiles, { minZoom:o.minzoom||14, maxNativeZoom:o.maxzoom||20, maxZoom:22, bounds:b });
+  }));
+  const lbl = document.getElementById('ortoLbl'); if (lbl) lbl.style.display = '';
+  const cb = document.getElementById('showOrto');
+  if (cb) cb.addEventListener('change', () => {
+    if (cb.checked) ortoLayer2d.addTo(map); else map.removeLayer(ortoLayer2d);
+    if (map3d) { add3dOrtoLayers(); sync3dOrto(); }
+  });
+  if (map3d) add3dOrtoLayers();   // se auto-aplaza si el estilo aún no está listo
+}).catch(() => {});
 
 // Leyenda de la capa de erosión (solo visible en modo erosión)
 const eroLegend = L.control({position:'topright'});
@@ -1878,6 +1921,7 @@ function init3d(center, zoom, pitch){
     map3d.on('mouseleave','puntos-c', () => { map3d.getCanvas().style.cursor = ''; });
     if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); }
     else update3dFeatures('');
+    add3dOrtoLayers();   // capa(s) de ortofoto bajo las parcelas (según checkbox)
   });
 }
 function enter3d(){

@@ -1723,14 +1723,14 @@ function update3dFeatures(exps){
 function fly3dToFarm(exps){
   if (!map3d) return;
   const c = farmCentroid(Number(exps));
-  if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:16.3, pitch:64, bearing:18, duration:700, essential:true });
+  if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:16.3, pitch:56, bearing:18, duration:700, essential:true });
   highlight3dFarm(exps);
   update3dFeatures(exps);
 }
-const EXAG3D = 2.2;
+const EXAG3D = 1.5;
 function init3d(center, zoom, pitch){
   map3d = new maplibregl.Map({
-    container:'map3d', attributionControl:false, center, zoom, pitch:pitch, bearing:18, maxPitch:85,
+    container:'map3d', attributionControl:false, center, zoom, pitch:pitch, bearing:18, maxPitch:70,
     style:{ version:8,
       sources:{
         sat:{ type:'raster', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:19, attribution:'© Esri, PNOA' },
@@ -1773,8 +1773,8 @@ function init3d(center, zoom, pitch){
   });
 }
 function enter3d(){
-  let center = null, zoom = 15, pitch = 62;
-  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 16.3; pitch = 64; } }
+  let center = null, zoom = 15, pitch = 54;
+  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 16.3; pitch = 56; } }
   if (!center) {
     // Sin finca seleccionada (Todas las fincas): el zoom general es muy bajo y con
     // mucho pitch sale una explanada plana. Acercamos un poco y bajamos el ángulo.

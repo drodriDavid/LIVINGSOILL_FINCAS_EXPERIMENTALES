@@ -1828,13 +1828,13 @@ function enter3d(){
     pitch = 48;
   }
   document.body.classList.add('mode-3d');
-  const b = document.getElementById('btn3d'); if (b) b.classList.add('active');
+  const b = document.getElementById('btn3d'); if (b) { b.classList.add('active'); const s=b.querySelector('span'); if(s) s.textContent='2D'; b.title='Volver al 2D'; }
   if (selectedFarm) openInfoPanelByExps(selectedFarm);   // mantener la ficha abierta al pasar de 2D a 3D
   if (!map3d) init3d(center, zoom, pitch);
   else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); } }
   setTimeout(() => { if (map3d) map3d.resize(); }, 60);
 }
-function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) b.classList.remove('active'); refreshMap(true); }
+function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } refreshMap(true); }
 window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit3d() : enter3d(); };
 // Precargar el visor 3D en segundo plano (queda detrás, transparente) sobre una
 // finca (zona pequeña, no toda Andalucía) para que al pulsar "3D" abra al instante.

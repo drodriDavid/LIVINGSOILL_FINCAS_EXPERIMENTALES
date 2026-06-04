@@ -1315,7 +1315,14 @@ function selectFarmMap(exps){
   } else {
     refreshMap(true);
     warm3d(selectedFarm);   // precarga en segundo plano el 3D alrededor de esta finca
+    autoOrto(selectedFarm); // si la finca tiene ortofoto, se muestra sobre el mapa
   }
+}
+// Activa la ortofoto automáticamente al seleccionar una finca que la tenga.
+function autoOrto(exps){
+  const cb = document.getElementById('showOrto');
+  if (!cb) return;
+  if (ORTOS && ORTOS[String(exps)] && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change')); }
 }
 function refreshMap(refit) {
   if (refit === undefined) refit = true;

@@ -1789,7 +1789,8 @@ function frame3dFarm(exps, instant){
   if (!map3d) return;
   const b = farmBounds(exps);
   if (!b) return;
-  try { map3d.fitBounds(b, { padding:cam3dPad(), pitch:52, bearing:18, maxZoom:17.3, duration: instant ? 0 : 650, essential:true }); }
+  // Vista cenital (pitch 0, norte arriba): así la finca queda siempre centrada.
+  try { map3d.fitBounds(b, { padding:cam3dPad(), pitch:0, bearing:0, maxZoom:17.8, duration: instant ? 0 : 650, essential:true }); }
   catch(e) { console.warn('frame3dFarm', e); }
 }
 // Caja que engloba todas las fincas (con margen) para acotar el 3D y que no se
@@ -1847,7 +1848,7 @@ function init3d(center, zoom, pitch){
 }
 function enter3d(){
   let center = null, zoom = 15, pitch = 52;
-  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 16.3; pitch = 52; } }
+  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 16.3; pitch = 0; } }
   if (!center) {
     // Sin finca seleccionada (Todas las fincas): el zoom general es muy bajo y con
     // mucho pitch sale una explanada plana. Acercamos un poco y bajamos el ángulo.

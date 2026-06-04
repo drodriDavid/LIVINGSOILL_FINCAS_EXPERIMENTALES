@@ -1680,22 +1680,28 @@ function _puntosGeoJSON(){
   Object.keys(PUNTOS).forEach(k => PUNTOS[k].forEach(p => fs.push({ type:'Feature', properties:{ tipo:p.tipo }, geometry:{ type:'Point', coordinates:[p.lon, p.lat] } })));
   return { type:'FeatureCollection', features: fs };
 }
-function init3d(center, zoom){
+const EXAG3D = 2.2;
+function init3d(center, zoom, pitch){
   map3d = new maplibregl.Map({
-    container:'map3d', attributionControl:false, center, zoom, pitch:64, bearing:18, maxPitch:85,
+    container:'map3d', attributionControl:false, center, zoom, pitch:pitch, bearing:18, maxPitch:85,
     style:{ version:8,
       sources:{
         sat:{ type:'raster', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:19, attribution:'© Esri, PNOA' },
-        ref:{ type:'raster', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:19 },
         dem:{ type:'raster-dem', tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize:256, encoding:'terrarium', maxzoom:14 }
       },
-      layers:[ {id:'sat',type:'raster',source:'sat'}, {id:'ref',type:'raster',source:'ref',paint:{'raster-opacity':0.85}} ],
-      terrain:{ source:'dem', exaggeration:1.5 }
+      layers:[ {id:'sat',type:'raster',source:'sat'} ],
+      sky:{
+        'sky-color':'#9ec9f2', 'sky-horizon-blend':0.6,
+        'horizon-color':'#e6eef7', 'horizon-fog-blend':0.5,
+        'fog-color':'#dde6ef', 'fog-ground-blend':0.55,
+        'atmosphere-blend':['interpolate',['linear'],['zoom'],0,1,11,0.5,16,0]
+      },
+      terrain:{ source:'dem', exaggeration:EXAG3D }
     }
   });
   map3d.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'bottom-right');
   map3d.on('load', () => {
-    try { map3d.setTerrain({ source:'dem', exaggeration:1.5 }); } catch(e) {}
+    try { map3d.setTerrain({ source:'dem', exaggeration:EXAG3D }); } catch(e) {}
     map3d.addSource('zonas', { type:'geojson', data:_zonasGeoJSON() });
     map3d.addLayer({ id:'zonas-fill', type:'fill', source:'zonas', paint:{ 'fill-color':['match',['get','group'],'TEST','#00a86b','#e24444'], 'fill-opacity':0.28 } });
     map3d.addLayer({ id:'zonas-line', type:'line', source:'zonas', paint:{ 'line-color':['match',['get','group'],'TEST','#00e08a','#ff5a5a'], 'line-width':2.6 } });
@@ -1704,13 +1710,20 @@ function init3d(center, zoom){
   });
 }
 function enter3d(){
-  let center = null, zoom = 15;
-  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 16.3; } }
-  if (!center) { const ctr = map.getCenter(); center = [ctr.lng, ctr.lat]; zoom = Math.min(16, map.getZoom()); }
+  let center = null, zoom = 15, pitch = 62;
+  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 16.3; pitch = 64; } }
+  if (!center) {
+    // Sin finca seleccionada (Todas las fincas): el zoom general es muy bajo y con
+    // mucho pitch sale una explanada plana. Acercamos un poco y bajamos el ángulo.
+    const ctr = map.getCenter();
+    center = [ctr.lng, ctr.lat];
+    zoom = Math.min(13, Math.max(9.5, map.getZoom() + 1.5));
+    pitch = 50;
+  }
   document.body.classList.add('mode-3d');
   const b = document.getElementById('btn3d'); if (b) b.classList.add('active');
-  if (!map3d) init3d(center, zoom);
-  else map3d.jumpTo({ center, zoom, pitch:64, bearing:18 });
+  if (!map3d) init3d(center, zoom, pitch);
+  else map3d.jumpTo({ center, zoom, pitch, bearing:18 });
   setTimeout(() => { if (map3d) map3d.resize(); }, 80);
 }
 function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) b.classList.remove('active'); }

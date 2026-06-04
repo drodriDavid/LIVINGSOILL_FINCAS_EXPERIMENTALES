@@ -2128,7 +2128,7 @@ function fitScreen(){
   else {
     // >=1920 ancho -> zoom 1; 1280 -> 0.71; entre medias, interpolado (mín. 0.6).
     const w = window.innerWidth;
-    const z = (w >= 1920) ? 1 : Math.max(0.6, Math.min(1, 0.71 + (w - 1280) / 640 * 0.29));
+    const z = (w >= 1920) ? 1 : Math.max(0.6, Math.min(1, 0.66 + (w - 1280) / 640 * 0.34));
     app.style.zoom = z; app.style.width = (100/z)+'vw'; app.style.height = (100/z)+'dvh';
   }
   clearTimeout(window.__fitT);

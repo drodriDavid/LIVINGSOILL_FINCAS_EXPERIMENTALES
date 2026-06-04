@@ -1339,11 +1339,9 @@ function updateResumenBtn(){
   const b = document.getElementById('dlResumen');
   if (!b) return;
   if (selectedFarm) {
-    const f = FINCAS.find(x => String(x.exps) === String(selectedFarm));
     const code = 'EXPS' + String(selectedFarm).padStart(2,'0');
-    const nom = f ? f.municipio : code;
-    b.textContent = '⤓ Descargar resumen finca ' + nom + ' (PDF)';
-    b.title = 'Genera un PDF con la ficha de ' + nom;
+    b.textContent = '⤓ Descargar resumen finca ' + code + ' (PDF)';
+    b.title = 'Genera un PDF con la ficha de ' + code;
   } else {
     b.textContent = '⤓ Descargar resumen de fincas (PDF)';
     b.title = 'Genera un PDF con una ficha (instantánea) por finca';

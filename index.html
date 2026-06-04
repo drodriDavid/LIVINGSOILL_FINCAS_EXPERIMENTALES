@@ -1760,12 +1760,9 @@ function update3dFeatures(exps){
 function fly3dToFarm(exps){
   if (!map3d) return;
   try {
-    const c = farmCentroid(Number(exps));
-    // No alejar: nos acercamos al menos a 16.3 y, si ya estás más cerca, lo mantenemos.
-    const z = Math.max(map3d.getZoom() || 0, 16.3);
-    if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:z, pitch:52, bearing:18, duration:700, essential:true });
     highlight3dFarm(exps);
     update3dFeatures(exps);
+    frame3dFarm(exps, false);   // encuadra y centra la finca con su bbox
   } catch(e) { console.warn('fly3dToFarm', e); }
 }
 // Precarga silenciosa: mueve el mapa 3D (oculto) a la finca para que sus teselas
@@ -1773,6 +1770,27 @@ function fly3dToFarm(exps){
 function warm3d(exps){
   if (!map3d || document.body.classList.contains('mode-3d')) return;
   try { const c = farmCentroid(Number(exps)); if (c) map3d.jumpTo({ center:[c[1], c[0]], zoom:16.3, pitch:52, bearing:18 }); } catch(_) {}
+}
+// Caja (bbox) de una finca a partir de los vértices de sus zonas.
+function farmBounds(exps){
+  const zs = ZONES.filter(z => z.exps === Number(exps));
+  if (!zs.length) return null;
+  let mnLa=90, mnLo=180, mxLa=-90, mxLo=-180;
+  zs.forEach(z => z.coords.forEach(p => { const la=p[0], lo=p[1]; if(la<mnLa)mnLa=la; if(la>mxLa)mxLa=la; if(lo<mnLo)mnLo=lo; if(lo>mxLo)mxLo=lo; }));
+  return [[mnLo, mnLa], [mxLo, mxLa]];
+}
+// Margen para encuadrar dejando hueco bajo el panel de fotos.
+function cam3dPad(){
+  if (typeof panelIsMobile === 'function' && panelIsMobile()) return {top:20, right:20, bottom:20, left:20};
+  return {top:40, right:50, bottom:150, left:50};
+}
+// Encuadra (y centra) la finca usando su bbox; instant=true sin animación.
+function frame3dFarm(exps, instant){
+  if (!map3d) return;
+  const b = farmBounds(exps);
+  if (!b) return;
+  try { map3d.fitBounds(b, { padding:cam3dPad(), pitch:52, bearing:18, maxZoom:17.3, duration: instant ? 0 : 650, essential:true }); }
+  catch(e) { console.warn('frame3dFarm', e); }
 }
 // Caja que engloba todas las fincas (con margen) para acotar el 3D y que no se
 // pueda navegar por todo el mundo.
@@ -1785,7 +1803,7 @@ function fincasBounds(){
 const EXAG3D = 1.5;
 function init3d(center, zoom, pitch){
   map3d = new maplibregl.Map({
-    container:'map3d', attributionControl:false, center, zoom, pitch:pitch, bearing:18, maxPitch:60, maxBounds:fincasBounds(),
+    container:'map3d', attributionControl:false, center, zoom, pitch:pitch, bearing:18, maxPitch:60, minZoom:8,
     style:{ version:8,
       sources:{
         sat:{ type:'raster', tiles:[SAT3D[currentBaseKey] || IMG_URL], tileSize:256, maxzoom:19, attribution:'Esri / PNOA © IGN' },
@@ -1843,11 +1861,15 @@ function enter3d(){
   if (selectedFarm) openInfoPanelByExps(selectedFarm);   // mantener la ficha abierta al pasar de 2D a 3D
   if (!map3d) init3d(center, zoom, pitch);
   else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); } }
-  // Tras hacerse visible el contenedor, reajustar el tamaño del lienzo y re-centrar
-  // (si el resize llega después del jumpTo, la finca quedaba descentrada).
-  const recenter = () => { if (!map3d) return; map3d.resize(); map3d.jumpTo({ center, zoom, pitch, bearing:18 }); };
-  setTimeout(recenter, 70);
-  setTimeout(recenter, 260);
+  // Tras hacerse visible el contenedor: reajustar el lienzo y encuadrar la finca
+  // con su bbox (si el resize llega tras el jumpTo, la finca quedaba descentrada).
+  const settle = () => {
+    if (!map3d) return;
+    map3d.resize();
+    if (selectedFarm) frame3dFarm(selectedFarm, true);
+  };
+  setTimeout(settle, 70);
+  setTimeout(settle, 260);
 }
 function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } refreshMap(true); }
 window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit3d() : enter3d(); };

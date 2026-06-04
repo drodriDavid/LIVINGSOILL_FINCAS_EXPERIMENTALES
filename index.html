@@ -246,6 +246,10 @@ body.mode-3d .map-title { display:none !important; }
 .basemap-switcher button.btn-3d { font-weight:950; font-size:15px; color:var(--green); letter-spacing:.01em; }
 .basemap-switcher button.btn-3d span { line-height:1; }
 .basemap-switcher button.btn-3d.active { background:var(--green); border-color:var(--green); color:#fff; }
+/* Etiquetas de puntos y sensores en el visor 3D */
+.m3d-coord { background:rgba(255,255,255,.92); color:#0a3d2b; font:800 10px system-ui,sans-serif; padding:1px 5px; border-radius:6px; border:1px solid rgba(10,61,43,.3); white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.25); }
+.m3d-sensor { background:#0a3d2b; color:#fff; font:800 10px system-ui,sans-serif; padding:1px 6px; border-radius:6px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.35); }
+.m3d-sensor.control { background:#7a1f1f; }
 /* Menú desplegable de capas (se abre con el botón del ojo) */
 .layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row nowrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:none; white-space:nowrap; }
 .layers-menu.open { display:flex; }
@@ -1231,10 +1235,15 @@ function polyStyle(z){
 function selectFarmMap(exps){
   selectedFarm = String(exps);
   const ff=document.getElementById('farmFilter'); if(ff) ff.value=selectedFarm;
-  const in3d = document.body.classList.contains('mode-3d');
-  refreshMap(!in3d);            // en 3D no reajustamos el mapa 2D oculto (más rápido)
   openInfoPanelByExps(selectedFarm);
-  if (in3d) fly3dToFarm(selectedFarm);
+  if (document.body.classList.contains('mode-3d')) {
+    // En 3D evitamos reconstruir todas las capas del mapa 2D oculto (es lo que
+    // hacía lenta la selección): basta con refrescar el resaltado de la lista.
+    renderList();
+    fly3dToFarm(selectedFarm);
+  } else {
+    refreshMap(true);
+  }
 }
 function refreshMap(refit) {
   if (refit === undefined) refit = true;
@@ -1687,11 +1696,36 @@ function highlight3dFarm(exps){
   map3d.setPaintProperty('zonas-fill','fill-opacity',['case',['==',['get','exps'],id],0.5,0.16]);
   map3d.setPaintProperty('zonas-line','line-width',['case',['==',['get','exps'],id],4.5,1.8]);
 }
+let _lbl3d = [];
+function clear3dLabels(){ _lbl3d.forEach(m => m.remove()); _lbl3d = []; }
+function add3dLabel(lon, lat, html, cls, anchor){
+  const el = document.createElement('div');
+  el.className = cls; el.innerHTML = html; el.style.pointerEvents = 'none';
+  const m = new maplibregl.Marker({ element:el, anchor:anchor||'top' }).setLngLat([lon, lat]).addTo(map3d);
+  _lbl3d.push(m);
+}
+// Muestra puntos y sensores igual que en 2D: al seleccionar una finca se filtran
+// a esa finca y se etiquetan (coordenadas en los puntos, id en los sensores).
+function update3dFeatures(exps){
+  if (!map3d || !map3d.getLayer('puntos-c')) return;
+  clear3dLabels();
+  const id = Number(exps);
+  map3d.setFilter('puntos-c', exps ? ['==',['get','exps'], id] : null);
+  if (!exps) return;
+  (PUNTOS[id] || []).forEach(p => {
+    if (p.lat != null && p.lon != null) add3dLabel(p.lon, p.lat, `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`, 'm3d-coord', 'top');
+  });
+  const io = IOT[id];
+  if (io && io.sensores) io.sensores.forEach(s => {
+    if (s.lat != null && s.lon != null) add3dLabel(s.lon, s.lat, '📡 ' + esc(s.id), 'm3d-sensor ' + (s.zona || ''), 'bottom');
+  });
+}
 function fly3dToFarm(exps){
   if (!map3d) return;
   const c = farmCentroid(Number(exps));
-  if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:16.3, pitch:64, bearing:18, duration:800, essential:true });
+  if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:16.3, pitch:64, bearing:18, duration:700, essential:true });
   highlight3dFarm(exps);
+  update3dFeatures(exps);
 }
 const EXAG3D = 2.2;
 function init3d(center, zoom, pitch){
@@ -1734,7 +1768,8 @@ function init3d(center, zoom, pitch){
     });
     map3d.on('mouseenter','puntos-c', () => { map3d.getCanvas().style.cursor = 'pointer'; });
     map3d.on('mouseleave','puntos-c', () => { map3d.getCanvas().style.cursor = ''; });
-    if (selectedFarm) highlight3dFarm(selectedFarm);
+    if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); }
+    else update3dFeatures('');
   });
 }
 function enter3d(){
@@ -1750,11 +1785,12 @@ function enter3d(){
   }
   document.body.classList.add('mode-3d');
   const b = document.getElementById('btn3d'); if (b) b.classList.add('active');
+  if (selectedFarm) openInfoPanelByExps(selectedFarm);   // mantener la ficha abierta al pasar de 2D a 3D
   if (!map3d) init3d(center, zoom, pitch);
-  else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) highlight3dFarm(selectedFarm); }
+  else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); } }
   setTimeout(() => { if (map3d) map3d.resize(); }, 60);
 }
-function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) b.classList.remove('active'); }
+function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) b.classList.remove('active'); refreshMap(true); }
 window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit3d() : enter3d(); };
 </script>
 </body>

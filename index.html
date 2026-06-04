@@ -801,7 +801,7 @@ togCtrl.onAdd = () => {
     <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
     <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
     <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>
-    <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox" checked><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos</label>
+    <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox"><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos</label>
     <label id="nubeSizeLbl" style="display:none;gap:5px">Grosor<input id="nubeSize" type="range" min="0.5" max="5" step="0.5" value="2" style="width:64px;cursor:pointer"></label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
@@ -881,10 +881,12 @@ fetch('data/nubes.json').then(r => r.ok ? r.json() : {}).then(j => {
   const sz = document.getElementById('nubeSize');
   if (sz) sz.addEventListener('input', () => setCloudPointSize(parseFloat(sz.value)));
 }).catch(() => {});
-function setTerrain3d(on){
+function setTerrain3d(on, exag){
   if (!map3d || !map3d.isStyleLoaded()) return;
-  try { map3d.setTerrain(on ? { source:'dem', exaggeration:EXAG3D } : null); } catch(e){}
+  try { map3d.setTerrain(on ? { source:'dem', exaggeration: exag || EXAG3D } : null); } catch(e){}
 }
+function setSat3d(on){ if (map3d && map3d.getLayer && map3d.getLayer('sat')) map3d.setLayoutProperty('sat','visibility', on?'visible':'none'); }
+function hideOrto3d(){ Object.keys(ORTOS).forEach(k => ['orto-'+k,'ortoline-'+k].forEach(id => { if (map3d.getLayer && map3d.getLayer(id)) map3d.setLayoutProperty(id,'visibility','none'); })); }
 function showCloudLoading(on){ const e=document.getElementById('cloudLoading'); if(e) e.classList.toggle('show', !!on); }
 let _cloudPointSize = 2;
 // Mostrar/ocultar las zonas 2D de MapLibre (al usar la nube usamos las zonas 3D).
@@ -905,23 +907,26 @@ function _cloudLayers(exps){
       return [v[i]*m, v[i+1]*m, v[i+2]*m];
     }
   });
+  // Zonas como "vallas" verticales translúcidas que cruzan la nube (límites estables al orbitar).
   const paths = ZONES.filter(z => z.exps === Number(exps)).map(z => ({
     path: z.coords.map(p => [p[1], p[0]]), color: z.group === 'TEST' ? [0, 224, 138] : [255, 80, 80]
   }));
-  // Paredes verticales translúcidas (visibles desde cualquier ángulo) + contorno superior.
-  const zonasWall = new deck.PolygonLayer({ id:'zonaswall3d-'+exps, data:paths, getPolygon:d=>d.path, extruded:true, getElevation:9, filled:true, stroked:false, getFillColor:d=>[d.color[0],d.color[1],d.color[2],50], material:false, parameters:{depthTest:false} });
-  const zonasLayer = new deck.PathLayer({ id:'zonas3d-'+exps, data:paths, getPath:d=>d.path, getColor:d=>d.color, widthUnits:'pixels', getWidth:4, jointRounded:true, capRounded:true, parameters:{depthTest:false} });
-  return [cloud, zonasWall, zonasLayer];
+  const walls = new deck.PolygonLayer({
+    id: 'zonaswall3d-'+exps, data: paths, getPolygon: d => d.path, extruded: true, getElevation: 70,
+    filled: true, stroked: true, getLineColor: d => d.color, getLineWidth: 2, lineWidthUnits: 'pixels',
+    getFillColor: d => [d.color[0], d.color[1], d.color[2], 40], material: false
+  });
+  return [cloud, walls];
 }
-function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} showCloudLoading(false); setMaplibreZonas(true); setTerrain3d(true); }
+function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} showCloudLoading(false); setSat3d(true); sync3dOrto(); setMaplibreZonas(true); setTerrain3d(true); }
 function update3dCloud(exps){
   if (!map3d) return;
   if (!map3d.isStyleLoaded()) { map3d.once('idle', () => update3dCloud(exps)); return; }   // espera a que cargue
   const cb = document.getElementById('showNube');
   const n = NUBES[String(exps)];
   if (!n || (cb && !cb.checked)) { hide3dCloud(); return; }
-  setTerrain3d(false);     // la nube aporta su propio relieve; el terreno exagerado la taparía
-  setMaplibreZonas(false); // ocultamos las zonas 2D (usamos las 3D que no parpadean)
+  setTerrain3d(false);     // nube sola (la pendiente real haría flotar la nube sobre el mapa plano)
+  setSat3d(false); hideOrto3d(); setMaplibreZonas(false);   // ocultamos el mapa base bajo la nube
   showCloudLoading(true);
   ensureDeck().then(() => {
     const layers = _cloudLayers(exps);

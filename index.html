@@ -279,6 +279,10 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   .farm-dot-wrap { width:36px !important; height:36px !important; margin-left:-18px !important; margin-top:-18px !important; }
   .controls-row { grid-template-columns:1fr 1fr; }
   #searchBox { font-size:13px; }
+  /* En móvil las gráficas se muestran dentro de la ficha (no hay panel inferior) */
+  .charts-panel { display:none !important; }
+  body.charts-open .leaflet-bottom.leaflet-left { transform:none; }
+  .charts-row { grid-template-columns:1fr; }
 }
 /* --- Buscador, filtros y resumen (barra lateral) --- */
 #searchBox { width:100%; margin:2px 0 6px; padding:10px 12px 10px 34px; border-radius:14px; font-size:13px;
@@ -308,6 +312,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .resumen-actions { margin:2px 0 6px; text-align:right; }
 .linklike { display:inline; width:auto; border:0; background:none; padding:0; color:var(--green); font-size:11px; font-weight:800; cursor:pointer; }
 .linklike:hover { text-decoration:underline; }
+/* --- Panel inferior de gráficas de muestras IoT --- */
+.charts-panel { position:absolute; left:18px; right:414px; bottom:18px; z-index:1090; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:8px 14px 10px; max-height:244px; overflow:auto; scrollbar-width:thin; transform:translateY(135%); opacity:0; pointer-events:none; transition:transform .25s ease, opacity .2s ease; }
+.charts-panel.open { transform:translateY(0); opacity:1; pointer-events:auto; }
+.charts-panel .close-x { position:absolute; top:8px; right:10px; z-index:2; }
+.charts-panel .muestras-block { margin:0; }
+.charts-panel .iot-chart { height:64px; }
+.charts-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:6px 16px; }
+.muestras-leg-t { color:#007c52; font-weight:900; }
+.muestras-leg-c { color:#bd2727; font-weight:900; }
+/* Subir el control de capas/leyenda cuando el panel inferior está abierto (que no lo tape) */
+body.charts-open .leaflet-bottom.leaflet-left { transition:transform .25s ease; transform:translateY(-250px); }
 </style>
 </head>
 <body>
@@ -339,6 +354,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     <aside id="infoPanel" class="info-panel" aria-hidden="true">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
       <div id="infoPanelBody"></div>
+    </aside>
+    <aside id="chartsPanel" class="charts-panel" aria-hidden="true" aria-label="Gráficas de muestras IoT">
+      <button class="close-x charts-close" onclick="closeChartsPanel()" aria-label="Cerrar gráficas">×</button>
+      <div id="chartsPanelBody"></div>
     </aside>
   </main>
 </div>
@@ -446,28 +465,46 @@ function lineChart(series, w, h, meta){
   const data = `data-series='${esc(JSON.stringify(series))}' data-labels='${esc(JSON.stringify((meta&&meta.labels)||[]))}' data-unit="${esc((meta&&meta.unit)||'')}" data-mn="${mn}" data-mx="${mx}" data-w="${w}" data-h="${h}"`;
   return `<svg viewBox="0 0 ${w} ${h}" class="iot-chart" preserveAspectRatio="none" ${data}>${paths}</svg><div class="iot-axis"><span>mín ${mn.toFixed(dec)}</span><span>máx ${mx.toFixed(dec)}</span></div>`;
 }
-function muestrasHtml(exps){
-  const io = IOT[exps]; if (!io || !io.sensores.length) return '';
-  if (MUESTRAS === null) return '<div class="muestras-block"><div class="sol-head">Muestras de suelo</div><div class="sol-empty">Cargando muestras…</div></div>';
+function _muestrasData(exps){
+  const io = IOT[exps]; if (!io || !io.sensores.length) return null;
+  if (MUESTRAS === null) return 'loading';
   const t = io.sensores.find(s => s.zona==='test'), c = io.sensores.find(s => s.zona==='control');
   const dt = t && MUESTRAS[t.id], dc = c && MUESTRAS[c.id];
-  if (!dt && !dc) return '';
-  const range = (((dt||dc).range)||[]).join(' → ');
+  if (!dt && !dc) return null;
+  return { dt, dc, range: (((dt||dc).range)||[]).join(' → ') };
+}
+// Gráficas de muestras IoT (van en el panel inferior)
+function muestrasChartsHtml(exps){
+  const d = _muestrasData(exps);
+  if (d === null) return '';
+  if (d === 'loading') return '<div class="muestras-block"><div class="sol-head">Muestras de suelo</div><div class="sol-empty">Cargando muestras…</div></div>';
+  const { dt, dc, range } = d;
+  const finca = FINCAS.find(f => f.exps === Number(exps));
   const units = { wc20:'m³/m³', st20:'°C', at:'°C' };
   const chart = (key,label,desc) => {
     const s=[]; if(dt) s.push({name:'test',vals:dt[key],color:'#00a86b'}); if(dc) s.push({name:'control',vals:dc[key],color:'#e24444'});
     const labels = (dt&&dt.t) || (dc&&dc.t) || [];
     return `<div class="iot-chart-wrap"><div class="iot-chart-label">${label} <span class="iot-help" title="Clic para ver la explicación">ⓘ</span></div>${lineChart(s,200,48,{labels,unit:units[key]||''})}<div class="iot-explain">${esc(desc)}</div></div>`;
   };
-  const cell = (d,key,fmt) => (d && d.last && d.last[key]!=null) ? esc(fmt(d.last[key])) : '—';
+  return `<div class="muestras-block">
+    <div class="sol-head">Muestras de suelo${finca?`<span class="iot-sub">${esc(finca.municipio)}</span>`:''}<span class="iot-sub">${esc(range)} · cada 6 h · <span class="muestras-leg-t">test</span> vs <span class="muestras-leg-c">control</span></span></div>
+    <div class="charts-row">
+      ${chart('wc20','Humedad del suelo a 20 cm (m³/m³)','Humedad volumétrica del suelo a 20 cm de profundidad (m³ de agua por m³ de suelo). Línea verde = zona tratada (test); roja = zona control. Si baja, el suelo se va secando. Una lectura cada 6 h durante la última semana.')}
+      ${chart('st20','Temperatura del suelo a 20 cm (°C)','Temperatura del suelo a 20 cm de profundidad (°C). Verde = zona tratada (test); roja = control. Suele subir de día y bajar de noche. Una lectura cada 6 h durante la última semana.')}
+      ${chart('at','Temperatura del aire (°C)','Temperatura del aire junto al sensor (°C). Verde = zona tratada (test); roja = control. Se aprecia el ciclo día/noche. Una lectura cada 6 h durante la última semana.')}
+    </div>
+  </div>`;
+}
+// Tabla de valores actuales (se queda en la ficha lateral, junto a los sensores)
+function muestrasValoresHtml(exps){
+  const d = _muestrasData(exps);
+  if (d === null || d === 'loading') return '';
+  const { dt, dc } = d;
+  const cell = (dd,key,fmt) => (dd && dd.last && dd.last[key]!=null) ? esc(fmt(dd.last[key])) : '—';
   const vr = (label,key,fmt) => `<tr><td>${label}</td><td>${cell(dt,key,fmt)}</td><td>${cell(dc,key,fmt)}</td></tr>`;
   const ult = (((dt&&dt.last&&dt.last.t)||(dc&&dc.last&&dc.last.t))||'').replace('T',' ');
   return `<div class="muestras-block">
-    <div class="sol-head">Muestras de suelo<span class="iot-sub">${esc(range)} · cada 6 h</span></div>
-    ${chart('wc20','Humedad del suelo a 20 cm (m³/m³)','Humedad volumétrica del suelo a 20 cm de profundidad (m³ de agua por m³ de suelo). Línea verde = zona tratada (test); roja = zona control. Si baja, el suelo se va secando. Una lectura cada 6 h durante la última semana.')}
-    ${chart('st20','Temperatura del suelo a 20 cm (°C)','Temperatura del suelo a 20 cm de profundidad (°C). Verde = zona tratada (test); roja = control. Suele subir de día y bajar de noche. Una lectura cada 6 h durante la última semana.')}
-    ${chart('at','Temperatura del aire (°C)','Temperatura del aire junto al sensor (°C). Verde = zona tratada (test); roja = control. Se aprecia el ciclo día/noche. Una lectura cada 6 h durante la última semana.')}
-    <div class="sol-head" style="margin-top:10px">Valores actuales${ult?`<span class="iot-sub">${esc(ult)}</span>`:''}</div>
+    <div class="sol-head">Valores actuales${ult?`<span class="iot-sub">${esc(ult)}</span>`:''}</div>
     <table class="now-table"><thead><tr><th></th><th class="now-th-test">test</th><th class="now-th-ctrl">control</th></tr></thead><tbody>
       ${vr('Humedad 20 cm','wc20',_pct)}
       ${vr('Humedad 50 cm','wc50',_pct)}
@@ -475,6 +512,7 @@ function muestrasHtml(exps){
       ${vr('Tª suelo 50 cm','st50',_tc)}
       ${vr('Tª aire','at',_tc)}
     </tbody></table>
+    <div class="muestras-note">Las gráficas de evolución se muestran en el panel inferior.</div>
   </div>`;
 }
 function _costeSol(intervs){
@@ -557,7 +595,7 @@ function iotHtml(exps) {
   return `<div class="iot-block"><div class="sol-head">Sensores IoT<span class="iot-sub">lecturas ${esc(io.periodo)}</span></div>` +
     `<table class="iot-table"><thead><tr><th>Sensor</th><th>Zona</th><th>Altitud</th></tr></thead><tbody>${rows}</tbody></table>` +
     `<div class="iot-foot">Altitud = altura del sensor sobre el nivel del mar.</div>` +
-    `${muestrasHtml(exps)}</div>`;
+    `${muestrasValoresHtml(exps)}</div>`;
 }
 const colorFor = g => g === 'TEST' ? '#00a86b' : '#e24444';
 const fillFor = g => g === 'TEST' ? '#c9f7df' : '#ffd2d2';
@@ -926,6 +964,17 @@ window.openInfoPanel = function(z) {
   body.innerHTML = popupHtml(z);
   renderFotos(z.exps);
   renderFotosSol(z.exps);
+  // Gráficas de muestras: en el panel inferior (escritorio) o dentro de la ficha (móvil)
+  const charts = muestrasChartsHtml(z.exps);
+  if (panelIsMobile()) {
+    closeChartsPanel();
+    if (charts) body.insertAdjacentHTML('beforeend', '<div class="popup charts-in-panel">' + charts + '</div>');
+  } else if (charts) {
+    document.getElementById('chartsPanelBody').innerHTML = charts;
+    openChartsPanel();
+  } else {
+    closeChartsPanel();
+  }
   const panel = document.getElementById('infoPanel');
   panel.classList.add('open');
   panel.style.setProperty('transform','translate(0px,0px)','important');
@@ -935,8 +984,20 @@ window.openInfoPanel = function(z) {
   panel.scrollTop = 0;
   try { history.replaceState(null, '', '#EXPS' + String(z.exps).padStart(2,'0')); } catch(_) {}
 };
+window.openChartsPanel = function() {
+  const p = document.getElementById('chartsPanel');
+  p.classList.add('open'); p.setAttribute('aria-hidden','false');
+  document.body.classList.add('charts-open');
+};
+window.closeChartsPanel = function() {
+  const p = document.getElementById('chartsPanel');
+  if (!p) return;
+  p.classList.remove('open'); p.setAttribute('aria-hidden','true');
+  document.body.classList.remove('charts-open');
+};
 window.closeInfoPanel = function() {
   _openZone = null;
+  closeChartsPanel();
   const panel = document.getElementById('infoPanel');
   panel.classList.remove('open');
   panel.style.setProperty('transform', panelIsMobile() ? 'translateY(115%)' : 'translateX(120%)','important');

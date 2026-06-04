@@ -845,11 +845,17 @@ fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
 let NUBES = {};
 let _deckOverlay = null, _deckLoaded = {};   // _deckLoaded[exps] = layer ya construida
 fetch('data/nubes.json').then(r => r.ok ? r.json() : {}).then(j => { NUBES = j || {}; }).catch(() => {});
-function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} }
+function setTerrain3d(on){
+  if (!map3d || !map3d.isStyleLoaded()) return;
+  try { map3d.setTerrain(on ? { source:'dem', exaggeration:EXAG3D } : null); } catch(e){}
+}
+function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} setTerrain3d(true); }
 function update3dCloud(exps){
   if (!map3d) return;
+  if (!map3d.isStyleLoaded()) { map3d.once('idle', () => update3dCloud(exps)); return; }   // espera a que cargue
   const n = NUBES[String(exps)];
   if (!n) { hide3dCloud(); return; }
+  setTerrain3d(false);   // la nube aporta su propio relieve; el terreno exagerado la taparía
   ensureDeck().then(() => {
     const LASLoader = window.loaders.LASLoader;
     const layer = new deck.PointCloudLayer({

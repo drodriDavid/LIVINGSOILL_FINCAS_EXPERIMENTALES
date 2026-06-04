@@ -3,7 +3,7 @@
     "name": "Torredelcampo",
     "tiles": "data/ortos/torredelcampo/{z}/{x}/{y}.png",
     "minzoom": 14,
-    "maxzoom": 20,
+    "maxzoom": 21,
     "bounds": [-3.840125, 37.813478, -3.834050, 37.819317]
   }
 }

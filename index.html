@@ -896,7 +896,7 @@ function _cloudLayers(exps){
   const cloud = new deck.PointCloudLayer({
     id: 'nube-'+exps, data: ortoTilesAbs(n.file), loaders: [_LASLoader],
     onDataLoad: () => showCloudLoading(false), onError: () => showCloudLoading(false),
-    coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [n.origin[0], n.origin[1], 0],
+    coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [n.origin[0], n.origin[1], n.zOffset || 0],
     getNormal: [0, 0, 1], pointSize: size,
     getColor: (o, {data, index}) => {   // RGB de LAS suele venir en 16 bits -> a 0..255
       const c = data.attributes.COLOR_0 || data.attributes.colors;
@@ -908,9 +908,10 @@ function _cloudLayers(exps){
   const paths = ZONES.filter(z => z.exps === Number(exps)).map(z => ({
     path: z.coords.map(p => [p[1], p[0]]), color: z.group === 'TEST' ? [0, 224, 138] : [255, 80, 80]
   }));
-  const zonasFill = new deck.PolygonLayer({ id:'zonasfill3d-'+exps, data:paths, getPolygon:d=>d.path, stroked:false, filled:true, getFillColor:d=>[d.color[0],d.color[1],d.color[2],55], parameters:{depthTest:false} });
-  const zonasLayer = new deck.PathLayer({ id:'zonas3d-'+exps, data:paths, getPath:d=>d.path, getColor:d=>d.color, widthUnits:'pixels', getWidth:3, jointRounded:true, capRounded:true, parameters:{depthTest:false} });
-  return [cloud, zonasFill, zonasLayer];
+  // Paredes verticales translúcidas (visibles desde cualquier ángulo) + contorno superior.
+  const zonasWall = new deck.PolygonLayer({ id:'zonaswall3d-'+exps, data:paths, getPolygon:d=>d.path, extruded:true, getElevation:9, filled:true, stroked:false, getFillColor:d=>[d.color[0],d.color[1],d.color[2],50], material:false, parameters:{depthTest:false} });
+  const zonasLayer = new deck.PathLayer({ id:'zonas3d-'+exps, data:paths, getPath:d=>d.path, getColor:d=>d.color, widthUnits:'pixels', getWidth:4, jointRounded:true, capRounded:true, parameters:{depthTest:false} });
+  return [cloud, zonasWall, zonasLayer];
 }
 function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} showCloudLoading(false); setMaplibreZonas(true); setTerrain3d(true); }
 function update3dCloud(exps){

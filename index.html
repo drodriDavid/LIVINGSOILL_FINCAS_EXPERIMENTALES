@@ -399,8 +399,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .fotos-cols .popup-fotos { flex:1 1 0; min-width:0; margin-top:0; }
 .fotos-cols .popup-fotos + .popup-fotos { border-left:1px solid var(--line); padding-left:22px; }
 @media (min-width: 981px) {
-  /* Zoom fijo de la interfaz al 50% (se compensa el tamaño para llenar la pantalla) */
-  .app { zoom:0.6; width:166.667vw; height:166.667dvh; }
   /* Posiciones de los tres paneles en escritorio (mismo aspecto que .info-panel) */
   .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:240px; width:380px; min-width:0; max-width:44vw; resize:none; direction:ltr; transform:translateX(-130%); }
   .info-panel.dock-right { left:auto; right:18px; top:140px; bottom:240px; width:330px; min-width:0; max-width:40vw; resize:none; direction:ltr; transform:translateX(130%); }
@@ -2120,6 +2118,23 @@ window.toggle3d = function(){
   else setTimeout(run, 1500);
 })();
 
+// ===== Zoom de la interfaz en función del tamaño de pantalla =====
+// Referencia ~2100x1050 => zoom 1 (monitores grandes, vista nativa). En portátiles
+// queda ~0.6-0.7. Se compensa el tamaño para llenar el viewport y se recalcula al
+// redimensionar. En móvil (<=980px) no se aplica (layout responsive propio).
+function fitScreen(){
+  const app = document.querySelector('.app'); if (!app) return;
+  if (window.innerWidth <= 980) { app.style.zoom=''; app.style.width=''; app.style.height=''; }
+  else {
+    const REFW = 2100, REFH = 1050;
+    const z = Math.min(1, Math.max(0.5, Math.min(window.innerWidth / REFW, window.innerHeight / REFH)));
+    app.style.zoom = z; app.style.width = (100/z)+'vw'; app.style.height = (100/z)+'dvh';
+  }
+  clearTimeout(window.__fitT);
+  window.__fitT = setTimeout(() => { try { map.invalidateSize(); } catch(e){} try { if (map3d) map3d.resize(); } catch(e){} }, 80);
+}
+window.addEventListener('resize', fitScreen);
+fitScreen();
 </script>
 </body>
 </html>

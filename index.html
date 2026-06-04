@@ -65,6 +65,9 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 /* En 2D queda detrás y transparente (precargado); en 3D pasa al frente */
 #map3d { position:absolute; inset:0; z-index:1; opacity:0; pointer-events:none; }
 body.mode-3d #map3d { z-index:560; opacity:1; pointer-events:auto; }
+/* En 3D ocultamos los azulejos del 2D (solo el panel del mapa, no los controles)
+   para que nunca se transparenten por detrás del 3D. */
+body.mode-3d #map .leaflet-map-pane { visibility:hidden; }
 body.mode-3d .map-title { display:none !important; }
 .maplibregl-ctrl-attrib { font-size:9px; }
 .farm-title { font-weight:900; font-size:12px; line-height:1.2; color:var(--ink); }
@@ -1777,7 +1780,7 @@ function init3d(center, zoom, pitch){
         sat:{ type:'raster', tiles:['https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileCol={x}&TileRow={y}'], tileSize:256, maxzoom:19, attribution:'PNOA © IGN España' },
         dem:{ type:'raster-dem', tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize:256, encoding:'terrarium', maxzoom:14 }
       },
-      layers:[ {id:'sat',type:'raster',source:'sat'} ],
+      layers:[ {id:'bg',type:'background',paint:{'background-color':'#aebfce'}}, {id:'sat',type:'raster',source:'sat'} ],
       sky:{
         'sky-color':'#9ec9f2', 'sky-horizon-blend':0.6,
         'horizon-color':'#e6eef7', 'horizon-fog-blend':0.5,

@@ -1709,7 +1709,7 @@ function highlight3dFarm(exps){
 }
 // Iconos: antena (sensor) y matraz (toma de muestra)
 const SENS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"><circle cx="12" cy="12" r="2.2" fill="#fff" stroke="none"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/></svg>';
-const SAMP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 9V3"/><path d="M8.2 14.5h7.6"/></svg>';
+const SAMP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.5h4v3a2 2 0 0 1-4 0z"/><path d="M12 6.5v8"/><path d="M8 14.5h8l-1.6 4.3a2.6 2.6 0 0 1-4.8 0z"/></svg>';
 let _lbl3d = [];
 function clear3dLabels(){ _lbl3d.forEach(m => m.remove()); _lbl3d = []; }
 function add3dMarker(lon, lat, html){

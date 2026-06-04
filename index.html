@@ -731,12 +731,23 @@ const PNOA_URL = 'https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&v
 const pnoa = L.layerGroup([ L.tileLayer(PNOA_URL, { maxZoom: 20, attribution: 'PNOA © IGN España' }), L.tileLayer(REF_URL, { maxZoom: 20 }) ]);
 const BASEMAPS = { esri, hibrido, topo, carto, pnoa };
 let currentBase = hibrido;
+let currentBaseKey = 'hibrido';
 hibrido.addTo(map);
+// Imagen que usa el 3D según el mapa elegido en 2D, para que coincidan (misma fuente/fecha).
+const TOPO_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}';
+const CARTO_URL = 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
+const SAT3D = { esri:IMG_URL, hibrido:IMG_URL, pnoa:PNOA_URL, topo:TOPO_URL, carto:CARTO_URL };
+function sync3dBasemap(){
+  if (!map3d) return;
+  const src = map3d.getSource('sat');
+  if (src && src.setTiles) { try { src.setTiles([SAT3D[currentBaseKey] || IMG_URL]); } catch(_) {} }
+}
 function setBasemap(key) {
   const next = BASEMAPS[key];
   if (!next || next === currentBase) return;
-  map.removeLayer(currentBase); next.addTo(map); currentBase = next;
+  map.removeLayer(currentBase); next.addTo(map); currentBase = next; currentBaseKey = key;
   document.querySelectorAll('.basemap-switcher button').forEach(b => b.classList.toggle('active', b.dataset.base === key));
+  sync3dBasemap();
 }
 const bmHtml = `
   <button data-base="hibrido" class="active" title="Satélite con nombres" aria-label="Satélite con nombres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/><circle cx="12" cy="9" r="1.6" fill="currentColor" stroke="none"/></svg></button>
@@ -1777,7 +1788,7 @@ function init3d(center, zoom, pitch){
     container:'map3d', attributionControl:false, center, zoom, pitch:pitch, bearing:18, maxPitch:60, maxBounds:fincasBounds(),
     style:{ version:8,
       sources:{
-        sat:{ type:'raster', tiles:['https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileCol={x}&TileRow={y}'], tileSize:256, maxzoom:19, attribution:'PNOA © IGN España' },
+        sat:{ type:'raster', tiles:[SAT3D[currentBaseKey] || IMG_URL], tileSize:256, maxzoom:19, attribution:'Esri / PNOA © IGN' },
         dem:{ type:'raster-dem', tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize:256, encoding:'terrarium', maxzoom:14 }
       },
       layers:[ {id:'bg',type:'background',paint:{'background-color':'#aebfce'}}, {id:'sat',type:'raster',source:'sat'} ],

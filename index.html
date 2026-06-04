@@ -902,13 +902,19 @@ function update3dCloud(exps){
       path: z.coords.map(p => [p[1], p[0]]),
       color: z.group === 'TEST' ? [0, 224, 138] : [255, 80, 80]
     }));
+    const zonasFill = new deck.PolygonLayer({
+      id: 'zonasfill3d-'+exps, data: paths, getPolygon: d => d.path, stroked: false, filled: true,
+      getFillColor: d => [d.color[0], d.color[1], d.color[2], 55],
+      parameters: { depthTest: false }
+    });
     const zonasLayer = new deck.PathLayer({
       id: 'zonas3d-'+exps, data: paths, getPath: d => d.path, getColor: d => d.color,
       widthUnits: 'pixels', getWidth: 3, jointRounded: true, capRounded: true,
       parameters: { depthTest: false }   // siempre visibles sobre la nube
     });
-    if (!_deckOverlay) { _deckOverlay = new deck.MapboxOverlay({ interleaved: true, layers: [layer, zonasLayer] }); map3d.addControl(_deckOverlay); }
-    else _deckOverlay.setProps({ layers: [layer, zonasLayer] });
+    const layers = [layer, zonasFill, zonasLayer];
+    if (!_deckOverlay) { _deckOverlay = new deck.MapboxOverlay({ interleaved: true, layers }); map3d.addControl(_deckOverlay); }
+    else _deckOverlay.setProps({ layers });
   }).catch(e => { console.warn('update3dCloud', e); showCloudLoading(false); });
 }
 

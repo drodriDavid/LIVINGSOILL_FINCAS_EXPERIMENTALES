@@ -2126,8 +2126,8 @@ function fitScreen(){
   const app = document.querySelector('.app'); if (!app) return;
   if (window.innerWidth <= 980) { app.style.zoom=''; app.style.width=''; app.style.height=''; }
   else {
-    const REFW = 2100, REFH = 1050;
-    const z = Math.min(1, Math.max(0.5, Math.min(window.innerWidth / REFW, window.innerHeight / REFH)));
+    const REFW = 1600, REFH = 900;
+    const z = Math.min(1, Math.max(0.6, Math.min(window.innerWidth / REFW, window.innerHeight / REFH)));
     app.style.zoom = z; app.style.width = (100/z)+'vw'; app.style.height = (100/z)+'dvh';
   }
   clearTimeout(window.__fitT);

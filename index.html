@@ -932,7 +932,7 @@ function update3dCloud(exps){
   const cb = document.getElementById('showNube');
   const n = NUBES[String(exps)];
   if (!n || (cb && !cb.checked)) { hide3dCloud(); return; }
-  setTerrain3d(false);      // como antes: nube sobre el mapa (satélite/orto visibles)
+  setTerrain3d(true, 1.0);  // terreno real (sin exagerar): la nube se apoya en él (parcela en pendiente)
   setMaplibreZonas(false);  // las zonas se proyectan sobre la nube (no hacen falta las 2D)
   showCloudLoading(true);
   ensureDeck().then(() => {

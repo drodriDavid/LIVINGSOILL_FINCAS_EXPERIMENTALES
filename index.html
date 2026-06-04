@@ -24,7 +24,7 @@
 * { box-sizing:border-box; }
 html, body { margin:0; padding:0; height:100%; overflow:hidden; }
 body { font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Arial, sans-serif; color:var(--ink); background:var(--paper); }
-.app { display:grid; grid-template-columns: clamp(300px, 23vw, 440px) 1fr; height:100dvh; width:100vw; }
+.app { display:grid; grid-template-columns: 420px 1fr; height:100dvh; width:100vw; }
 .sidebar { background:linear-gradient(180deg,#ffffff 0%,#f3f8f5 100%); border-right:1px solid var(--line); overflow:auto; padding:12px 14px 16px; box-shadow: 8px 0 28px rgba(0,0,0,.08); z-index:1000; scrollbar-width:none; -ms-overflow-style:none; }
 .sidebar::-webkit-scrollbar { width:0; height:0; display:none; }
 .brand { display:flex; gap:10px; align-items:center; padding:4px 4px 10px; border-bottom:1px solid var(--line); margin-bottom:8px; }
@@ -92,7 +92,7 @@ body.mode-3d .map-title { display:none !important; }
 .badge.control { color:#bd2727; background:#fff0f0; border-color:#ffd1d1; }
 .badge.vertices { color:#99670f; background:#fff8e9; border-color:#ffe2a5; }
 .map-wrap { position:relative; min-width:0; overflow:hidden; }
-#map { height:100vh; width:100%; background:#e9efe9; }
+#map { height:100%; width:100%; background:#e9efe9; }
 .map-title { position:absolute; left:64px; top:18px; z-index:650; background:rgba(255,255,255,.94); backdrop-filter:blur(10px); border:1px solid var(--line); border-radius:18px; padding:10px 14px; box-shadow:0 12px 30px rgba(0,0,0,.12); max-width:380px; }
 .map-title b { color:var(--green); font-size:16px; }
 .map-title p { margin:4px 0 0; color:var(--muted); font-size:12px; }
@@ -400,8 +400,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .fotos-cols .popup-fotos + .popup-fotos { border-left:1px solid var(--line); padding-left:22px; }
 @media (min-width: 981px) {
   /* Posiciones de los tres paneles en escritorio (mismo aspecto que .info-panel) */
-  .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:240px; width:clamp(280px, 26vw, 400px); min-width:0; max-width:44vw; resize:none; direction:ltr; transform:translateX(-130%); }
-  .info-panel.dock-right { left:auto; right:18px; top:140px; bottom:240px; width:clamp(260px, 23vw, 360px); min-width:0; max-width:40vw; resize:none; direction:ltr; transform:translateX(130%); }
+  .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:240px; width:380px; min-width:0; max-width:44vw; resize:none; direction:ltr; transform:translateX(-130%); }
+  .info-panel.dock-right { left:auto; right:18px; top:140px; bottom:240px; width:330px; min-width:0; max-width:40vw; resize:none; direction:ltr; transform:translateX(130%); }
   .info-panel.dock-bottom{ left:18px; right:18px; top:auto; bottom:18px; width:auto; min-width:0; max-width:none; height:auto; max-height:230px; resize:none; direction:ltr; transform:translateY(140%); }
   .info-panel.dock-left.open, .info-panel.dock-right.open { transform:translateX(0); }
   .info-panel.dock-bottom.open { transform:translateY(0); }
@@ -2117,6 +2117,24 @@ window.toggle3d = function(){
   if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout:3000 });
   else setTimeout(run, 1500);
 })();
+
+// ===== Escala toda la interfaz según la resolución (misma vista en cualquier pantalla) =====
+function fitScreen(){
+  const app = document.querySelector('.app'); if (!app) return;
+  if (window.innerWidth <= 980) {           // en móvil usamos el layout responsive, sin zoom
+    app.style.zoom = ''; app.style.width = ''; app.style.height = '';
+  } else {
+    const REF = 1600;                        // ancho de referencia del diseño "cómodo"
+    const z = Math.min(1, Math.max(0.62, window.innerWidth / REF));
+    app.style.zoom = z;
+    app.style.width = (100 / z) + 'vw';      // compensar para que llene el viewport tras el zoom
+    app.style.height = (100 / z) + 'dvh';
+  }
+  clearTimeout(window.__fitT);
+  window.__fitT = setTimeout(() => { try { map.invalidateSize(); } catch(e){} try { if (map3d) map3d.resize(); } catch(e){} }, 80);
+}
+window.addEventListener('resize', fitScreen);
+fitScreen();
 </script>
 </body>
 </html>

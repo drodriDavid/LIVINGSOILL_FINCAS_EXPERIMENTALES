@@ -801,7 +801,8 @@ togCtrl.onAdd = () => {
     <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
     <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
     <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>
-    <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox" checked><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos</label>`;
+    <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox" checked><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos</label>
+    <label id="nubeSizeLbl" style="display:none;gap:5px">Grosor<input id="nubeSize" type="range" min="0.5" max="5" step="0.5" value="2" style="width:64px;cursor:pointer"></label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
   return d;
@@ -857,65 +858,68 @@ fetch('data/nubes.json').then(r => r.ok ? r.json() : {}).then(j => {
   NUBES = j || {};
   if (!Object.keys(NUBES).length) return;
   const lbl = document.getElementById('nubeLbl'); if (lbl) lbl.style.display = '';
+  const szl = document.getElementById('nubeSizeLbl'); if (szl) szl.style.display = '';
   const cb = document.getElementById('showNube');
   if (cb) cb.addEventListener('change', () => {
     if (!document.body.classList.contains('mode-3d')) return;
     if (cb.checked) update3dCloud(selectedFarm); else hide3dCloud();
   });
+  const sz = document.getElementById('nubeSize');
+  if (sz) sz.addEventListener('input', () => setCloudPointSize(parseFloat(sz.value)));
 }).catch(() => {});
 function setTerrain3d(on){
   if (!map3d || !map3d.isStyleLoaded()) return;
   try { map3d.setTerrain(on ? { source:'dem', exaggeration:EXAG3D } : null); } catch(e){}
 }
 function showCloudLoading(on){ const e=document.getElementById('cloudLoading'); if(e) e.classList.toggle('show', !!on); }
-function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} showCloudLoading(false); setTerrain3d(true); }
+let _cloudPointSize = 2;
+// Mostrar/ocultar las zonas 2D de MapLibre (al usar la nube usamos las zonas 3D).
+function setMaplibreZonas(vis){ if(!map3d) return; ['zonas-fill','zonas-line'].forEach(id => { if (map3d.getLayer && map3d.getLayer(id)) map3d.setLayoutProperty(id,'visibility', vis?'visible':'none'); }); }
+// Construye las capas deck (nube + zonas 3D) para una finca.
+function _cloudLayers(exps){
+  const n = NUBES[String(exps)];
+  const size = _cloudPointSize || n.pointSize || 1.5;
+  const cloud = new deck.PointCloudLayer({
+    id: 'nube-'+exps, data: ortoTilesAbs(n.file), loaders: [_LASLoader],
+    onDataLoad: () => showCloudLoading(false), onError: () => showCloudLoading(false),
+    coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [n.origin[0], n.origin[1], 0],
+    getNormal: [0, 0, 1], pointSize: size,
+    getColor: (o, {data, index}) => {   // RGB de LAS suele venir en 16 bits -> a 0..255
+      const c = data.attributes.COLOR_0 || data.attributes.colors;
+      if (!c) return [220, 220, 220];
+      const v = c.value, s = c.size || 4, i = index * s, m = (v[i] > 255) ? (1/257) : 1;
+      return [v[i]*m, v[i+1]*m, v[i+2]*m];
+    }
+  });
+  const paths = ZONES.filter(z => z.exps === Number(exps)).map(z => ({
+    path: z.coords.map(p => [p[1], p[0]]), color: z.group === 'TEST' ? [0, 224, 138] : [255, 80, 80]
+  }));
+  const zonasFill = new deck.PolygonLayer({ id:'zonasfill3d-'+exps, data:paths, getPolygon:d=>d.path, stroked:false, filled:true, getFillColor:d=>[d.color[0],d.color[1],d.color[2],55], parameters:{depthTest:false} });
+  const zonasLayer = new deck.PathLayer({ id:'zonas3d-'+exps, data:paths, getPath:d=>d.path, getColor:d=>d.color, widthUnits:'pixels', getWidth:3, jointRounded:true, capRounded:true, parameters:{depthTest:false} });
+  return [cloud, zonasFill, zonasLayer];
+}
+function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} showCloudLoading(false); setMaplibreZonas(true); setTerrain3d(true); }
 function update3dCloud(exps){
   if (!map3d) return;
   if (!map3d.isStyleLoaded()) { map3d.once('idle', () => update3dCloud(exps)); return; }   // espera a que cargue
   const cb = document.getElementById('showNube');
   const n = NUBES[String(exps)];
   if (!n || (cb && !cb.checked)) { hide3dCloud(); return; }
-  setTerrain3d(false);   // la nube aporta su propio relieve; el terreno exagerado la taparía
+  setTerrain3d(false);     // la nube aporta su propio relieve; el terreno exagerado la taparía
+  setMaplibreZonas(false); // ocultamos las zonas 2D (usamos las 3D que no parpadean)
   showCloudLoading(true);
   ensureDeck().then(() => {
-    const LASLoader = _LASLoader;
-    const layer = new deck.PointCloudLayer({
-      id: 'nube-'+exps,
-      data: ortoTilesAbs(n.file),
-      loaders: [LASLoader],
-      onDataLoad: () => showCloudLoading(false),
-      onError: () => showCloudLoading(false),
-      coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
-      coordinateOrigin: [n.origin[0], n.origin[1], 0],
-      getNormal: [0, 0, 1],
-      pointSize: n.pointSize || 1.5,
-      // El color RGB de LAS suele venir en 16 bits (0..65535); lo bajamos a 0..255.
-      getColor: (o, {data, index}) => {
-        const c = data.attributes.COLOR_0 || data.attributes.colors;
-        if (!c) return [220, 220, 220];
-        const v = c.value, s = c.size || 4, i = index * s, m = (v[i] > 255) ? (1/257) : 1;
-        return [v[i]*m, v[i+1]*m, v[i+2]*m];
-      }
-    });
-    // Contorno de las zonas (test/control) por ENCIMA de la nube (no se ocultan).
-    const paths = ZONES.filter(z => z.exps === Number(exps)).map(z => ({
-      path: z.coords.map(p => [p[1], p[0]]),
-      color: z.group === 'TEST' ? [0, 224, 138] : [255, 80, 80]
-    }));
-    const zonasFill = new deck.PolygonLayer({
-      id: 'zonasfill3d-'+exps, data: paths, getPolygon: d => d.path, stroked: false, filled: true,
-      getFillColor: d => [d.color[0], d.color[1], d.color[2], 55],
-      parameters: { depthTest: false }
-    });
-    const zonasLayer = new deck.PathLayer({
-      id: 'zonas3d-'+exps, data: paths, getPath: d => d.path, getColor: d => d.color,
-      widthUnits: 'pixels', getWidth: 3, jointRounded: true, capRounded: true,
-      parameters: { depthTest: false }   // siempre visibles sobre la nube
-    });
-    const layers = [layer, zonasFill, zonasLayer];
+    const layers = _cloudLayers(exps);
     if (!_deckOverlay) { _deckOverlay = new deck.MapboxOverlay({ interleaved: true, layers }); map3d.addControl(_deckOverlay); }
     else _deckOverlay.setProps({ layers });
   }).catch(e => { console.warn('update3dCloud', e); showCloudLoading(false); });
+}
+// Cambiar el grosor de los puntos en vivo (sin recargar la nube).
+function setCloudPointSize(v){
+  _cloudPointSize = v;
+  if (_deckOverlay && map3d && document.body.classList.contains('mode-3d') && NUBES[String(selectedFarm)]) {
+    try { _deckOverlay.setProps({ layers: _cloudLayers(selectedFarm) }); } catch(e){}
+  }
 }
 
 // Leyenda de la capa de erosión (solo visible en modo erosión)

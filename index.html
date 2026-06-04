@@ -1588,6 +1588,10 @@ function reportFincaHtml(exps){
         <h3>Problemas encontrados</h3><ul class="chars">${chars}</ul>
         ${suelHtml(exps)}
         ${solucionesHtml(exps)}
+        <div class="rep-fotos">
+          <h3>Imágenes · Muestreo</h3><div class="rep-thumbs">${muImgs || '<i>Sin imágenes.</i>'}</div>
+          ${solImgs ? `<h3>Imágenes · Aplicación de soluciones</h3><div class="rep-thumbs">${solImgs}</div>` : ''}
+        </div>
       </div>
       <div class="rep-col">
         <h3>Ubicación · parcela y puntos de muestreo</h3>
@@ -1595,10 +1599,6 @@ function reportFincaHtml(exps){
         <div class="rep-mlegend"><span><i style="background:#00a86b"></i>Zona test</span><span><i style="background:#e24444"></i>Zona control</span><span><i style="background:#2f6df6"></i>Remuestreo</span></div>
         ${iotHtml(exps)}
       </div>
-    </div>
-    <div class="rep-fotos">
-      <h3>Imágenes · Muestreo</h3><div class="rep-thumbs">${muImgs || '<i>Sin imágenes.</i>'}</div>
-      ${solImgs ? `<h3>Imágenes · Aplicación de soluciones</h3><div class="rep-thumbs">${solImgs}</div>` : ''}
     </div>
   </section>`;
 }

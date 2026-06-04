@@ -792,7 +792,8 @@ togCtrl.onAdd = () => {
     <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
     <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
     <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
-    <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>`;
+    <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>
+    <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox" checked><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos</label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
   return d;
@@ -844,7 +845,16 @@ fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
 // ===== Nubes de puntos en 3D (deck.gl sobre el terreno de MapLibre) =====
 let NUBES = {};
 let _deckOverlay = null, _deckLoaded = {};   // _deckLoaded[exps] = layer ya construida
-fetch('data/nubes.json').then(r => r.ok ? r.json() : {}).then(j => { NUBES = j || {}; }).catch(() => {});
+fetch('data/nubes.json').then(r => r.ok ? r.json() : {}).then(j => {
+  NUBES = j || {};
+  if (!Object.keys(NUBES).length) return;
+  const lbl = document.getElementById('nubeLbl'); if (lbl) lbl.style.display = '';
+  const cb = document.getElementById('showNube');
+  if (cb) cb.addEventListener('change', () => {
+    if (!document.body.classList.contains('mode-3d')) return;
+    if (cb.checked) update3dCloud(selectedFarm); else hide3dCloud();
+  });
+}).catch(() => {});
 function setTerrain3d(on){
   if (!map3d || !map3d.isStyleLoaded()) return;
   try { map3d.setTerrain(on ? { source:'dem', exaggeration:EXAG3D } : null); } catch(e){}
@@ -853,8 +863,9 @@ function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: 
 function update3dCloud(exps){
   if (!map3d) return;
   if (!map3d.isStyleLoaded()) { map3d.once('idle', () => update3dCloud(exps)); return; }   // espera a que cargue
+  const cb = document.getElementById('showNube');
   const n = NUBES[String(exps)];
-  if (!n) { hide3dCloud(); return; }
+  if (!n || (cb && !cb.checked)) { hide3dCloud(); return; }
   setTerrain3d(false);   // la nube aporta su propio relieve; el terreno exagerado la taparía
   ensureDeck().then(() => {
     const LASLoader = window.loaders.LASLoader;

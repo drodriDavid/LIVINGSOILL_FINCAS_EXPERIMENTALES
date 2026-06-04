@@ -20,7 +20,8 @@
 html, body { margin:0; padding:0; height:100%; overflow:hidden; }
 body { font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Arial, sans-serif; color:var(--ink); background:var(--paper); }
 .app { display:grid; grid-template-columns: 420px 1fr; height:100vh; width:100vw; }
-.sidebar { background:linear-gradient(180deg,#ffffff 0%,#f3f8f5 100%); border-right:1px solid var(--line); overflow:auto; padding:12px 14px 16px; box-shadow: 8px 0 28px rgba(0,0,0,.08); z-index:1000; }
+.sidebar { background:linear-gradient(180deg,#ffffff 0%,#f3f8f5 100%); border-right:1px solid var(--line); overflow:auto; padding:12px 14px 16px; box-shadow: 8px 0 28px rgba(0,0,0,.08); z-index:1000; scrollbar-width:none; -ms-overflow-style:none; }
+.sidebar::-webkit-scrollbar { width:0; height:0; display:none; }
 .brand { display:flex; gap:10px; align-items:center; padding:4px 4px 10px; border-bottom:1px solid var(--line); margin-bottom:8px; }
 .brand img { width:110px; height:auto; object-fit:contain; }
 .brand h1 { margin:0; font-size:15px; line-height:1.05; color:var(--green); font-weight:900; letter-spacing:-.02em; }
@@ -303,10 +304,10 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2300666a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>") no-repeat 11px center; }
 #searchBox::-webkit-search-cancel-button { cursor:pointer; }
 .controls-row { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-.resumen { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin:8px 0 4px; }
-.resumen .rz { background:#fff; border:1px solid var(--line); border-radius:12px; padding:7px 9px; display:flex; flex-direction:column; gap:1px; }
-.resumen .rz b { color:var(--green); font-size:17px; font-weight:950; line-height:1; letter-spacing:-.02em; }
-.resumen .rz span { font-size:9.5px; color:var(--muted); text-transform:uppercase; font-weight:800; letter-spacing:.04em; }
+.resumen { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:8px 0 4px; }
+.resumen .rz { background:#fff; border:1px solid var(--line); border-radius:12px; padding:6px 7px; display:flex; flex-direction:column; gap:1px; }
+.resumen .rz b { color:var(--green); font-size:16px; font-weight:950; line-height:1; letter-spacing:-.02em; }
+.resumen .rz span { font-size:8px; color:var(--muted); text-transform:uppercase; font-weight:800; letter-spacing:.03em; line-height:1.15; }
 /* --- Capa de erosión: leyenda y swatch --- */
 .dot.ero { background:linear-gradient(90deg,#2e7d32 0 25%,#9e9d24 25% 50%,#ef6c00 50% 75%,#c62828 75% 100%); border-radius:2px; }
 .map-legend { background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:14px; padding:9px 11px; box-shadow:0 8px 22px rgba(0,0,0,.14); font-size:11px; font-weight:700; color:var(--ink); max-width:200px; }
@@ -356,30 +357,41 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .info-panel.dock-bottom.open { transform:translateY(0); }
 }
 /* --- Informe PDF (una ficha por finca, vía impresión) --- */
-.report-root { display:none; }
-.report-title { font-size:14px; font-weight:900; color:var(--green); margin-bottom:10px; }
-.report-page { color:var(--ink); font-size:11px; }
-.rep-head h2 { color:var(--green); font-size:16px; margin:0; }
-.rep-head h2 small { color:var(--muted); font-weight:700; }
-.rep-head .rep-sub { color:var(--muted); font-size:11px; margin:2px 0 6px; }
-.rep-meta { font-size:11px; margin-bottom:6px; }
-.rep-grid { display:flex; gap:20px; align-items:flex-start; }
-.rep-col { flex:1 1 0; min-width:0; }
+.report-root { display:none; color:var(--ink); }
+.report-cover { display:flex; align-items:center; gap:14px; border-bottom:3px solid var(--green); padding-bottom:10px; margin-bottom:14px; }
+.report-cover .report-logo { width:48px; height:auto; }
+.report-cover .report-h1 { font-size:22px; font-weight:950; color:var(--green); letter-spacing:-.02em; line-height:1; }
+.report-cover .report-h2 { font-size:11px; color:var(--muted); font-weight:700; margin-top:3px; }
+.report-page { font-size:11px; }
+.rep-banner { display:flex; align-items:center; gap:12px; background:linear-gradient(90deg,#00666a,#00a86b); color:#fff; border-radius:10px; padding:8px 12px; margin-bottom:6px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+.rep-banner .rep-code { background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.55); border-radius:8px; padding:4px 9px; font-weight:950; font-size:14px; letter-spacing:.02em; }
+.rep-banner .rep-mun { font-size:15px; font-weight:900; }
+.rep-banner .rep-mun small { font-weight:600; opacity:.88; }
+.rep-banner .rep-finca { font-size:10px; opacity:.92; }
+.rep-meta { font-size:11px; margin:0 2px 8px; color:var(--ink); }
+.rep-top { display:flex; gap:18px; align-items:flex-start; }
+.rep-top .rep-col { flex:1 1 0; min-width:0; }
 .report-page h3 { color:var(--green); font-size:12px; margin:8px 0 4px; }
 .report-page .chars { margin:2px 0 4px; padding-left:16px; }
+.rep-map { position:relative; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#d7e2dc; aspect-ratio:16/10; }
+.rep-map img { width:100%; height:100%; object-fit:cover; display:block; }
+.rep-map svg { position:absolute; inset:0; width:100%; height:100%; }
+.rep-map-empty { display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; aspect-ratio:16/10; }
+.rep-mlegend { display:flex; flex-wrap:wrap; gap:12px; font-size:10px; font-weight:700; color:var(--ink); margin:5px 0 4px; }
+.rep-mlegend i { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:4px; vertical-align:middle; }
 .rep-fotos { margin-top:8px; }
 .rep-thumbs { display:flex; flex-wrap:wrap; gap:5px; }
 .rep-thumbs img { width:92px; height:69px; object-fit:cover; border-radius:4px; border:1px solid var(--line); }
 @media print {
-  @page { margin: 12mm; }
+  @page { margin: 11mm; }
   html, body { overflow:visible !important; height:auto !important; background:#fff !important; }
   .app, #lightbox, #gallery, #galleryBackdrop, #iotTip, .leaflet-container { display:none !important; }
-  .report-root { display:block !important; position:static; }
+  .report-root { display:block !important; position:static; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .report-page { page-break-after:always; break-after:page; }
   .report-page:last-child { page-break-after:auto; break-after:auto; }
-  .rep-grid { display:flex; }
-  .sol-block, .iot-block { break-inside:avoid; }
-  .rep-thumbs img { width:80px; height:60px; }
+  .rep-top, .rep-grid { display:flex; }
+  .sol-block, .iot-block, .rep-map, .rep-fotos { break-inside:avoid; }
+  .rep-thumbs img { width:74px; height:56px; }
 }
 </style>
 </head>
@@ -710,8 +722,7 @@ togCtrl.onAdd = () => {
     <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
     <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
     <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
-    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
-    <label title="Colorea las fincas según su nivel de erosión (modelo RUSLE)"><input id="showErosion" type="checkbox"><span class="dot ero"></span>Erosión</label>`;
+    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
   return d;
@@ -1502,6 +1513,37 @@ function buildResumen(){
   }
 }
 // --- PDF: una ficha (instantánea) por finca, vía impresión del navegador ---
+// Mapa de la parcela para el PDF: satélite (Esri export) + polígonos test/control + puntos de muestreo
+function parcelaMapHtml(exps){
+  const zs = ZONES.filter(z => z.exps === exps);
+  if (!zs.length) return '<div class="rep-map rep-map-empty">Sin geometría de la parcela.</div>';
+  const pts = puntosDe(exps);
+  const lats = [], lons = [];
+  zs.forEach(z => z.coords.forEach(p => { lats.push(p[0]); lons.push(p[1]); }));
+  pts.forEach(p => { lats.push(p.lat); lons.push(p.lon); });
+  let minLat = Math.min(...lats), maxLat = Math.max(...lats), minLon = Math.min(...lons), maxLon = Math.max(...lons);
+  const padLat = (maxLat - minLat) * 0.20 || 0.0015, padLon = (maxLon - minLon) * 0.20 || 0.0015;
+  minLat -= padLat; maxLat += padLat; minLon -= padLon; maxLon += padLon;
+  const W = 640, H = 400;
+  const exportUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${minLon},${minLat},${maxLon},${maxLat}&bboxSR=4326&imageSR=4326&size=${W},${H}&format=jpg&f=image`;
+  const X = lon => ((lon - minLon) / (maxLon - minLon)) * W;
+  const Y = lat => ((maxLat - lat) / (maxLat - minLat)) * H;
+  let polys = '';
+  zs.forEach(z => {
+    const d = z.coords.map((p,i) => (i?'L':'M') + X(p[1]).toFixed(1) + ' ' + Y(p[0]).toFixed(1)).join(' ') + 'Z';
+    const col = z.group === 'TEST' ? '#00e08a' : '#ff5a5a';
+    polys += `<path d="${d}" fill="${col}" fill-opacity="0.18" stroke="${col}" stroke-width="2.4"/>`;
+  });
+  let dots = '';
+  pts.forEach(p => {
+    const col = p.tipo === 'test' ? '#00e08a' : (p.tipo === 'control' ? '#ff5a5a' : '#2f6df6');
+    dots += `<circle cx="${X(p.lon).toFixed(1)}" cy="${Y(p.lat).toFixed(1)}" r="4" fill="${col}" stroke="#fff" stroke-width="1.4"/>`;
+  });
+  return `<div class="rep-map">
+    <img src="${exportUrl}" width="${W}" height="${H}" alt="Mapa satélite de la parcela">
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${polys}${dots}</svg>
+  </div>`;
+}
 function reportFincaHtml(exps){
   const finca = FINCAS.find(f => f.exps === exps) || {};
   const z = ZONES.find(z => z.exps === exps && z.group === 'TEST') || ZONES.find(z => z.exps === exps) || {};
@@ -1513,16 +1555,24 @@ function reportFincaHtml(exps){
   const muImgs = (im.muestreo || []).map(n => `<img src="${ghDir(exps)}/${esc(n)}" alt="">`).join('');
   const solImgs = (im.sol || []).map(n => `<img src="${solDir(exps)}/${esc(n)}" alt="">`).join('');
   return `<section class="report-page">
-    <div class="rep-head"><h2>${code} · ${esc(finca.municipio||'')} <small>(${esc(finca.provincia||'')})</small></h2>
-      <div class="rep-sub">${z.finca?esc(z.finca):''}</div></div>
+    <div class="rep-banner">
+      <div class="rep-code">${code}</div>
+      <div class="rep-bt"><div class="rep-mun">${esc(finca.municipio||'')} <small>${esc(finca.provincia||'')}</small></div>
+      <div class="rep-finca">${z.finca?esc(z.finca):''}</div></div>
+    </div>
     <div class="rep-meta"><b>Zonas:</b> ${finca.n_zones||'—'} (${finca.n_test||0} test · ${finca.n_control||0} control) &nbsp;·&nbsp; <b>Vértices:</b> ${finca.n_vertices||'—'} &nbsp;·&nbsp; <b>Muestreo:</b> ${muestreoTxt}</div>
-    <div class="rep-grid">
+    <div class="rep-top">
       <div class="rep-col">
         <h3>Problemas encontrados</h3><ul class="chars">${chars}</ul>
         ${suelHtml(exps)}
         ${solucionesHtml(exps)}
       </div>
-      <div class="rep-col">${iotHtml(exps)}</div>
+      <div class="rep-col">
+        <h3>Ubicación · parcela y puntos de muestreo</h3>
+        ${parcelaMapHtml(exps)}
+        <div class="rep-mlegend"><span><i style="background:#00a86b"></i>Zona test</span><span><i style="background:#e24444"></i>Zona control</span><span><i style="background:#2f6df6"></i>Remuestreo</span></div>
+        ${iotHtml(exps)}
+      </div>
     </div>
     <div class="rep-fotos">
       <h3>Imágenes · Muestreo</h3><div class="rep-thumbs">${muImgs || '<i>Sin imágenes.</i>'}</div>
@@ -1533,7 +1583,7 @@ function reportFincaHtml(exps){
 function generarPdfFincas(){
   const root = document.getElementById('reportRoot'); if(!root) return;
   const pages = FINCAS.slice().sort((a,b)=>a.exps-b.exps).map(f => reportFincaHtml(f.exps)).join('');
-  root.innerHTML = `<div class="report-title">LivingSoiLL · Fincas experimentales — instantánea por finca</div>${pages}`;
+  root.innerHTML = `<div class="report-cover"><img class="report-logo" src="assets/logo_brote.png" alt="LivingSoiLL"><div><div class="report-h1">LivingSoiLL</div><div class="report-h2">Fincas experimentales del Living Lab Andaluz · instantánea por finca</div></div></div>${pages}`;
   let printed = false;
   const go = () => { if (printed) return; printed = true; window.print(); };
   const imgs = [...root.querySelectorAll('img')];

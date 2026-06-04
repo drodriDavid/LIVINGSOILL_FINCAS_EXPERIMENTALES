@@ -279,10 +279,11 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   .farm-dot-wrap { width:36px !important; height:36px !important; margin-left:-18px !important; margin-top:-18px !important; }
   .controls-row { grid-template-columns:1fr 1fr; }
   #searchBox { font-size:13px; }
-  /* En móvil las gráficas se muestran dentro de la ficha (no hay panel inferior) */
-  .charts-panel { display:none !important; }
-  body.charts-open .leaflet-bottom.leaflet-left { transform:none; }
+  /* En móvil los tres paneles se combinan en una sola ficha a pantalla completa */
+  #sensorsPanel, #fotosPanel { display:none !important; }
   .charts-row { grid-template-columns:1fr; }
+  .sensors-side { flex:1 1 100%; }
+  .sensors-charts { flex:1 1 100%; }
 }
 /* --- Buscador, filtros y resumen (barra lateral) --- */
 #searchBox { width:100%; margin:2px 0 6px; padding:10px 12px 10px 34px; border-radius:14px; font-size:13px;
@@ -312,17 +313,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .resumen-actions { margin:2px 0 6px; text-align:right; }
 .linklike { display:inline; width:auto; border:0; background:none; padding:0; color:var(--green); font-size:11px; font-weight:800; cursor:pointer; }
 .linklike:hover { text-decoration:underline; }
-/* --- Panel inferior de gráficas de muestras IoT --- */
-.charts-panel { position:absolute; left:18px; right:414px; bottom:18px; z-index:1090; background:#fff; border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:8px 14px 10px; max-height:244px; overflow:auto; scrollbar-width:thin; transform:translateY(135%); opacity:0; pointer-events:none; transition:transform .25s ease, opacity .2s ease; }
-.charts-panel.open { transform:translateY(0); opacity:1; pointer-events:auto; }
-.charts-panel .close-x { position:absolute; top:8px; right:10px; z-index:2; }
-.charts-panel .muestras-block { margin:0; }
-.charts-panel .iot-chart { height:64px; }
-.charts-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:6px 16px; }
+/* --- Sistema de 3 paneles (izquierda: info · abajo: sensores · derecha: fotos) --- */
+.charts-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:6px 16px; }
 .muestras-leg-t { color:#007c52; font-weight:900; }
 .muestras-leg-c { color:#bd2727; font-weight:900; }
-/* Subir el control de capas/leyenda cuando el panel inferior está abierto (que no lo tape) */
-body.charts-open .leaflet-bottom.leaflet-left { transition:transform .25s ease; transform:translateY(-250px); }
+.sensors-layout { display:flex; gap:6px 20px; align-items:flex-start; flex-wrap:wrap; }
+.sensors-side { flex:0 0 290px; max-width:100%; }
+.sensors-charts { flex:1 1 320px; min-width:0; }
+.sensors-charts .iot-chart { height:62px; }
+.panel-tag { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:950; padding:8px 0 2px; position:sticky; top:0; background:#fff; z-index:6; }
+@media (min-width: 981px) {
+  /* Posiciones de los tres paneles en escritorio (mismo aspecto que .info-panel) */
+  .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:236px; width:340px; min-width:0; max-width:42vw; resize:none; direction:ltr; transform:translateX(-130%); }
+  .info-panel.dock-right { left:auto; right:18px; top:140px; bottom:236px; width:320px; min-width:0; max-width:40vw; resize:none; direction:ltr; transform:translateX(130%); }
+  .info-panel.dock-bottom{ left:18px; right:18px; top:auto; bottom:18px; width:auto; min-width:0; max-width:none; height:206px; resize:none; direction:ltr; transform:translateY(140%); }
+  .info-panel.dock-left.open, .info-panel.dock-right.open { transform:translateX(0); }
+  .info-panel.dock-bottom.open { transform:translateY(0); }
+}
 </style>
 </head>
 <body>
@@ -351,13 +358,17 @@ body.charts-open .leaflet-bottom.leaflet-left { transition:transform .25s ease; 
   <main class="map-wrap">
     <div id="map"></div>
     <div class="map-title"><b>LivingSoiLL · Fincas experimentales</b><p>Visor de las 16 fincas experimentales del Living Lab Andaluz. Selecciona una finca para ver sus zonas, problemas del suelo, soluciones aplicadas, muestras de suelo, sensores IoT y fotos.</p></div>
-    <aside id="infoPanel" class="info-panel" aria-hidden="true">
+    <aside id="infoPanel" class="info-panel dock-left" aria-hidden="true" aria-label="Información de la parcela">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
       <div id="infoPanelBody"></div>
     </aside>
-    <aside id="chartsPanel" class="charts-panel" aria-hidden="true" aria-label="Gráficas de muestras IoT">
-      <button class="close-x charts-close" onclick="closeChartsPanel()" aria-label="Cerrar gráficas">×</button>
-      <div id="chartsPanelBody"></div>
+    <aside id="sensorsPanel" class="info-panel dock-bottom" aria-hidden="true" aria-label="Datos de los sensores">
+      <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
+      <div id="sensorsPanelBody"></div>
+    </aside>
+    <aside id="fotosPanel" class="info-panel dock-right" aria-hidden="true" aria-label="Fotos de la finca">
+      <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
+      <div id="fotosPanelBody"></div>
     </aside>
   </main>
 </div>
@@ -512,7 +523,6 @@ function muestrasValoresHtml(exps){
       ${vr('Tª suelo 50 cm','st50',_tc)}
       ${vr('Tª aire','at',_tc)}
     </tbody></table>
-    <div class="muestras-note">Las gráficas de evolución se muestran en el panel inferior.</div>
   </div>`;
 }
 function _costeSol(intervs){
@@ -625,7 +635,7 @@ const bmCtrl = L.control({position:'topright'});
 bmCtrl.onAdd = () => { const d = L.DomUtil.create('div','basemap-switcher'); d.innerHTML = bmHtml; L.DomEvent.disableClickPropagation(d); d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setBasemap(b.dataset.base))); return d; };
 bmCtrl.addTo(map);
 
-const togCtrl = L.control({position:'bottomleft'});
+const togCtrl = L.control({position:'topright'});
 togCtrl.onAdd = () => {
   const d = L.DomUtil.create('div','map-toggles');
   d.innerHTML = `
@@ -643,7 +653,7 @@ togCtrl.onAdd = () => {
 togCtrl.addTo(map);
 
 // Leyenda de la capa de erosión (solo visible en modo erosión)
-const eroLegend = L.control({position:'bottomleft'});
+const eroLegend = L.control({position:'topright'});
 eroLegend.onAdd = () => {
   const d = L.DomUtil.create('div','map-legend');
   d.id = 'eroLegend';
@@ -704,7 +714,7 @@ function zoneCentroid(z) {
   let la=0, lo=0; z.coords.forEach(p => { la+=p[0]; lo+=p[1]; });
   return [la/z.coords.length, lo/z.coords.length];
 }
-function popupHtml(z) {
+function infoPanelHtml(z) {
   const typeClass = z.group === 'TEST' ? 'test' : 'control';
   const chars = (CARACTERISTICAS[z.exps] || []).map(c => `<li>${esc(c)}</li>`).join('');
   const rows = z.vertices.map(v => `<tr><td>V${v.n}</td><td>${v.lat.toFixed(8)}</td><td>${v.lon.toFixed(8)}</td></tr>`).join('');
@@ -736,26 +746,6 @@ function popupHtml(z) {
       <ul class="chars">${chars || '<li><i>Sin características catalogadas.</i></li>'}</ul></div>
       ${suelHtml(z.exps)}
       ${solucionesHtml(z.exps)}
-      ${iotHtml(z.exps)}
-      <div class="popup-fotos">
-        <div class="fotos-head">
-          <span class="fotos-label">Fotos · Muestreo</span>
-          <span class="fotos-head-actions">
-            <button class="fotos-gallery-btn" onclick="openGallery(${z.exps},'muestreo')" data-exps="${z.exps}" style="display:none">Ver galería</button>
-            <button class="fotos-cfg-btn" onclick="setGhToken()" title="Configurar subida de fotos (token de GitHub)">🔑</button>
-          </span>
-        </div>
-        <div class="fotos-grid" data-exps="${z.exps}"></div>
-      </div>
-      <div class="popup-fotos popup-fotos-sol" style="display:none">
-        <div class="fotos-head">
-          <span class="fotos-label">Fotos · Aplicación de soluciones</span>
-          <span class="fotos-head-actions">
-            <button class="fotos-gallery-btn fotos-gallery-btn-sol" onclick="openGallery(${z.exps},'sol')" data-exps="${z.exps}" style="display:none">Ver galería</button>
-          </span>
-        </div>
-        <div class="fotos-grid fotos-grid-sol" data-exps="${z.exps}"></div>
-      </div>
       <div class="popup-actions">
         <a class="popup-btn maps" target="_blank" rel="noopener" href="${gmaps}" title="Abrir ubicación en Google Maps">Cómo llegar</a>
       </div>
@@ -772,6 +762,35 @@ function popupHtml(z) {
       <div class="puntos-legend"><span><i class="pt-dot test"></i>Test</span><span><i class="pt-dot control"></i>Control</span>${cnt.r?'<span><i class="pt-dot r"></i>Remuestreo</span>':''}</div>
       <table class="puntos-table"><thead><tr><th>Punto</th><th>Lat</th><th>Lon</th><th>Fecha</th></tr></thead><tbody>${ptsRows || '<tr><td colspan="4"><i>Sin puntos de muestreo.</i></td></tr>'}</tbody></table>
       <div class="popup-actions"><button class="popup-btn secondary" onclick="showPopupView(this,'info')">← Volver</button></div>
+    </div>
+  </div>`;
+}
+// Panel inferior: datos de los sensores (tabla + valores actuales) y gráficas de muestras
+function sensorsPanelHtml(z){
+  const charts = muestrasChartsHtml(z.exps);
+  return `<div class="popup"><div class="sensors-layout"><div class="sensors-side">${iotHtml(z.exps)}</div>${charts?`<div class="sensors-charts">${charts}</div>`:''}</div></div>`;
+}
+// Panel derecho: fotos (muestreo y aplicación de soluciones)
+function fotosPanelHtml(z){
+  return `<div class="popup">
+    <div class="popup-fotos">
+      <div class="fotos-head">
+        <span class="fotos-label">Fotos · Muestreo</span>
+        <span class="fotos-head-actions">
+          <button class="fotos-gallery-btn" onclick="openGallery(${z.exps},'muestreo')" data-exps="${z.exps}" style="display:none">Ver galería</button>
+          <button class="fotos-cfg-btn" onclick="setGhToken()" title="Configurar subida de fotos (token de GitHub)">🔑</button>
+        </span>
+      </div>
+      <div class="fotos-grid" data-exps="${z.exps}"></div>
+    </div>
+    <div class="popup-fotos popup-fotos-sol" style="display:none">
+      <div class="fotos-head">
+        <span class="fotos-label">Fotos · Aplicación de soluciones</span>
+        <span class="fotos-head-actions">
+          <button class="fotos-gallery-btn fotos-gallery-btn-sol" onclick="openGallery(${z.exps},'sol')" data-exps="${z.exps}" style="display:none">Ver galería</button>
+        </span>
+      </div>
+      <div class="fotos-grid fotos-grid-sol" data-exps="${z.exps}"></div>
     </div>
   </div>`;
 }
@@ -808,7 +827,7 @@ async function listFotosSol(exps, force) {
   } catch (e) { console.warn('listFotosSol', e); return fotosSolCache[key] || []; }
 }
 async function renderFotosSol(exps) {
-  const grid = document.querySelector('#infoPanelBody .fotos-grid-sol');
+  const grid = document.querySelector('.fotos-grid-sol');
   if (!grid) return;
   grid.dataset.exps = exps;
   grid.innerHTML = '<div class="fotos-loading">Cargando fotos…</div>';
@@ -819,14 +838,14 @@ async function renderFotosSol(exps) {
   if (!arr.length) { if (block) block.style.display = 'none'; return; }
   if (block) block.style.display = '';
   grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Aplicación de soluciones EXPS${String(exps).padStart(2,'0')} · foto ${i+1}" onclick="lbUrls=window._solUrls;openLightbox(this.src)"></div>`).join('');
-  const btn = document.querySelector(`#infoPanelBody .fotos-gallery-btn-sol[data-exps="${exps}"]`);
+  const btn = document.querySelector(`.fotos-gallery-btn-sol[data-exps="${exps}"]`);
   if (btn) { btn.style.display = ''; btn.textContent = `Ver galería (${arr.length})`; }
 }
 window.setGhToken = function() {
   const t = prompt('Pega tu token de GitHub (fine-grained, permiso "Contents: Read and write" en este repo).\nSe guarda SOLO en este navegador. Deja vacío para borrarlo.', ghToken());
   if (t === null) return;
   if (t.trim()) localStorage.setItem('gh_token', t.trim()); else localStorage.removeItem('gh_token');
-  const grid = document.querySelector('#infoPanelBody .fotos-grid');
+  const grid = document.querySelector('.fotos-grid:not(.fotos-grid-sol)');
   if (grid && grid.dataset.exps) renderFotos(grid.dataset.exps);
   alert(t.trim() ? 'Token guardado en este navegador. Ya puedes subir y borrar fotos.' : 'Token borrado.');
 };
@@ -896,7 +915,7 @@ window.removeFoto = async function(exps, name, sha) {
   } catch (e) { alert('No se pudo borrar: ' + e.message); }
 };
 async function renderFotos(exps) {
-  const grid = document.querySelector('#infoPanelBody .fotos-grid');
+  const grid = document.querySelector('.fotos-grid:not(.fotos-grid-sol)');
   if (!grid) return;
   grid.dataset.exps = exps;
   grid.innerHTML = '<div class="fotos-loading">Cargando fotos…</div>';
@@ -907,7 +926,7 @@ async function renderFotos(exps) {
   grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Muestreo de suelo EXPS${String(exps).padStart(2,'0')} · foto ${i+1}" onclick="lbUrls=window._muUrls;openLightbox(this.src)">${canEdit?`<button class="foto-rm" onclick="removeFoto(${exps},'${esc(f.name)}','${f.sha}')" aria-label="Eliminar">×</button>`:''}</div>`).join('')
     + `<label class="foto-cam" title="Hacer foto con la cámara"><input type="file" accept="image/*" capture="environment" onchange="onFotoChange(${exps},this)" hidden>📷</label>`
     + `<label class="foto-add" title="${canEdit?'Añadir foto desde galería/archivos':'Configura el token (🔑) para poder subir'}"><input type="file" accept="image/*" multiple onchange="onFotoChange(${exps},this)" hidden>+</label>`;
-  const btn = document.querySelector(`#infoPanelBody .fotos-gallery-btn[data-exps="${exps}"]`);
+  const btn = document.querySelector(`.fotos-gallery-btn:not(.fotos-gallery-btn-sol)[data-exps="${exps}"]`);
   if (btn) { btn.style.display = arr.length ? '' : 'none'; btn.textContent = `Ver galería (${arr.length})`; }
 }
 window.openGallery = async function(exps, cat) {
@@ -958,52 +977,32 @@ window.openLightbox = function(src) {
 };
 window.closeLightbox = function() { document.getElementById('lightbox').classList.remove('open'); };
 function panelIsMobile() { return window.matchMedia('(max-width: 980px)').matches; }
+function openDock(id){ const p=document.getElementById(id); if(!p) return; p.classList.add('open'); p.setAttribute('aria-hidden','false'); }
+function closeDock(id){ const p=document.getElementById(id); if(!p) return; p.classList.remove('open'); p.setAttribute('aria-hidden','true'); }
 window.openInfoPanel = function(z) {
   _openZone = z;
-  const body = document.getElementById('infoPanelBody');
-  body.innerHTML = popupHtml(z);
+  const infoBody = document.getElementById('infoPanelBody');
+  const sBody = document.getElementById('sensorsPanelBody');
+  const fBody = document.getElementById('fotosPanelBody');
+  if (panelIsMobile()) {
+    // Móvil: los tres paneles se combinan en la ficha a pantalla completa
+    infoBody.innerHTML = infoPanelHtml(z) + sensorsPanelHtml(z) + fotosPanelHtml(z);
+    if (sBody) sBody.innerHTML = ''; if (fBody) fBody.innerHTML = '';
+    openDock('infoPanel'); closeDock('sensorsPanel'); closeDock('fotosPanel');
+  } else {
+    infoBody.innerHTML = infoPanelHtml(z);
+    if (sBody) sBody.innerHTML = sensorsPanelHtml(z);
+    if (fBody) fBody.innerHTML = fotosPanelHtml(z);
+    openDock('infoPanel'); openDock('sensorsPanel'); openDock('fotosPanel');
+  }
   renderFotos(z.exps);
   renderFotosSol(z.exps);
-  // Gráficas de muestras: en el panel inferior (escritorio) o dentro de la ficha (móvil)
-  const charts = muestrasChartsHtml(z.exps);
-  if (panelIsMobile()) {
-    closeChartsPanel();
-    if (charts) body.insertAdjacentHTML('beforeend', '<div class="popup charts-in-panel">' + charts + '</div>');
-  } else if (charts) {
-    document.getElementById('chartsPanelBody').innerHTML = charts;
-    openChartsPanel();
-  } else {
-    closeChartsPanel();
-  }
-  const panel = document.getElementById('infoPanel');
-  panel.classList.add('open');
-  panel.style.setProperty('transform','translate(0px,0px)','important');
-  panel.style.setProperty('opacity','1','important');
-  panel.style.setProperty('pointer-events','auto','important');
-  panel.setAttribute('aria-hidden','false');
-  panel.scrollTop = 0;
+  const p = document.getElementById('infoPanel'); if (p) p.scrollTop = 0;
   try { history.replaceState(null, '', '#EXPS' + String(z.exps).padStart(2,'0')); } catch(_) {}
-};
-window.openChartsPanel = function() {
-  const p = document.getElementById('chartsPanel');
-  p.classList.add('open'); p.setAttribute('aria-hidden','false');
-  document.body.classList.add('charts-open');
-};
-window.closeChartsPanel = function() {
-  const p = document.getElementById('chartsPanel');
-  if (!p) return;
-  p.classList.remove('open'); p.setAttribute('aria-hidden','true');
-  document.body.classList.remove('charts-open');
 };
 window.closeInfoPanel = function() {
   _openZone = null;
-  closeChartsPanel();
-  const panel = document.getElementById('infoPanel');
-  panel.classList.remove('open');
-  panel.style.setProperty('transform', panelIsMobile() ? 'translateY(115%)' : 'translateX(120%)','important');
-  panel.style.setProperty('opacity','0','important');
-  panel.style.setProperty('pointer-events','none','important');
-  panel.setAttribute('aria-hidden','true');
+  ['infoPanel','sensorsPanel','fotosPanel'].forEach(closeDock);
   try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch(_) {}
 };
 function openInfoPanelByExps(exps) {

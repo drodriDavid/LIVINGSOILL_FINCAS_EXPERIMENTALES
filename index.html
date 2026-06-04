@@ -889,34 +889,38 @@ function setSat3d(on){ if (map3d && map3d.getLayer && map3d.getLayer('sat')) map
 function hideOrto3d(){ Object.keys(ORTOS).forEach(k => ['orto-'+k,'ortoline-'+k].forEach(id => { if (map3d.getLayer && map3d.getLayer(id)) map3d.setLayoutProperty(id,'visibility','none'); })); }
 function showCloudLoading(on){ const e=document.getElementById('cloudLoading'); if(e) e.classList.toggle('show', !!on); }
 let _cloudPointSize = 2;
-// Mostrar/ocultar las zonas 2D de MapLibre (al usar la nube usamos las zonas 3D).
 function setMaplibreZonas(vis){ if(!map3d) return; ['zonas-fill','zonas-line'].forEach(id => { if (map3d.getLayer && map3d.getLayer(id)) map3d.setLayoutProperty(id,'visibility', vis?'visible':'none'); }); }
-// Construye las capas deck (nube + zonas 3D) para una finca.
+// Función de color que PROYECTA las zonas (test/control) sobre la nube: tiñe los
+// puntos que caen dentro de cada polígono de zona. Cacheada por finca para que el
+// deslizador de grosor no recalcule 5,8 M de puntos.
+let _colorFn = null, _colorExps = null;
+function buildColorFn(exps, n){
+  const oLng=n.origin[0], oLat=n.origin[1], mLat=111320, mLng=111320*Math.cos(oLat*Math.PI/180);
+  const polys = ZONES.filter(z => z.exps === Number(exps)).map(z => ({
+    ring: z.coords.map(p => [ (p[1]-oLng)*mLng, (p[0]-oLat)*mLat ]),   // [x,y] en metros locales (= coords de la nube)
+    col: z.group === 'TEST' ? [0,224,138] : [255,80,80]
+  }));
+  function pip(x,y,r){ let c=false; for(let i=0,j=r.length-1;i<r.length;j=i++){ const xi=r[i][0],yi=r[i][1],xj=r[j][0],yj=r[j][1]; if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) c=!c; } return c; }
+  return (o,{data,index}) => {
+    const P=data.attributes.POSITION.value, x=P[index*3], y=P[index*3+1];
+    const cc=data.attributes.COLOR_0; let r=210,g=210,b=210;
+    if(cc){ const v=cc.value,s=cc.size||4,i=index*s,m=(v[i]>255)?(1/257):1; r=v[i]*m; g=v[i+1]*m; b=v[i+2]*m; }
+    for(let p=0;p<polys.length;p++){ if(pip(x,y,polys[p].ring)){ const col=polys[p].col,k=0.5; return [r*(1-k)+col[0]*k, g*(1-k)+col[1]*k, b*(1-k)+col[2]*k]; } }
+    return [r,g,b];
+  };
+}
 function _cloudLayers(exps){
   const n = NUBES[String(exps)];
   const size = _cloudPointSize || n.pointSize || 1.5;
+  if (_colorExps !== String(exps)) { _colorFn = buildColorFn(exps, n); _colorExps = String(exps); }
   const cloud = new deck.PointCloudLayer({
     id: 'nube-'+exps, data: ortoTilesAbs(n.file), loaders: [_LASLoader],
     onDataLoad: () => showCloudLoading(false), onError: () => showCloudLoading(false),
     coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [n.origin[0], n.origin[1], n.zOffset || 0],
     getNormal: [0, 0, 1], pointSize: size, material: false, sizeUnits: 'pixels',
-    getColor: (o, {data, index}) => {   // RGB de LAS suele venir en 16 bits -> a 0..255
-      const c = data.attributes.COLOR_0 || data.attributes.colors;
-      if (!c) return [220, 220, 220];
-      const v = c.value, s = c.size || 4, i = index * s, m = (v[i] > 255) ? (1/257) : 1;
-      return [v[i]*m, v[i+1]*m, v[i+2]*m];
-    }
+    getColor: _colorFn, updateTriggers: { getColor: String(exps) }
   });
-  // Zonas como "vallas" verticales translúcidas que cruzan la nube (límites estables al orbitar).
-  const paths = ZONES.filter(z => z.exps === Number(exps)).map(z => ({
-    path: z.coords.map(p => [p[1], p[0]]), color: z.group === 'TEST' ? [0, 224, 138] : [255, 80, 80]
-  }));
-  const walls = new deck.PolygonLayer({
-    id: 'zonaswall3d-'+exps, data: paths, getPolygon: d => d.path, extruded: true, getElevation: 70,
-    filled: true, stroked: true, getLineColor: d => d.color, getLineWidth: 2, lineWidthUnits: 'pixels',
-    getFillColor: d => [d.color[0], d.color[1], d.color[2], 40], material: false
-  });
-  return [cloud, walls];
+  return [cloud];
 }
 function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} showCloudLoading(false); setSat3d(true); sync3dOrto(); setMaplibreZonas(true); setTerrain3d(true); }
 function update3dCloud(exps){
@@ -925,8 +929,8 @@ function update3dCloud(exps){
   const cb = document.getElementById('showNube');
   const n = NUBES[String(exps)];
   if (!n || (cb && !cb.checked)) { hide3dCloud(); return; }
-  setTerrain3d(false);     // nube sola (la pendiente real haría flotar la nube sobre el mapa plano)
-  setSat3d(false); hideOrto3d(); setMaplibreZonas(false);   // ocultamos el mapa base bajo la nube
+  setTerrain3d(false);      // como antes: nube sobre el mapa (satélite/orto visibles)
+  setMaplibreZonas(false);  // las zonas se proyectan sobre la nube (no hacen falta las 2D)
   showCloudLoading(true);
   ensureDeck().then(() => {
     const layers = _cloudLayers(exps);

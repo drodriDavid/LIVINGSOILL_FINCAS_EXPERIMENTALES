@@ -64,10 +64,7 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 /* --- Modo 3D (MapLibre) --- */
 #map3d { position:absolute; inset:0; z-index:560; display:none; }
 body.mode-3d #map3d { display:block; }
-body.mode-3d .map-title, body.mode-3d .info-panel { display:none !important; }
-.exit-3d { position:absolute; left:50%; top:14px; transform:translateX(-50%); z-index:1250; display:none; background:var(--green); color:#fff; border:0; border-radius:999px; padding:9px 16px; font-weight:900; font-size:13px; cursor:pointer; box-shadow:0 10px 24px rgba(0,0,0,.25); }
-.exit-3d:hover { background:#00a86b; }
-body.mode-3d .exit-3d { display:block; }
+body.mode-3d .map-title { display:none !important; }
 .maplibregl-ctrl-attrib { font-size:9px; }
 .farm-title { font-weight:900; font-size:12px; line-height:1.2; color:var(--ink); }
 .farm-meta { color:var(--muted); font-size:10.5px; line-height:1.3; margin-top:1px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; }
@@ -246,6 +243,9 @@ body.mode-3d .exit-3d { display:block; }
 .basemap-switcher .bm-sep { width:1px; align-self:stretch; background:var(--line); margin:4px 2px; flex:0 0 1px; }
 .basemap-switcher button.eye-btn.active { background:var(--green); border-color:var(--green); }
 .basemap-switcher button.eye-btn.active svg { stroke:#fff; }
+.basemap-switcher button.btn-3d { font-weight:950; font-size:15px; color:var(--green); letter-spacing:.01em; }
+.basemap-switcher button.btn-3d span { line-height:1; }
+.basemap-switcher button.btn-3d.active { background:var(--green); border-color:var(--green); color:#fff; }
 /* Menú desplegable de capas (se abre con el botón del ojo) */
 .layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row nowrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:none; white-space:nowrap; }
 .layers-menu.open { display:flex; }
@@ -444,7 +444,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   <main class="map-wrap">
     <div id="map"></div>
     <div id="map3d"></div>
-    <button id="exit3d" class="exit-3d" type="button" title="Salir del 3D">↩ Volver al 2D</button>
     <div class="map-title"><b>LivingSoiLL · Fincas experimentales</b><p>Visor de las 16 fincas experimentales del Living Lab Andaluz. Selecciona una finca para ver sus zonas, problemas del suelo, soluciones aplicadas, muestras de suelo, sensores IoT y fotos.</p></div>
     <aside id="infoPanel" class="info-panel dock-right" aria-hidden="true" aria-label="Información de la parcela">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
@@ -730,7 +729,7 @@ const bmHtml = `
   <button data-base="pnoa" title="Ortofoto PNOA · alta resolución (IGN España)" aria-label="Ortofoto PNOA alta resolución"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7.2" height="7.2" rx="1.4"/><rect x="13.3" y="3.5" width="7.2" height="7.2" rx="1.4"/><rect x="3.5" y="13.3" width="7.2" height="7.2" rx="1.4"/><rect x="13.3" y="13.3" width="7.2" height="7.2" rx="1.4"/></svg></button>
   <span class="bm-sep"></span>
   <button id="eyeBtn" class="eye-btn" type="button" title="Capas visibles" aria-label="Mostrar u ocultar capas" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
-  <button id="btn3d" class="eye-btn" type="button" title="Ver en 3D (Google Earth)" aria-label="Ver en 3D en Google Earth"><svg viewBox="0 0 24 24"><path d="M12 2.5l8.5 4.75v9.5L12 21.5l-8.5-4.75v-9.5z"/><path d="M12 2.5v19M3.5 7.25L12 12l8.5-4.75"/></svg></button>`;
+  <button id="btn3d" class="eye-btn btn-3d" type="button" title="Ver el relieve en 3D" aria-label="Ver el relieve en 3D"><span>3D</span></button>`;
 const bmCtrl = L.control({position:'topright'});
 bmCtrl.onAdd = () => {
   const d = L.DomUtil.create('div','basemap-switcher');
@@ -1232,8 +1231,10 @@ function polyStyle(z){
 function selectFarmMap(exps){
   selectedFarm = String(exps);
   const ff=document.getElementById('farmFilter'); if(ff) ff.value=selectedFarm;
-  refreshMap(true);
+  const in3d = document.body.classList.contains('mode-3d');
+  refreshMap(!in3d);            // en 3D no reajustamos el mapa 2D oculto (más rápido)
   openInfoPanelByExps(selectedFarm);
+  if (in3d) fly3dToFarm(selectedFarm);
 }
 function refreshMap(refit) {
   if (refit === undefined) refit = true;
@@ -1290,7 +1291,7 @@ function renderList() {
   const html = farms.map(f => { const code='EXPS'+String(f.exps).padStart(2,'0'); const desc=(CARACTERISTICAS[f.exps]||[])[0]||`${f.n_zones} zonas · ${f.n_vertices} vértices`; const noAct=!(SOLUCIONES[f.exps] && SOLUCIONES[f.exps].estado==='actuado'); return `<div class="farm-card${String(selectedFarm)===String(f.exps)?' active':''}${noAct?' no-act':''}" data-exps="${f.exps}" tabindex="0" role="button" aria-label="${esc(code)} · ${esc(f.municipio)}, ${esc(f.provincia)}${noAct?' (sin actuar)':''}"><div class="code">${code}</div><div class="farm-title">${esc(f.municipio)} <span class="prov-tag">${esc(f.provincia)}</span></div><div class="farm-meta">${esc(desc)}</div></div>`; }).join('');
   document.getElementById('farmList').innerHTML = html || '<p style="color:#667085">No hay resultados.</p>';
   document.querySelectorAll('.farm-card').forEach(el => {
-    const sel = () => { selectedFarm=el.dataset.exps; document.getElementById('farmFilter').value=selectedFarm; refreshMap(); openInfoPanelByExps(selectedFarm); };
+    const sel = () => selectFarmMap(el.dataset.exps);
     el.addEventListener('click', sel);
     el.addEventListener('keydown', e => { if (e.key==='Enter' || e.key===' ') { e.preventDefault(); sel(); } });
   });
@@ -1673,12 +1674,24 @@ openFromHash();
 // ===== Modo 3D dentro del visor (MapLibre GL + relieve del terreno) =====
 let map3d = null;
 function _zonasGeoJSON(){
-  return { type:'FeatureCollection', features: ZONES.map(z => ({ type:'Feature', properties:{ group:z.group }, geometry:{ type:'Polygon', coordinates:[ z.coords.map(p => [p[1], p[0]]) ] } })) };
+  return { type:'FeatureCollection', features: ZONES.map(z => ({ type:'Feature', properties:{ group:z.group, exps:z.exps }, geometry:{ type:'Polygon', coordinates:[ z.coords.map(p => [p[1], p[0]]) ] } })) };
 }
 function _puntosGeoJSON(){
   const fs = [];
-  Object.keys(PUNTOS).forEach(k => PUNTOS[k].forEach(p => fs.push({ type:'Feature', properties:{ tipo:p.tipo }, geometry:{ type:'Point', coordinates:[p.lon, p.lat] } })));
+  Object.keys(PUNTOS).forEach(k => PUNTOS[k].forEach(p => fs.push({ type:'Feature', properties:{ tipo:p.tipo, id:p.id||'', exps:Number(k) }, geometry:{ type:'Point', coordinates:[p.lon, p.lat] } })));
   return { type:'FeatureCollection', features: fs };
+}
+function highlight3dFarm(exps){
+  if (!map3d || !map3d.getLayer('zonas-fill')) return;
+  const id = Number(exps) || -1;
+  map3d.setPaintProperty('zonas-fill','fill-opacity',['case',['==',['get','exps'],id],0.5,0.16]);
+  map3d.setPaintProperty('zonas-line','line-width',['case',['==',['get','exps'],id],4.5,1.8]);
+}
+function fly3dToFarm(exps){
+  if (!map3d) return;
+  const c = farmCentroid(Number(exps));
+  if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:16.3, pitch:64, bearing:18, duration:800, essential:true });
+  highlight3dFarm(exps);
 }
 const EXAG3D = 2.2;
 function init3d(center, zoom, pitch){
@@ -1707,6 +1720,21 @@ function init3d(center, zoom, pitch){
     map3d.addLayer({ id:'zonas-line', type:'line', source:'zonas', paint:{ 'line-color':['match',['get','group'],'TEST','#00e08a','#ff5a5a'], 'line-width':2.6 } });
     map3d.addSource('puntos', { type:'geojson', data:_puntosGeoJSON() });
     map3d.addLayer({ id:'puntos-c', type:'circle', source:'puntos', paint:{ 'circle-radius':5, 'circle-color':['match',['get','tipo'],'test','#00e08a','control','#ff5a5a','#2f6df6'], 'circle-stroke-color':'#fff', 'circle-stroke-width':1.5 } });
+    // Clic en una finca: misma selección + ficha que en el 2D
+    map3d.on('click','zonas-fill', e => { const ex = e.features[0].properties.exps; if (ex != null) selectFarmMap(ex); });
+    map3d.on('mouseenter','zonas-fill', () => { map3d.getCanvas().style.cursor = 'pointer'; });
+    map3d.on('mouseleave','zonas-fill', () => { map3d.getCanvas().style.cursor = ''; });
+    // Clic en un punto de muestreo: popup con id y tipo
+    map3d.on('click','puntos-c', e => {
+      const p = e.features[0].properties;
+      new maplibregl.Popup({ offset:10, closeButton:false })
+        .setLngLat(e.lngLat)
+        .setHTML(`<div style="font:800 12px system-ui;color:#0a3d2b">${esc(p.id||'')} · ${esc(String(p.tipo||'').toUpperCase())}</div>`)
+        .addTo(map3d);
+    });
+    map3d.on('mouseenter','puntos-c', () => { map3d.getCanvas().style.cursor = 'pointer'; });
+    map3d.on('mouseleave','puntos-c', () => { map3d.getCanvas().style.cursor = ''; });
+    if (selectedFarm) highlight3dFarm(selectedFarm);
   });
 }
 function enter3d(){
@@ -1723,12 +1751,11 @@ function enter3d(){
   document.body.classList.add('mode-3d');
   const b = document.getElementById('btn3d'); if (b) b.classList.add('active');
   if (!map3d) init3d(center, zoom, pitch);
-  else map3d.jumpTo({ center, zoom, pitch, bearing:18 });
-  setTimeout(() => { if (map3d) map3d.resize(); }, 80);
+  else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) highlight3dFarm(selectedFarm); }
+  setTimeout(() => { if (map3d) map3d.resize(); }, 60);
 }
 function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) b.classList.remove('active'); }
 window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit3d() : enter3d(); };
-(function(){ const e = document.getElementById('exit3d'); if (e) e.addEventListener('click', exit3d); })();
 </script>
 </body>
 </html>

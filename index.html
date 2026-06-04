@@ -2124,8 +2124,10 @@ function fitScreen(){
   if (window.innerWidth <= 980) {           // en móvil usamos el layout responsive, sin zoom
     app.style.zoom = ''; app.style.width = ''; app.style.height = '';
   } else {
-    const REF = 1600;                        // ancho de referencia del diseño "cómodo"
-    const z = Math.min(1, Math.max(0.62, window.innerWidth / REF));
+    // Escalamos según ancho Y alto (lo más restrictivo) para que quepa toda la
+    // vista igual en cualquier pantalla. Referencia ~1850x950 = zoom 1 (nativo).
+    const REFW = 1850, REFH = 950;
+    const z = Math.min(1, Math.max(0.5, Math.min(window.innerWidth / REFW, window.innerHeight / REFH)));
     app.style.zoom = z;
     app.style.width = (100 / z) + 'vw';      // compensar para que llene el viewport tras el zoom
     app.style.height = (100 / z) + 'dvh';

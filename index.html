@@ -347,6 +347,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* Fotos en la franja inferior: miniaturas pequeñas que llenan el ancho */
 .dock-bottom .fotos-grid { grid-template-columns:repeat(auto-fill, minmax(92px, 1fr)); }
 .dock-bottom .popup-fotos { margin-top:6px; }
+.dock-bottom .dock-title { margin-bottom:8px; }
 /* Las dos galerías (muestreo y soluciones) una al lado de la otra */
 .fotos-cols { display:flex; gap:10px 22px; align-items:flex-start; }
 .fotos-cols .popup-fotos { flex:1 1 0; min-width:0; margin-top:0; }
@@ -355,7 +356,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   /* Posiciones de los tres paneles en escritorio (mismo aspecto que .info-panel) */
   .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:240px; width:380px; min-width:0; max-width:44vw; resize:none; direction:ltr; transform:translateX(-130%); }
   .info-panel.dock-right { left:auto; right:18px; top:140px; bottom:240px; width:330px; min-width:0; max-width:40vw; resize:none; direction:ltr; transform:translateX(130%); }
-  .info-panel.dock-bottom{ left:18px; right:18px; top:auto; bottom:18px; width:auto; min-width:0; max-width:none; height:210px; resize:none; direction:ltr; transform:translateY(140%); }
+  .info-panel.dock-bottom{ left:18px; right:18px; top:auto; bottom:18px; width:auto; min-width:0; max-width:none; height:auto; max-height:230px; resize:none; direction:ltr; transform:translateY(140%); }
   .info-panel.dock-left.open, .info-panel.dock-right.open { transform:translateX(0); }
   .info-panel.dock-bottom.open { transform:translateY(0); }
 }
@@ -384,8 +385,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .report-page .sue-table, .report-page .now-table, .report-page .iot-table { font-size:9px; }
 .report-page .sue-table td, .report-page .now-table td, .report-page .now-table th, .report-page .iot-table td, .report-page .iot-table th { padding:2px 4px; }
 .report-page .sol-inv { padding:4px 8px; margin-top:5px; }
-.rep-map { position:relative; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#d7e2dc; height:155px; }
-.rep-map img { width:100%; height:100%; object-fit:cover; display:block; }
+.rep-map { position:relative; border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#d7e2dc; }
+.rep-map img { width:100%; height:auto; display:block; }
 .rep-map svg { position:absolute; inset:0; width:100%; height:100%; }
 .rep-map-empty { display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; height:120px; }
 .rep-mlegend { display:flex; flex-wrap:wrap; gap:10px; font-size:9px; font-weight:700; color:var(--ink); margin:4px 0 3px; }
@@ -1521,31 +1522,40 @@ function buildResumen(){
   }
 }
 // --- PDF: una ficha (instantánea) por finca, vía impresión del navegador ---
-// Mapa de la parcela para el PDF: satélite (Esri export) + polígonos test/control + puntos de muestreo
+// Mapa de la parcela para el PDF: satélite (Esri export, Web Mercator) + polígonos + puntos, sin deformar
+function _merc(lon, lat){ const R = 6378137; return [ R * lon * Math.PI/180, R * Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360)) ]; }
 function parcelaMapHtml(exps){
   const zs = ZONES.filter(z => z.exps === exps);
   if (!zs.length) return '<div class="rep-map rep-map-empty">Sin geometría de la parcela.</div>';
   const pts = puntosDe(exps);
-  const lats = [], lons = [];
-  zs.forEach(z => z.coords.forEach(p => { lats.push(p[0]); lons.push(p[1]); }));
-  pts.forEach(p => { lats.push(p.lat); lons.push(p.lon); });
-  let minLat = Math.min(...lats), maxLat = Math.max(...lats), minLon = Math.min(...lons), maxLon = Math.max(...lons);
-  const padLat = (maxLat - minLat) * 0.20 || 0.0015, padLon = (maxLon - minLon) * 0.20 || 0.0015;
-  minLat -= padLat; maxLat += padLat; minLon -= padLon; maxLon += padLon;
-  const W = 640, H = 400;
-  const exportUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${minLon},${minLat},${maxLon},${maxLat}&bboxSR=4326&imageSR=4326&size=${W},${H}&format=jpg&f=image`;
-  const X = lon => ((lon - minLon) / (maxLon - minLon)) * W;
-  const Y = lat => ((maxLat - lat) / (maxLat - minLat)) * H;
+  const m = [];
+  zs.forEach(z => z.coords.forEach(p => m.push(_merc(p[1], p[0]))));
+  pts.forEach(p => m.push(_merc(p.lon, p.lat)));
+  let minX = Math.min(...m.map(p=>p[0])), maxX = Math.max(...m.map(p=>p[0]));
+  let minY = Math.min(...m.map(p=>p[1])), maxY = Math.max(...m.map(p=>p[1]));
+  let dx = (maxX - minX) || 80, dy = (maxY - minY) || 80;
+  // margen del 20 %
+  minX -= dx*0.20; maxX += dx*0.20; minY -= dy*0.20; maxY += dy*0.20;
+  dx = maxX - minX; dy = maxY - minY;
+  // Ajusta el recorte al aspecto objetivo (mismo que la imagen) para que NO se deforme
+  const target = 1.6;
+  if (dx/dy < target) { const add = (dy*target - dx)/2; minX -= add; maxX += add; }
+  else { const add = (dx/target - dy)/2; minY -= add; maxY += add; }
+  dx = maxX - minX; dy = maxY - minY;
+  const W = 640, H = Math.round(W/target);
+  const exportUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${minX},${minY},${maxX},${maxY}&bboxSR=3857&imageSR=3857&size=${W},${H}&format=jpg&f=image`;
+  const PX = x => ((x - minX) / dx) * W, PY = y => ((maxY - y) / dy) * H;
   let polys = '';
   zs.forEach(z => {
-    const d = z.coords.map((p,i) => (i?'L':'M') + X(p[1]).toFixed(1) + ' ' + Y(p[0]).toFixed(1)).join(' ') + 'Z';
+    const d = z.coords.map((p,i) => { const mm = _merc(p[1], p[0]); return (i?'L':'M') + PX(mm[0]).toFixed(1) + ' ' + PY(mm[1]).toFixed(1); }).join(' ') + 'Z';
     const col = z.group === 'TEST' ? '#00e08a' : '#ff5a5a';
     polys += `<path d="${d}" fill="${col}" fill-opacity="0.18" stroke="${col}" stroke-width="2.4"/>`;
   });
   let dots = '';
   pts.forEach(p => {
+    const mm = _merc(p.lon, p.lat);
     const col = p.tipo === 'test' ? '#00e08a' : (p.tipo === 'control' ? '#ff5a5a' : '#2f6df6');
-    dots += `<circle cx="${X(p.lon).toFixed(1)}" cy="${Y(p.lat).toFixed(1)}" r="4" fill="${col}" stroke="#fff" stroke-width="1.4"/>`;
+    dots += `<circle cx="${PX(mm[0]).toFixed(1)}" cy="${PY(mm[1]).toFixed(1)}" r="4" fill="${col}" stroke="#fff" stroke-width="1.4"/>`;
   });
   return `<div class="rep-map">
     <img src="${exportUrl}" width="${W}" height="${H}" alt="Mapa satélite de la parcela">

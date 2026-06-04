@@ -254,6 +254,7 @@ body.mode-3d .map-title { display:none !important; }
 .basemap-switcher button.btn-3d { font-weight:950; font-size:15px; color:var(--green); letter-spacing:.01em; }
 .basemap-switcher button.btn-3d span { line-height:1; }
 .basemap-switcher button.btn-3d.active { background:var(--green); border-color:var(--green); color:#fff; }
+.basemap-switcher button.btn-3d.loading { opacity:.55; cursor:progress; }
 /* Marcadores 3D de puntos de muestreo (matraz) y sensores (antena) */
 .m3d-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
 .m3d-ico { width:27px; height:27px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 4px 7px rgba(0,0,0,.5); }
@@ -1724,6 +1725,7 @@ openFromHash();
 
 // ===== Modo 3D dentro del visor (MapLibre GL + relieve del terreno) =====
 let map3d = null;
+let _want3d = false;   // el usuario quiere entrar en 3D (aunque MapLibre aún cargue)
 // MapLibre (~785 KB) se carga solo cuando se necesita el 3D, para no ralentizar
 // la carga inicial del visor 2D.
 let _mlPromise = null;
@@ -1889,30 +1891,40 @@ function enter3d(){
     zoom = Math.min(13, Math.max(9.5, map.getZoom() + 1.5));
     pitch = 48;
   }
-  document.body.classList.add('mode-3d');
-  const b = document.getElementById('btn3d'); if (b) { b.classList.add('active'); const s=b.querySelector('span'); if(s) s.textContent='2D'; b.title='Volver al 2D'; }
-  if (selectedFarm) openInfoPanelByExps(selectedFarm);   // mantener la ficha abierta al pasar de 2D a 3D
-  // Asegura MapLibre cargado (carga diferida) antes de crear/mover el mapa 3D.
-  ensureMapLibre().then(() => {
-    if (!document.body.classList.contains('mode-3d')) return;   // el usuario salió mientras cargaba
+  const b = document.getElementById('btn3d');
+  // Activa realmente el 3D (oculta el 2D, crea/mueve el mapa). Solo cuando MapLibre
+  // está listo, para no dejar pantalla en blanco mientras se descarga la librería.
+  const apply = () => {
+    document.body.classList.add('mode-3d');
+    if (b) { b.classList.remove('loading'); b.classList.add('active'); const s=b.querySelector('span'); if(s) s.textContent='2D'; b.title='Volver al 2D'; }
+    if (selectedFarm) openInfoPanelByExps(selectedFarm);   // mantener la ficha abierta al pasar de 2D a 3D
     if (!map3d) init3d(center, zoom, pitch);
     else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); } }
-    // Tras hacerse visible el contenedor: reajustar el lienzo y encuadrar la finca
-    // con su bbox (si el resize llega tras el jumpTo, la finca quedaba descentrada).
-    const settle = () => {
-      if (!map3d) return;
-      map3d.resize();
-      if (selectedFarm) frame3dFarm(selectedFarm, true);
-    };
+    // Tras hacerse visible el contenedor: reajustar el lienzo y encuadrar la finca.
+    const settle = () => { if (!map3d) return; map3d.resize(); if (selectedFarm) frame3dFarm(selectedFarm, true); };
     setTimeout(settle, 70);
     setTimeout(settle, 260);
-  }).catch(() => {});
+  };
+  if (window.maplibregl) { apply(); }
+  else {
+    // MapLibre aún cargando: nos quedamos en 2D y damos feedback en el botón.
+    if (b) { b.classList.add('loading'); const s=b.querySelector('span'); if(s) s.textContent='…'; }
+    _want3d = true;
+    ensureMapLibre().then(() => { if (_want3d) apply(); }).catch(() => { if (b) { b.classList.remove('loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; } });
+  }
 }
-function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } refreshMap(true); }
-window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit3d() : enter3d(); };
-// Precargar el visor 3D en segundo plano (queda detrás, transparente) sobre una
-// finca (zona pequeña, no toda Andalucía) para que al pulsar "3D" abra al instante.
+function exit3d(){ _want3d = false; document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active','loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } refreshMap(true); }
+window.toggle3d = function(){
+  const b = document.getElementById('btn3d');
+  if (b && b.classList.contains('loading')) {   // estaba cargando: cancelar
+    _want3d = false; b.classList.remove('loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; return;
+  }
+  document.body.classList.contains('mode-3d') ? exit3d() : enter3d();
+};
+// Empezar a descargar MapLibre en segundo plano cuanto antes (no bloquea el 2D),
+// y crear el mapa 3D cuando el navegador esté ocioso para que abra al instante.
 (function preload3d(){
+  ensureMapLibre();   // arranca la descarga ya, en paralelo
   const run = () => {
     ensureMapLibre().then(() => {
       if (map3d) return;
@@ -1922,9 +1934,8 @@ window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit
       setTimeout(() => { if (map3d) map3d.resize(); }, 300);
     }).catch(() => {});
   };
-  // Esperamos a que el 2D esté listo para no competir por el ancho de banda.
-  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout:6000 });
-  else setTimeout(run, 3500);
+  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout:3000 });
+  else setTimeout(run, 1500);
 })();
 </script>
 </body>

@@ -476,7 +476,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     <div id="map"></div>
     <div id="map3d"></div>
     <div id="cloudLoading" class="cloud-loading"><div class="cl-txt">Cargando nube de puntos…</div><div class="cl-bar"><div class="cl-bar-i"></div></div></div>
-    <div id="rotHint" class="rot-hint">🖱️ Ctrl + arrastrar para girar · rueda/2 dedos para zoom</div>
+    <div id="rotHint" class="rot-hint">🔄 Mantén <b>Shift</b> + desliza 2 dedos (o arrastra) para girar · 2 dedos = zoom</div>
     <div class="map-title"><b>LivingSoiLL · Fincas experimentales</b><p>Visor de las 16 fincas experimentales del Living Lab Andaluz. Selecciona una finca para ver sus zonas, problemas del suelo, soluciones aplicadas, muestras de suelo, sensores IoT y fotos.</p></div>
     <aside id="infoPanel" class="info-panel dock-right" aria-hidden="true" aria-label="Información de la parcela">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
@@ -2027,12 +2027,29 @@ function init3d(center, zoom, pitch){
     }
   });
   map3d.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'bottom-right');
-  // Girar/inclinar con el touchpad: Ctrl (o ⌘) + arrastrar.
+  // Girar/inclinar con el touchpad: mantén SHIFT y desliza 2 dedos (o arrastra).
   (function(){
-    const cv = map3d.getCanvas(); let rot = null;
-    cv.addEventListener('mousedown', e => { if ((e.ctrlKey||e.metaKey) && e.button===0){ rot={x:e.clientX,y:e.clientY,b:map3d.getBearing(),p:map3d.getPitch()}; map3d.dragPan.disable(); cv.style.cursor='grabbing'; e.preventDefault(); } });
-    window.addEventListener('mousemove', e => { if(!rot) return; map3d.setBearing(rot.b - (e.clientX-rot.x)*0.4); map3d.setPitch(Math.max(0, Math.min(map3d.getMaxPitch?map3d.getMaxPitch():60, rot.p + (e.clientY-rot.y)*0.4))); });
-    window.addEventListener('mouseup', () => { if(rot){ rot=null; map3d.dragPan.enable(); cv.style.cursor=''; } });
+    const cv = map3d.getCanvas();
+    const mp = () => map3d.getMaxPitch ? map3d.getMaxPitch() : 60;
+    const mod = e => e.shiftKey || e.altKey || e.metaKey;
+    // Mientras se pulsa Shift/Alt, desactivamos el zoom de rueda para poder girar con 2 dedos.
+    const keyTog = () => { try { (window.__rotKey ? map3d.scrollZoom.disable() : map3d.scrollZoom.enable()); } catch(_){} };
+    window.addEventListener('keydown', e => { if (e.key==='Shift'||e.key==='Alt') { window.__rotKey=true; keyTog(); } });
+    window.addEventListener('keyup',   e => { if (e.key==='Shift'||e.key==='Alt') { window.__rotKey=false; keyTog(); } });
+    window.addEventListener('blur', () => { window.__rotKey=false; try{ map3d.scrollZoom.enable(); }catch(_){} });
+    // Rueda / dos dedos con modificador -> girar (deltaX) e inclinar (deltaY).
+    cv.addEventListener('wheel', e => {
+      if (!mod(e)) return;
+      e.preventDefault();
+      map3d.setBearing(map3d.getBearing() + (e.deltaX||0) * 0.6);
+      map3d.setPitch(Math.max(0, Math.min(mp(), map3d.getPitch() - (e.deltaY||0) * 0.4)));
+    }, { passive:false });
+    // Arrastrar con modificador -> girar/inclinar.
+    let rot = null;
+    cv.addEventListener('mousedown', e => { if (mod(e)) { rot={x:e.clientX,y:e.clientY,b:map3d.getBearing(),p:map3d.getPitch()}; try{map3d.dragPan.disable();}catch(_){} cv.style.cursor='grabbing'; e.preventDefault(); e.stopPropagation(); } }, true);
+    window.addEventListener('mousemove', e => { if(!rot) return; map3d.setBearing(rot.b - (e.clientX-rot.x)*0.4); map3d.setPitch(Math.max(0, Math.min(mp(), rot.p + (e.clientY-rot.y)*0.4))); });
+    window.addEventListener('mouseup', () => { if(rot){ rot=null; try{map3d.dragPan.enable();}catch(_){} cv.style.cursor=''; } });
+    cv.addEventListener('contextmenu', e => e.preventDefault());
   })();
   map3d.on('load', () => {
     try { map3d.setTerrain({ source:'dem', exaggeration:EXAG3D }); } catch(e) {}

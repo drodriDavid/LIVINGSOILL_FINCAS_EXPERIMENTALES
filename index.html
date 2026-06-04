@@ -1843,7 +1843,11 @@ function enter3d(){
   if (selectedFarm) openInfoPanelByExps(selectedFarm);   // mantener la ficha abierta al pasar de 2D a 3D
   if (!map3d) init3d(center, zoom, pitch);
   else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); } }
-  setTimeout(() => { if (map3d) map3d.resize(); }, 60);
+  // Tras hacerse visible el contenedor, reajustar el tamaño del lienzo y re-centrar
+  // (si el resize llega después del jumpTo, la finca quedaba descentrada).
+  const recenter = () => { if (!map3d) return; map3d.resize(); map3d.jumpTo({ center, zoom, pitch, bearing:18 }); };
+  setTimeout(recenter, 70);
+  setTimeout(recenter, 260);
 }
 function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } refreshMap(true); }
 window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit3d() : enter3d(); };

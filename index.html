@@ -817,7 +817,10 @@ function ortoTilesAbs(rel){ return _ortoBaseDir() + rel; }   // URL absoluta par
 function sync3dOrto(){
   if (!map3d || !map3d.isStyleLoaded()) return;
   const on = !!(document.getElementById('showOrto') && document.getElementById('showOrto').checked);
-  Object.keys(ORTOS).forEach(k => { const lid='orto-'+k; if (map3d.getLayer(lid)) map3d.setLayoutProperty(lid,'visibility', on?'visible':'none'); });
+  Object.keys(ORTOS).forEach(k => { const v=on?'visible':'none';
+    if (map3d.getLayer('orto-'+k)) map3d.setLayoutProperty('orto-'+k,'visibility', v);
+    if (map3d.getLayer('ortoline-'+k)) map3d.setLayoutProperty('ortoline-'+k,'visibility', v);
+  });
 }
 function add3dOrtoLayers(){
   if (!map3d || !Object.keys(ORTOS).length) return;
@@ -830,6 +833,11 @@ function add3dOrtoLayers(){
       if (!map3d.getSource(sid)) map3d.addSource(sid, { type:'raster', tiles:[ortoTilesAbs(o.tiles)], tileSize:256, minzoom:o.minzoom||14, maxzoom:o.maxzoom||20, bounds:o.bounds });
       const before = map3d.getLayer('zonas-fill') ? 'zonas-fill' : undefined;   // bajo las parcelas
       map3d.addLayer({ id:lid, type:'raster', source:sid, layout:{ visibility: on?'visible':'none' } }, before);
+      if (o.footprint) {   // contorno (huella) del orto
+        const lsid='ortolinesrc-'+k, llid='ortoline-'+k;
+        if (!map3d.getSource(lsid)) map3d.addSource(lsid, { type:'geojson', data: ortoTilesAbs(o.footprint) });
+        map3d.addLayer({ id:llid, type:'line', source:lsid, layout:{ visibility: on?'visible':'none', 'line-join':'round' }, paint:{ 'line-color':'#ff8c00', 'line-width':2.5, 'line-dasharray':[3,2] } }, before);
+      }
     } catch(e) { console.warn('add3dOrtoLayers', e); }
   });
 }
@@ -842,6 +850,12 @@ fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
     const b = L.latLngBounds([o.bounds[1], o.bounds[0]], [o.bounds[3], o.bounds[2]]);
     return L.tileLayer(o.tiles, { minZoom:o.minzoom||14, maxNativeZoom:o.maxzoom||20, maxZoom:22, bounds:b });
   }));
+  // Contorno (huella) de cada orto: línea naranja discontinua, dentro del mismo grupo.
+  keys.forEach(k => { const o = ORTOS[k]; if (!o.footprint) return;
+    fetch(o.footprint).then(r => r.ok ? r.json() : null).then(gj => {
+      if (gj) L.geoJSON(gj, { style:{ color:'#ff8c00', weight:2.5, opacity:.95, fill:false, dashArray:'6 4' }, interactive:false }).addTo(ortoLayer2d);
+    }).catch(() => {});
+  });
   const lbl = document.getElementById('ortoLbl'); if (lbl) lbl.style.display = '';
   const cb = document.getElementById('showOrto');
   if (cb) cb.addEventListener('change', () => {

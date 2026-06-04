@@ -227,6 +227,17 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .basemap-switcher button.active { background:var(--green); border-color:var(--green); }
 .basemap-switcher button.active svg { stroke:#fff; fill:#fff; }
 .basemap-switcher svg { width:22px; height:22px; stroke:var(--green); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.basemap-switcher .bm-sep { width:1px; align-self:stretch; background:var(--line); margin:4px 2px; flex:0 0 1px; }
+.basemap-switcher button.eye-btn.active { background:var(--green); border-color:var(--green); }
+.basemap-switcher button.eye-btn.active svg { stroke:#fff; }
+/* Menú desplegable de capas (se abre con el botón del ojo) */
+.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:6px; margin-top:6px; display:none; flex-direction:column; gap:1px; font-size:12.5px; font-weight:800; min-width:172px; }
+.layers-menu.open { display:flex; }
+.layers-menu .lm-h { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:950; padding:4px 8px 6px; }
+.layers-menu label { display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none; padding:7px 9px; border-radius:9px; white-space:nowrap; }
+.layers-menu label:hover { background:#f0f7f3; }
+.layers-menu input { width:auto; accent-color:var(--green); margin:0; cursor:pointer; }
+.layers-menu .dot { width:11px; height:11px; flex-shrink:0; }
 .leaflet-tooltip.farm-label { background:var(--green); border:1px solid var(--green); color:#fff; border-radius:6px; padding:1px 7px; font-weight:900; white-space:nowrap; box-shadow:0 2px 5px rgba(0,0,0,.28); font-size:var(--farm-fs,10px); letter-spacing:.04em; }
 .leaflet-tooltip.farm-label::before { display:none !important; }
 .leaflet-tooltip.province-label { background:rgba(255,255,255,.72); border:1px solid rgba(20,51,49,.16); color:#143331; font-weight:700; font-size:var(--prov-fs,11px); letter-spacing:.14em; text-transform:uppercase; padding:1px 8px; border-radius:999px; box-shadow:0 1px 3px rgba(0,0,0,.12); text-shadow:none; backdrop-filter:blur(3px); }
@@ -637,16 +648,32 @@ const bmHtml = `
   <button data-base="hibrido" class="active" title="Satélite con nombres" aria-label="Satélite con nombres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/><circle cx="12" cy="9" r="1.6" fill="currentColor" stroke="none"/></svg></button>
   <button data-base="esri" title="Satélite" aria-label="Satélite"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></button>
   <button data-base="topo" title="Topográfico" aria-label="Topográfico"><svg viewBox="0 0 24 24"><path d="M3 19l5-9 4 6 3-5 6 8z"/><circle cx="8.5" cy="6.5" r="1.6"/></svg></button>
-  <button data-base="carto" title="Mapa claro" aria-label="Mapa claro"><svg viewBox="0 0 24 24"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></button>`;
+  <button data-base="carto" title="Mapa claro" aria-label="Mapa claro"><svg viewBox="0 0 24 24"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></button>
+  <span class="bm-sep"></span>
+  <button id="eyeBtn" class="eye-btn" type="button" title="Capas visibles" aria-label="Mostrar u ocultar capas" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
 const bmCtrl = L.control({position:'topright'});
-bmCtrl.onAdd = () => { const d = L.DomUtil.create('div','basemap-switcher'); d.innerHTML = bmHtml; L.DomEvent.disableClickPropagation(d); d.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setBasemap(b.dataset.base))); return d; };
+bmCtrl.onAdd = () => {
+  const d = L.DomUtil.create('div','basemap-switcher');
+  d.innerHTML = bmHtml;
+  L.DomEvent.disableClickPropagation(d);
+  d.querySelectorAll('button[data-base]').forEach(b => b.addEventListener('click', () => setBasemap(b.dataset.base)));
+  const eye = d.querySelector('#eyeBtn');
+  if (eye) eye.addEventListener('click', () => {
+    const menu = document.querySelector('.layers-menu');
+    if (!menu) return;
+    const open = menu.classList.toggle('open');
+    eye.classList.toggle('active', open);
+    eye.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  return d;
+};
 bmCtrl.addTo(map);
 
 const togCtrl = L.control({position:'topright'});
 togCtrl.onAdd = () => {
-  const d = L.DomUtil.create('div','map-toggles');
+  const d = L.DomUtil.create('div','layers-menu');
   d.innerHTML = `
-    <span class="eye" title="Visibilidad de capas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+    <div class="lm-h">Capas visibles</div>
     <label><input id="showTest" type="checkbox" checked><span class="dot test"></span>TEST</label>
     <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
     <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>

@@ -841,6 +841,38 @@ fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
   if (map3d) add3dOrtoLayers();   // se auto-aplaza si el estilo aún no está listo
 }).catch(() => {});
 
+// ===== Nubes de puntos en 3D (deck.gl sobre el terreno de MapLibre) =====
+let NUBES = {};
+let _deckOverlay = null, _deckLoaded = {};   // _deckLoaded[exps] = layer ya construida
+fetch('data/nubes.json').then(r => r.ok ? r.json() : {}).then(j => { NUBES = j || {}; }).catch(() => {});
+function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} }
+function update3dCloud(exps){
+  if (!map3d) return;
+  const n = NUBES[String(exps)];
+  if (!n) { hide3dCloud(); return; }
+  ensureDeck().then(() => {
+    const LASLoader = window.loaders.LASLoader;
+    const layer = new deck.PointCloudLayer({
+      id: 'nube-'+exps,
+      data: ortoTilesAbs(n.file),
+      loaders: [LASLoader],
+      coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS,
+      coordinateOrigin: [n.origin[0], n.origin[1], 0],
+      getNormal: [0, 0, 1],
+      pointSize: n.pointSize || 1.5,
+      // El color RGB de LAS suele venir en 16 bits (0..65535); lo bajamos a 0..255.
+      getColor: (o, {data, index}) => {
+        const c = data.attributes.COLOR_0 || data.attributes.colors;
+        if (!c) return [220, 220, 220];
+        const v = c.value, s = c.size || 4, i = index * s, m = (v[i] > 255) ? (1/257) : 1;
+        return [v[i]*m, v[i+1]*m, v[i+2]*m];
+      }
+    });
+    if (!_deckOverlay) { _deckOverlay = new deck.MapboxOverlay({ interleaved: true, layers: [layer] }); map3d.addControl(_deckOverlay); }
+    else _deckOverlay.setProps({ layers: [layer] });
+  }).catch(e => console.warn('update3dCloud', e));
+}
+
 // Leyenda de la capa de erosión (solo visible en modo erosión)
 const eroLegend = L.control({position:'topright'});
 eroLegend.onAdd = () => {
@@ -1791,6 +1823,15 @@ function ensureMapLibre(){
   });
   return _mlPromise;
 }
+// Carga diferida de deck.gl + loader LAS (para la nube de puntos en 3D).
+function _loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+let _deckPromise = null;
+function ensureDeck(){
+  if (window.deck && window.loaders && window.loaders.LASLoader) return Promise.resolve();
+  if (_deckPromise) return _deckPromise;
+  _deckPromise = _loadScript('vendor/deckgl/deck.gl.min.js').then(() => _loadScript('vendor/deckgl/loaders-las.min.js'));
+  return _deckPromise;
+}
 function _zonasGeoJSON(){
   return { type:'FeatureCollection', features: ZONES.map(z => ({ type:'Feature', properties:{ group:z.group, exps:z.exps }, geometry:{ type:'Polygon', coordinates:[ z.coords.map(p => [p[1], p[0]]) ] } })) };
 }
@@ -1846,6 +1887,7 @@ function fly3dToFarm(exps){
   try {
     highlight3dFarm(exps);
     update3dFeatures(exps);
+    update3dCloud(exps);        // nube de puntos si la finca tiene
     frame3dFarm(exps, true);    // salto instantáneo (evita la transición rara entre fincas)
   } catch(e) { console.warn('fly3dToFarm', e); }
 }
@@ -1952,7 +1994,7 @@ function enter3d(){
     if (!map3d) init3d(center, zoom, pitch);
     else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); } }
     // Tras hacerse visible el contenedor: reajustar el lienzo y encuadrar la finca.
-    const settle = () => { if (!map3d) return; map3d.resize(); if (selectedFarm) frame3dFarm(selectedFarm, true); };
+    const settle = () => { if (!map3d) return; map3d.resize(); if (selectedFarm) { frame3dFarm(selectedFarm, true); update3dCloud(selectedFarm); } };
     setTimeout(settle, 70);
     setTimeout(settle, 260);
   };
@@ -1964,7 +2006,7 @@ function enter3d(){
     ensureMapLibre().then(() => { if (_want3d) apply(); }).catch(() => { if (b) { b.classList.remove('loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; } });
   }
 }
-function exit3d(){ _want3d = false; document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active','loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } refreshMap(true); }
+function exit3d(){ _want3d = false; document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active','loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } hide3dCloud(); refreshMap(true); }
 window.toggle3d = function(){
   const b = document.getElementById('btn3d');
   if (b && b.classList.contains('loading')) {   // estaba cargando: cancelar

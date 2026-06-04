@@ -231,7 +231,7 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .basemap-switcher button.eye-btn.active { background:var(--green); border-color:var(--green); }
 .basemap-switcher button.eye-btn.active svg { stroke:#fff; }
 /* Menú desplegable de capas (se abre con el botón del ojo) */
-.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row wrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:min(640px, calc(100vw - 36px)); }
+.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row nowrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:none; white-space:nowrap; }
 .layers-menu.open { display:flex; }
 .layers-menu .lm-h { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:950; padding:0 8px 0 2px; margin-right:2px; border-right:1px solid var(--line); align-self:stretch; display:flex; align-items:center; }
 .layers-menu label { display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; padding:6px 8px; border-radius:9px; white-space:nowrap; }
@@ -332,6 +332,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .muestras-leg-c { color:#bd2727; font-weight:900; }
 .sensors-layout { display:flex; gap:6px 20px; align-items:flex-start; flex-wrap:wrap; }
 .sensors-side { flex:0 0 290px; max-width:100%; }
+#sensorsPanel .sensors-side > .iot-block { border-top:0; padding-top:0; margin-top:0; }
 .sensors-charts { flex:1 1 320px; min-width:0; }
 .sensors-charts .iot-chart { height:62px; }
 /* Título de cada panel (canvas) */
@@ -798,7 +799,6 @@ function infoPanelHtml(z) {
   return `<div class="dock-title">Información de la parcela</div><div class="popup">
     <h3>${esc(z.finca)}</h3>
     <div class="sub">${esc(z.municipio)} · ${esc(z.provincia)} · ${esc(z.panel)}</div>
-    <span class="pill ${typeClass}">${z.group}</span><span class="pill">${esc(z.zone_label)}</span>
     <div class="view view-info">
       <div class="meta-grid">
         <b>Código</b><span>${exps}</span>
@@ -840,22 +840,11 @@ function fotosPanelHtml(z){
   return `<div class="dock-title">Imágenes · muestreo y soluciones</div><div class="popup">
     <div class="fotos-cols">
     <div class="popup-fotos">
-      <div class="fotos-head">
-        <span class="fotos-label">Imágenes · Muestreo</span>
-        <span class="fotos-head-actions">
-          <button class="fotos-gallery-btn" onclick="openGallery(${z.exps},'muestreo')" data-exps="${z.exps}" style="display:none">Ver galería</button>
-          <button class="fotos-cfg-btn" onclick="setGhToken()" title="Configurar subida de fotos (token de GitHub)">🔑</button>
-        </span>
-      </div>
+      <div class="fotos-head"><span class="fotos-label">Imágenes · Muestreo</span></div>
       <div class="fotos-grid" data-exps="${z.exps}"></div>
     </div>
-    <div class="popup-fotos popup-fotos-sol" style="display:none">
-      <div class="fotos-head">
-        <span class="fotos-label">Imágenes · Aplicación de soluciones</span>
-        <span class="fotos-head-actions">
-          <button class="fotos-gallery-btn fotos-gallery-btn-sol" onclick="openGallery(${z.exps},'sol')" data-exps="${z.exps}" style="display:none">Ver galería</button>
-        </span>
-      </div>
+    <div class="popup-fotos popup-fotos-sol">
+      <div class="fotos-head"><span class="fotos-label">Imágenes · Aplicación de soluciones</span></div>
       <div class="fotos-grid fotos-grid-sol" data-exps="${z.exps}"></div>
     </div>
     </div>
@@ -894,7 +883,7 @@ async function listFotosSol(exps, force) {
     const data = await r.json();
     const arr = (Array.isArray(data) ? data : []).filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f.name))
       .sort((a,b)=>a.name.localeCompare(b.name))
-      .map(f => ({ name:f.name, url:f.download_url }));
+      .map(f => ({ name:f.name, url:f.download_url, sha:f.sha }));
     fotosSolCache[key] = arr; return arr;
   } catch (e) { console.warn('listFotosSol', e); return fotosSolCache[key] || []; }
 }
@@ -902,24 +891,22 @@ async function renderFotosSol(exps) {
   const grid = document.querySelector('.fotos-grid-sol');
   if (!grid) return;
   grid.dataset.exps = exps;
-  grid.innerHTML = '<div class="fotos-loading">Cargando fotos…</div>';
+  grid.innerHTML = '<div class="fotos-loading">Cargando imágenes…</div>';
   const arr = await listFotosSol(exps);
   if (String(grid.dataset.exps) !== String(exps)) return;
   window._solUrls = arr.map(f => f.url);
-  const block = grid.closest('.popup-fotos');
-  if (!arr.length) { if (block) block.style.display = 'none'; return; }
-  if (block) block.style.display = '';
-  grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Aplicación de soluciones EXPS${String(exps).padStart(2,'0')} · foto ${i+1}" onclick="lbUrls=window._solUrls;openLightbox(this.src)"></div>`).join('');
-  const btn = document.querySelector(`.fotos-gallery-btn-sol[data-exps="${exps}"]`);
-  if (btn) { btn.style.display = ''; btn.textContent = `Ver galería (${arr.length})`; }
+  const canEdit = !!ghToken();
+  grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Aplicación de soluciones EXPS${String(exps).padStart(2,'0')} · imagen ${i+1}" onclick="openLb(window._solUrls, ${i})">${canEdit && f.sha?`<button class="foto-rm" onclick="removeFotoSol(${exps},'${esc(f.name)}','${f.sha}')" aria-label="Eliminar">×</button>`:''}</div>`).join('')
+    + `<label class="foto-cam" title="Hacer foto con la cámara"><input type="file" accept="image/*" capture="environment" onchange="onFotoChangeSol(${exps},this)" hidden>📷</label>`
+    + `<label class="foto-add" title="Subir imagen de aplicación de soluciones"><input type="file" accept="image/*" multiple onchange="onFotoChangeSol(${exps},this)" hidden>+</label>`;
 }
 window.setGhToken = function() {
   const t = prompt('Pega tu token de GitHub (fine-grained, permiso "Contents: Read and write" en este repo).\nSe guarda SOLO en este navegador. Deja vacío para borrarlo.', ghToken());
   if (t === null) return;
   if (t.trim()) localStorage.setItem('gh_token', t.trim()); else localStorage.removeItem('gh_token');
-  const grid = document.querySelector('.fotos-grid:not(.fotos-grid-sol)');
-  if (grid && grid.dataset.exps) renderFotos(grid.dataset.exps);
-  alert(t.trim() ? 'Token guardado en este navegador. Ya puedes subir y borrar fotos.' : 'Token borrado.');
+  const grid = document.querySelector('.fotos-grid-sol');
+  if (grid && grid.dataset.exps) renderFotosSol(grid.dataset.exps);
+  alert(t.trim() ? 'Token guardado en este navegador. Ya puedes subir y borrar imágenes.' : 'Token borrado.');
 };
 function resizeImage(file, maxW, quality) {
   return new Promise((resolve, reject) => {
@@ -995,16 +982,13 @@ async function renderFotos(exps) {
   const grid = document.querySelector('.fotos-grid:not(.fotos-grid-sol)');
   if (!grid) return;
   grid.dataset.exps = exps;
-  grid.innerHTML = '<div class="fotos-loading">Cargando fotos…</div>';
+  grid.innerHTML = '<div class="fotos-loading">Cargando imágenes…</div>';
   const arr = await listFotos(exps);
   if (String(grid.dataset.exps) !== String(exps)) return;
-  window._muUrls = arr.map(f => f.url); lbUrls = window._muUrls;
-  const canEdit = !!ghToken();
-  grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Muestreo de suelo EXPS${String(exps).padStart(2,'0')} · foto ${i+1}" onclick="lbUrls=window._muUrls;openLightbox(this.src)">${canEdit?`<button class="foto-rm" onclick="removeFoto(${exps},'${esc(f.name)}','${f.sha}')" aria-label="Eliminar">×</button>`:''}</div>`).join('')
-    + `<label class="foto-cam" title="Hacer foto con la cámara"><input type="file" accept="image/*" capture="environment" onchange="onFotoChange(${exps},this)" hidden>📷</label>`
-    + `<label class="foto-add" title="${canEdit?'Añadir foto desde galería/archivos':'Configura el token (🔑) para poder subir'}"><input type="file" accept="image/*" multiple onchange="onFotoChange(${exps},this)" hidden>+</label>`;
-  const btn = document.querySelector(`.fotos-gallery-btn:not(.fotos-gallery-btn-sol)[data-exps="${exps}"]`);
-  if (btn) { btn.style.display = arr.length ? '' : 'none'; btn.textContent = `Ver galería (${arr.length})`; }
+  window._muUrls = arr.map(f => f.url);
+  grid.innerHTML = arr.length
+    ? arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Muestreo de suelo EXPS${String(exps).padStart(2,'0')} · imagen ${i+1}" onclick="openLb(window._muUrls, ${i})"></div>`).join('')
+    : '<div class="fotos-loading">Sin imágenes.</div>';
 }
 window.openGallery = async function(exps, cat) {
   const modal = document.getElementById('gallery');
@@ -1032,8 +1016,52 @@ window.onFotoChange = function(exps, input) {
   input.value = '';
   (async () => { for (const f of files) await addFotoToFinca(exps, f); })();
 };
+// --- Subida/borrado de imágenes de Aplicación de soluciones ---
+async function addFotoToFincaSol(exps, file) {
+  if (!ghToken()) { if (confirm('Para subir imágenes necesitas configurar tu token de GitHub. ¿Configurarlo ahora?')) setGhToken(); return; }
+  try {
+    const dataUrl = await resizeImage(file, 1400, 0.78);
+    const b64 = dataUrl.split(',')[1];
+    const name = `EXPS${String(exps).padStart(2,'0')}_sol_${Date.now()}.jpg`;
+    const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${solDir(exps)}/${name}`;
+    const r = await fetch(url, {
+      method:'PUT',
+      headers:{ 'Authorization':'Bearer '+ghToken(), 'Accept':'application/vnd.github+json' },
+      body: JSON.stringify({ message:`imagen soluciones EXPS${String(exps).padStart(2,'0')}`, content:b64, branch:GH.branch })
+    });
+    if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.message || ('HTTP '+r.status)); }
+    await listFotosSol(exps, true);
+    renderFotosSol(exps);
+  } catch (e) { alert('No se pudo subir la imagen: ' + e.message); console.warn(e); }
+}
+window.onFotoChangeSol = function(exps, input) {
+  const files = Array.from(input.files);
+  input.value = '';
+  (async () => { for (const f of files) await addFotoToFincaSol(exps, f); })();
+};
+window.removeFotoSol = async function(exps, name, sha) {
+  if (!ghToken()) { alert('Necesitas un token de GitHub para borrar.'); return; }
+  if (!confirm('¿Eliminar esta imagen del repositorio?')) return;
+  try {
+    const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${solDir(exps)}/${name}`;
+    const r = await fetch(url, {
+      method:'DELETE',
+      headers:{ 'Authorization':'Bearer '+ghToken(), 'Accept':'application/vnd.github+json' },
+      body: JSON.stringify({ message:`borrar imagen ${name}`, sha, branch:GH.branch })
+    });
+    if (!r.ok) { const err = await r.json().catch(()=>({})); throw new Error(err.message || ('HTTP '+r.status)); }
+    await listFotosSol(exps, true);
+    renderFotosSol(exps);
+  } catch (e) { alert('No se pudo borrar: ' + e.message); }
+};
 let lbUrls = [];
 let lbIndex = 0;
+// Abre el visor con una galería concreta, posicionado en el índice i (las flechas navegan entre ellas)
+window.openLb = function(urls, i) {
+  lbUrls = (urls || []).slice();
+  document.getElementById('lightbox').classList.add('open');
+  lbShow(i || 0);
+};
 function lbShow(i) {
   if (!lbUrls.length) return;
   lbIndex = (i + lbUrls.length) % lbUrls.length;

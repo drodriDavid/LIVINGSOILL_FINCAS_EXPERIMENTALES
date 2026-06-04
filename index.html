@@ -399,6 +399,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .fotos-cols .popup-fotos { flex:1 1 0; min-width:0; margin-top:0; }
 .fotos-cols .popup-fotos + .popup-fotos { border-left:1px solid var(--line); padding-left:22px; }
 @media (min-width: 981px) {
+  /* Zoom fijo de la interfaz al 50% (se compensa el tamaño para llenar la pantalla) */
+  .app { zoom:0.5; width:200vw; height:200dvh; }
   /* Posiciones de los tres paneles en escritorio (mismo aspecto que .info-panel) */
   .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:240px; width:380px; min-width:0; max-width:44vw; resize:none; direction:ltr; transform:translateX(-130%); }
   .info-panel.dock-right { left:auto; right:18px; top:140px; bottom:240px; width:330px; min-width:0; max-width:40vw; resize:none; direction:ltr; transform:translateX(130%); }

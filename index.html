@@ -62,8 +62,9 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .fl-dot.act { background:var(--green); }
 .fl-dot.noact { background:#bfe3cf; border:1px solid #0a3d2b; }
 /* --- Modo 3D (MapLibre) --- */
-#map3d { position:absolute; inset:0; z-index:560; display:none; }
-body.mode-3d #map3d { display:block; }
+/* En 2D queda detrás y transparente (precargado); en 3D pasa al frente */
+#map3d { position:absolute; inset:0; z-index:1; opacity:0; pointer-events:none; }
+body.mode-3d #map3d { z-index:560; opacity:1; pointer-events:auto; }
 body.mode-3d .map-title { display:none !important; }
 .maplibregl-ctrl-attrib { font-size:9px; }
 .farm-title { font-weight:900; font-size:12px; line-height:1.2; color:var(--ink); }
@@ -246,10 +247,18 @@ body.mode-3d .map-title { display:none !important; }
 .basemap-switcher button.btn-3d { font-weight:950; font-size:15px; color:var(--green); letter-spacing:.01em; }
 .basemap-switcher button.btn-3d span { line-height:1; }
 .basemap-switcher button.btn-3d.active { background:var(--green); border-color:var(--green); color:#fff; }
-/* Etiquetas de puntos y sensores en el visor 3D */
-.m3d-coord { background:rgba(255,255,255,.92); color:#0a3d2b; font:800 10px system-ui,sans-serif; padding:1px 5px; border-radius:6px; border:1px solid rgba(10,61,43,.3); white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.25); }
-.m3d-sensor { background:#0a3d2b; color:#fff; font:800 10px system-ui,sans-serif; padding:1px 6px; border-radius:6px; white-space:nowrap; box-shadow:0 2px 6px rgba(0,0,0,.35); }
-.m3d-sensor.control { background:#7a1f1f; }
+/* Marcadores 3D minimalistas de puntos de muestreo y sensores */
+.m3d-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.m3d-pin { width:14px; height:14px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 4px 6px rgba(0,0,0,.45); }
+.m3d-pin.test { background:#12c98a; }
+.m3d-pin.control { background:#ff5a5a; }
+.m3d-pin.r { background:#2f6df6; }
+.m3d-pin.sensor-test { background:#0a8f5e; }
+.m3d-pin.sensor-control { background:#9c2b2b; }
+.m3d-tag { font:800 10px system-ui,sans-serif; padding:1px 6px; border-radius:6px; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+.m3d-tag.coord { background:rgba(255,255,255,.92); color:#0a3d2b; border:1px solid rgba(10,61,43,.3); }
+.m3d-tag.sens { background:#0a3d2b; color:#fff; }
+.m3d-tag.sens.control { background:#7a1f1f; }
 /* Menú desplegable de capas (se abre con el botón del ojo) */
 .layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row nowrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:none; white-space:nowrap; }
 .layers-menu.open { display:flex; }
@@ -1698,42 +1707,47 @@ function highlight3dFarm(exps){
 }
 let _lbl3d = [];
 function clear3dLabels(){ _lbl3d.forEach(m => m.remove()); _lbl3d = []; }
-function add3dLabel(lon, lat, html, cls, anchor){
+function add3dMarker(lon, lat, html){
   const el = document.createElement('div');
-  el.className = cls; el.innerHTML = html; el.style.pointerEvents = 'none';
-  const m = new maplibregl.Marker({ element:el, anchor:anchor||'top' }).setLngLat([lon, lat]).addTo(map3d);
+  el.className = 'm3d-wrap'; el.innerHTML = html; el.style.pointerEvents = 'none';
+  const m = new maplibregl.Marker({ element:el, anchor:'bottom' }).setLngLat([lon, lat]).addTo(map3d);
   _lbl3d.push(m);
 }
-// Muestra puntos y sensores igual que en 2D: al seleccionar una finca se filtran
-// a esa finca y se etiquetan (coordenadas en los puntos, id en los sensores).
+// Muestra puntos y sensores igual que en 2D: al seleccionar una finca se cambian
+// los círculos planos por pines 3D (coordenadas en los puntos, id en los sensores).
 function update3dFeatures(exps){
   if (!map3d || !map3d.getLayer('puntos-c')) return;
   clear3dLabels();
   const id = Number(exps);
-  map3d.setFilter('puntos-c', exps ? ['==',['get','exps'], id] : null);
+  // Con finca: ocultamos los círculos planos y usamos pines; sin finca: todos los círculos.
+  map3d.setFilter('puntos-c', exps ? ['==',['get','exps'], -1] : null);
   if (!exps) return;
   (PUNTOS[id] || []).forEach(p => {
-    if (p.lat != null && p.lon != null) add3dLabel(p.lon, p.lat, `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`, 'm3d-coord', 'top');
+    if (p.lat == null || p.lon == null) return;
+    const cls = p.tipo === 'test' ? 'test' : p.tipo === 'control' ? 'control' : 'r';
+    add3dMarker(p.lon, p.lat, `<span class="m3d-tag coord">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span><span class="m3d-pin ${cls}"></span>`);
   });
   const io = IOT[id];
   if (io && io.sensores) io.sensores.forEach(s => {
-    if (s.lat != null && s.lon != null) add3dLabel(s.lon, s.lat, '📡 ' + esc(s.id), 'm3d-sensor ' + (s.zona || ''), 'bottom');
+    if (s.lat == null || s.lon == null) return;
+    const zc = s.zona === 'control' ? 'control' : 'test';
+    add3dMarker(s.lon, s.lat, `<span class="m3d-tag sens ${zc}">📡 ${esc(s.id)}</span><span class="m3d-pin sensor-${zc}"></span>`);
   });
 }
 function fly3dToFarm(exps){
   if (!map3d) return;
   const c = farmCentroid(Number(exps));
-  if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:16.3, pitch:56, bearing:18, duration:700, essential:true });
+  if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:15.8, pitch:52, bearing:18, duration:700, essential:true });
   highlight3dFarm(exps);
   update3dFeatures(exps);
 }
 const EXAG3D = 1.5;
 function init3d(center, zoom, pitch){
   map3d = new maplibregl.Map({
-    container:'map3d', attributionControl:false, center, zoom, pitch:pitch, bearing:18, maxPitch:70,
+    container:'map3d', attributionControl:false, center, zoom, pitch:pitch, bearing:18, maxPitch:60,
     style:{ version:8,
       sources:{
-        sat:{ type:'raster', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:19, attribution:'© Esri, PNOA' },
+        sat:{ type:'raster', tiles:['https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileCol={x}&TileRow={y}'], tileSize:256, maxzoom:19, attribution:'PNOA © IGN España' },
         dem:{ type:'raster-dem', tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize:256, encoding:'terrarium', maxzoom:14 }
       },
       layers:[ {id:'sat',type:'raster',source:'sat'} ],
@@ -1773,15 +1787,15 @@ function init3d(center, zoom, pitch){
   });
 }
 function enter3d(){
-  let center = null, zoom = 15, pitch = 54;
-  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 16.3; pitch = 56; } }
+  let center = null, zoom = 15, pitch = 52;
+  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 15.8; pitch = 52; } }
   if (!center) {
     // Sin finca seleccionada (Todas las fincas): el zoom general es muy bajo y con
     // mucho pitch sale una explanada plana. Acercamos un poco y bajamos el ángulo.
     const ctr = map.getCenter();
     center = [ctr.lng, ctr.lat];
     zoom = Math.min(13, Math.max(9.5, map.getZoom() + 1.5));
-    pitch = 50;
+    pitch = 48;
   }
   document.body.classList.add('mode-3d');
   const b = document.getElementById('btn3d'); if (b) b.classList.add('active');
@@ -1792,6 +1806,13 @@ function enter3d(){
 }
 function exit3d(){ document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) b.classList.remove('active'); refreshMap(true); }
 window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit3d() : enter3d(); };
+// Precargar el visor 3D en segundo plano (queda detrás, transparente) para que
+// al pulsar "3D" se abra al instante.
+(function preload3d(){
+  const run = () => { if (!map3d) { const ctr = map.getCenter(); init3d([ctr.lng, ctr.lat], Math.min(12, map.getZoom()), 48); setTimeout(() => { if (map3d) map3d.resize(); }, 300); } };
+  if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout:4000 });
+  else setTimeout(run, 2500);
+})();
 </script>
 </body>
 </html>

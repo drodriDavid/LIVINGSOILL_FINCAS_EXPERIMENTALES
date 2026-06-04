@@ -247,14 +247,15 @@ body.mode-3d .map-title { display:none !important; }
 .basemap-switcher button.btn-3d { font-weight:950; font-size:15px; color:var(--green); letter-spacing:.01em; }
 .basemap-switcher button.btn-3d span { line-height:1; }
 .basemap-switcher button.btn-3d.active { background:var(--green); border-color:var(--green); color:#fff; }
-/* Marcadores 3D minimalistas de puntos de muestreo y sensores */
-.m3d-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
-.m3d-pin { width:14px; height:14px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); border:2px solid #fff; box-shadow:0 4px 6px rgba(0,0,0,.45); }
-.m3d-pin.test { background:#12c98a; }
-.m3d-pin.control { background:#ff5a5a; }
-.m3d-pin.r { background:#2f6df6; }
-.m3d-pin.sensor-test { background:#0a8f5e; }
-.m3d-pin.sensor-control { background:#9c2b2b; }
+/* Marcadores 3D de puntos de muestreo (matraz) y sensores (antena) */
+.m3d-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.m3d-ico { width:27px; height:27px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 4px 7px rgba(0,0,0,.5); }
+.m3d-ico svg { width:15px; height:15px; display:block; }
+.m3d-ico.samp.test { background:#12c98a; }
+.m3d-ico.samp.control { background:#ff5a5a; }
+.m3d-ico.samp.r { background:#2f6df6; }
+.m3d-ico.sens.test { background:#0a8f5e; }
+.m3d-ico.sens.control { background:#9c2b2b; }
 .m3d-tag { font:800 10px system-ui,sans-serif; padding:1px 6px; border-radius:6px; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,.3); }
 .m3d-tag.coord { background:rgba(255,255,255,.92); color:#0a3d2b; border:1px solid rgba(10,61,43,.3); }
 .m3d-tag.sens { background:#0a3d2b; color:#fff; }
@@ -1706,6 +1707,9 @@ function highlight3dFarm(exps){
   map3d.setPaintProperty('zonas-fill','fill-opacity',['case',['==',['get','exps'],id],0.5,0.16]);
   map3d.setPaintProperty('zonas-line','line-width',['case',['==',['get','exps'],id],4.5,1.8]);
 }
+// Iconos: antena (sensor) y matraz (toma de muestra)
+const SENS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round"><circle cx="12" cy="12" r="2.2" fill="#fff" stroke="none"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/></svg>';
+const SAMP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L5.5 17a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 9V3"/><path d="M8.2 14.5h7.6"/></svg>';
 let _lbl3d = [];
 function clear3dLabels(){ _lbl3d.forEach(m => m.remove()); _lbl3d = []; }
 function add3dMarker(lon, lat, html){
@@ -1727,13 +1731,13 @@ function update3dFeatures(exps){
     (PUNTOS[id] || []).forEach(p => {
       if (p.lat == null || p.lon == null) return;
       const cls = p.tipo === 'test' ? 'test' : p.tipo === 'control' ? 'control' : 'r';
-      add3dMarker(p.lon, p.lat, `<span class="m3d-tag coord">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span><span class="m3d-pin ${cls}"></span>`);
+      add3dMarker(p.lon, p.lat, `<span class="m3d-tag coord">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span><span class="m3d-ico samp ${cls}">${SAMP_SVG}</span>`);
     });
     const io = IOT[id];
     if (io && io.sensores) io.sensores.forEach(s => {
       if (s.lat == null || s.lon == null) return;
       const zc = s.zona === 'control' ? 'control' : 'test';
-      add3dMarker(s.lon, s.lat, `<span class="m3d-tag sens ${zc}">📡 ${esc(s.id)}</span><span class="m3d-pin sensor-${zc}"></span>`);
+      add3dMarker(s.lon, s.lat, `<span class="m3d-tag sens ${zc}">${esc(s.id)}</span><span class="m3d-ico sens ${zc}">${SENS_SVG}</span>`);
     });
   } catch(e) { console.warn('update3dFeatures', e); }
 }

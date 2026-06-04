@@ -295,6 +295,8 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
   .charts-row { grid-template-columns:1fr; }
   .sensors-side { flex:1 1 100%; }
   .sensors-charts { flex:1 1 100%; }
+  .fotos-cols { flex-direction:column; gap:6px; }
+  .fotos-cols .popup-fotos + .popup-fotos { border-left:0; padding-left:0; border-top:1px solid var(--line); padding-top:8px; }
 }
 /* --- Buscador, filtros y resumen (barra lateral) --- */
 #searchBox { width:100%; margin:2px 0 6px; padding:10px 12px 10px 34px; border-radius:14px; font-size:13px;
@@ -340,6 +342,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* Fotos en la franja inferior: miniaturas pequeñas que llenan el ancho */
 .dock-bottom .fotos-grid { grid-template-columns:repeat(auto-fill, minmax(92px, 1fr)); }
 .dock-bottom .popup-fotos { margin-top:6px; }
+/* Las dos galerías (muestreo y soluciones) una al lado de la otra */
+.fotos-cols { display:flex; gap:10px 22px; align-items:flex-start; }
+.fotos-cols .popup-fotos { flex:1 1 0; min-width:0; margin-top:0; }
+.fotos-cols .popup-fotos + .popup-fotos { border-left:1px solid var(--line); padding-left:22px; }
 @media (min-width: 981px) {
   /* Posiciones de los tres paneles en escritorio (mismo aspecto que .info-panel) */
   .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:240px; width:380px; min-width:0; max-width:44vw; resize:none; direction:ltr; transform:translateX(-130%); }
@@ -513,7 +519,7 @@ function muestrasChartsHtml(exps){
   const chart = (key,label,desc) => {
     const s=[]; if(dt) s.push({name:'test',vals:dt[key],color:'#00a86b'}); if(dc) s.push({name:'control',vals:dc[key],color:'#e24444'});
     const labels = (dt&&dt.t) || (dc&&dc.t) || [];
-    return `<div class="iot-chart-wrap"><div class="iot-chart-label">${label} <span class="iot-help" title="Clic para ver la explicación">ⓘ</span></div>${lineChart(s,200,48,{labels,unit:units[key]||''})}<div class="iot-explain">${esc(desc)}</div></div>`;
+    return `<div class="iot-chart-wrap open"><div class="iot-chart-label">${label} <span class="iot-help" title="Clic para ocultar/mostrar la explicación">ⓘ</span></div>${lineChart(s,200,48,{labels,unit:units[key]||''})}<div class="iot-explain">${esc(desc)}</div></div>`;
   };
   return `<div class="muestras-block">
     <div class="sol-head">Muestras de suelo${finca?`<span class="iot-sub">${esc(finca.municipio)}</span>`:''}<span class="iot-sub">${esc(range)} · cada 6 h · <span class="muestras-leg-t">test</span> vs <span class="muestras-leg-c">control</span></span></div>
@@ -807,6 +813,7 @@ function sensorsPanelHtml(z){
 // Panel derecho: fotos (muestreo y aplicación de soluciones)
 function fotosPanelHtml(z){
   return `<div class="dock-title">Fotos · muestreo y soluciones</div><div class="popup">
+    <div class="fotos-cols">
     <div class="popup-fotos">
       <div class="fotos-head">
         <span class="fotos-label">Fotos · Muestreo</span>
@@ -825,6 +832,7 @@ function fotosPanelHtml(z){
         </span>
       </div>
       <div class="fotos-grid fotos-grid-sol" data-exps="${z.exps}"></div>
+    </div>
     </div>
   </div>`;
 }

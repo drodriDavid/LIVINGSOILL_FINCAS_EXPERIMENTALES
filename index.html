@@ -1747,7 +1747,9 @@ function fly3dToFarm(exps){
   if (!map3d) return;
   try {
     const c = farmCentroid(Number(exps));
-    if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:15.8, pitch:52, bearing:18, duration:700, essential:true });
+    // No alejar: nos acercamos al menos a 16.3 y, si ya estás más cerca, lo mantenemos.
+    const z = Math.max(map3d.getZoom() || 0, 16.3);
+    if (c) map3d.flyTo({ center:[c[1], c[0]], zoom:z, pitch:52, bearing:18, duration:700, essential:true });
     highlight3dFarm(exps);
     update3dFeatures(exps);
   } catch(e) { console.warn('fly3dToFarm', e); }
@@ -1756,7 +1758,7 @@ function fly3dToFarm(exps){
 // se descarguen en segundo plano y al pulsar "3D" abra al instante.
 function warm3d(exps){
   if (!map3d || document.body.classList.contains('mode-3d')) return;
-  try { const c = farmCentroid(Number(exps)); if (c) map3d.jumpTo({ center:[c[1], c[0]], zoom:15.8, pitch:52, bearing:18 }); } catch(_) {}
+  try { const c = farmCentroid(Number(exps)); if (c) map3d.jumpTo({ center:[c[1], c[0]], zoom:16.3, pitch:52, bearing:18 }); } catch(_) {}
 }
 // Caja que engloba todas las fincas (con margen) para acotar el 3D y que no se
 // pueda navegar por todo el mundo.
@@ -1813,7 +1815,7 @@ function init3d(center, zoom, pitch){
 }
 function enter3d(){
   let center = null, zoom = 15, pitch = 52;
-  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 15.8; pitch = 52; } }
+  if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { center = [c[1], c[0]]; zoom = 16.3; pitch = 52; } }
   if (!center) {
     // Sin finca seleccionada (Todas las fincas): el zoom general es muy bajo y con
     // mucho pitch sale una explanada plana. Acercamos un poco y bajamos el ángulo.
@@ -1838,7 +1840,7 @@ window.toggle3d = function(){ document.body.classList.contains('mode-3d') ? exit
     if (map3d) return;
     let c = (FINCAS && FINCAS.length) ? farmCentroid(FINCAS[0].exps) : null;
     const center = c ? [c[1], c[0]] : [map.getCenter().lng, map.getCenter().lat];
-    init3d(center, 15.8, 52);
+    init3d(center, 16.3, 52);
     setTimeout(() => { if (map3d) map3d.resize(); }, 300);
   };
   if ('requestIdleCallback' in window) requestIdleCallback(run, { timeout:4000 });

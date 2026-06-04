@@ -86,6 +86,7 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .info-panel .popup .popup-btn { padding:6px 9px; font-size:12px; }
 .sol-block, .iot-block { margin:9px 0 2px; border-top:1px solid var(--line); padding-top:7px; }
 .sol-head { font-size:11px; color:var(--green); text-transform:uppercase; font-weight:900; letter-spacing:.05em; margin-bottom:5px; }
+.sol-head::before { content:''; display:block; width:26px; height:2px; background:var(--green); opacity:.5; border-radius:2px; margin-bottom:5px; }
 .iot-sub { font-weight:600; text-transform:none; letter-spacing:0; color:var(--muted); margin-left:4px; font-size:11px; }
 .popup .chars.sol-list { margin:2px 0 4px; }
 .sol-empty { font-size:12.5px; color:var(--muted); font-style:italic; }
@@ -908,7 +909,6 @@ async function renderFotosSol(exps) {
   window._solUrls = arr.map(f => f.url);
   const canEdit = !!ghToken();
   grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Aplicación de soluciones EXPS${String(exps).padStart(2,'0')} · imagen ${i+1}" onclick="openLb(window._solUrls, ${i})">${canEdit && f.sha?`<button class="foto-rm" onclick="removeFotoSol(${exps},'${esc(f.name)}','${f.sha}')" aria-label="Eliminar">×</button>`:''}</div>`).join('')
-    + `<label class="foto-cam" title="Hacer foto con la cámara"><input type="file" accept="image/*" capture="environment" onchange="onFotoChangeSol(${exps},this)" hidden>📷</label>`
     + `<label class="foto-add" title="Subir imagen de aplicación de soluciones"><input type="file" accept="image/*" multiple onchange="onFotoChangeSol(${exps},this)" hidden>+</label>`;
 }
 window.setGhToken = function() {
@@ -997,9 +997,9 @@ async function renderFotos(exps) {
   const arr = await listFotos(exps);
   if (String(grid.dataset.exps) !== String(exps)) return;
   window._muUrls = arr.map(f => f.url);
-  grid.innerHTML = arr.length
-    ? arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Muestreo de suelo EXPS${String(exps).padStart(2,'0')} · imagen ${i+1}" onclick="openLb(window._muUrls, ${i})"></div>`).join('')
-    : '<div class="fotos-loading">Sin imágenes.</div>';
+  const canEdit = !!ghToken();
+  grid.innerHTML = arr.map((f,i) => `<div class="foto-thumb"><img src="${f.url}" loading="lazy" alt="Muestreo de suelo EXPS${String(exps).padStart(2,'0')} · imagen ${i+1}" onclick="openLb(window._muUrls, ${i})">${canEdit && f.sha?`<button class="foto-rm" onclick="removeFoto(${exps},'${esc(f.name)}','${f.sha}')" aria-label="Eliminar">×</button>`:''}</div>`).join('')
+    + `<label class="foto-add" title="Subir imagen de muestreo"><input type="file" accept="image/*" multiple onchange="onFotoChange(${exps},this)" hidden>+</label>`;
 }
 window.openGallery = async function(exps, cat) {
   const modal = document.getElementById('gallery');
@@ -1582,8 +1582,15 @@ function reportFincaHtml(exps){
 }
 function generarPdfFincas(){
   const root = document.getElementById('reportRoot'); if(!root) return;
-  const pages = FINCAS.slice().sort((a,b)=>a.exps-b.exps).map(f => reportFincaHtml(f.exps)).join('');
-  root.innerHTML = `<div class="report-cover"><img class="report-logo" src="assets/logo_brote.png" alt="LivingSoiLL"><div><div class="report-h1">LivingSoiLL</div><div class="report-h2">Fincas experimentales del Living Lab Andaluz · instantánea por finca</div></div></div>${pages}`;
+  // Si hay una finca seleccionada, solo esa; si no, todas
+  const lista = selectedFarm
+    ? FINCAS.filter(f => String(f.exps) === String(selectedFarm))
+    : FINCAS.slice().sort((a,b)=>a.exps-b.exps);
+  const pages = lista.map(f => reportFincaHtml(f.exps)).join('');
+  const sub = (lista.length === 1)
+    ? `Finca EXPS${String(lista[0].exps).padStart(2,'0')} · ${esc(lista[0].municipio)}`
+    : 'Fincas experimentales del Living Lab Andaluz · instantánea por finca';
+  root.innerHTML = `<div class="report-cover"><img class="report-logo" src="assets/logo_brote.png" alt="LivingSoiLL"><div><div class="report-h1">LivingSoiLL</div><div class="report-h2">${sub}</div></div></div>${pages}`;
   let printed = false;
   const go = () => { if (printed) return; printed = true; window.print(); };
   const imgs = [...root.querySelectorAll('img')];

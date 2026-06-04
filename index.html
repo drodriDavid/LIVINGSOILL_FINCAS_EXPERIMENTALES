@@ -698,7 +698,10 @@ const esri = L.tileLayer(IMG_URL, { maxZoom: 20, attribution: 'Tiles © Esri' })
 const hibrido = L.layerGroup([ L.tileLayer(IMG_URL, { maxZoom: 20, attribution: 'Tiles © Esri' }), L.tileLayer(REF_URL, { maxZoom: 20 }) ]);
 const topo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
 const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, attribution: '© OpenStreetMap © CARTO' });
-const BASEMAPS = { esri, hibrido, topo, carto };
+// Ortofoto PNOA del IGN (máxima resolución para España) + nombres
+const PNOA_URL = 'https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileCol={x}&TileRow={y}';
+const pnoa = L.layerGroup([ L.tileLayer(PNOA_URL, { maxZoom: 20, attribution: 'PNOA © IGN España' }), L.tileLayer(REF_URL, { maxZoom: 20 }) ]);
+const BASEMAPS = { esri, hibrido, topo, carto, pnoa };
 let currentBase = hibrido;
 hibrido.addTo(map);
 function setBasemap(key) {
@@ -712,8 +715,10 @@ const bmHtml = `
   <button data-base="esri" title="Satélite" aria-label="Satélite"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg></button>
   <button data-base="topo" title="Topográfico" aria-label="Topográfico"><svg viewBox="0 0 24 24"><path d="M3 19l5-9 4 6 3-5 6 8z"/><circle cx="8.5" cy="6.5" r="1.6"/></svg></button>
   <button data-base="carto" title="Mapa claro" aria-label="Mapa claro"><svg viewBox="0 0 24 24"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></button>
+  <button data-base="pnoa" title="Ortofoto PNOA · alta resolución (IGN España)" aria-label="Ortofoto PNOA alta resolución"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7.2" height="7.2" rx="1.4"/><rect x="13.3" y="3.5" width="7.2" height="7.2" rx="1.4"/><rect x="3.5" y="13.3" width="7.2" height="7.2" rx="1.4"/><rect x="13.3" y="13.3" width="7.2" height="7.2" rx="1.4"/></svg></button>
   <span class="bm-sep"></span>
-  <button id="eyeBtn" class="eye-btn" type="button" title="Capas visibles" aria-label="Mostrar u ocultar capas" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
+  <button id="eyeBtn" class="eye-btn" type="button" title="Capas visibles" aria-label="Mostrar u ocultar capas" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <button id="btn3d" class="eye-btn" type="button" title="Ver en 3D (Google Earth)" aria-label="Ver en 3D en Google Earth"><svg viewBox="0 0 24 24"><path d="M12 2.5l8.5 4.75v9.5L12 21.5l-8.5-4.75v-9.5z"/><path d="M12 2.5v19M3.5 7.25L12 12l8.5-4.75"/></svg></button>`;
 const bmCtrl = L.control({position:'topright'});
 bmCtrl.onAdd = () => {
   const d = L.DomUtil.create('div','basemap-switcher');
@@ -727,6 +732,13 @@ bmCtrl.onAdd = () => {
     const open = menu.classList.toggle('open');
     eye.classList.toggle('active', open);
     eye.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  const b3d = d.querySelector('#btn3d');
+  if (b3d) b3d.addEventListener('click', () => {
+    let lat, lon;
+    if (selectedFarm) { const c = farmCentroid(Number(selectedFarm)); if (c) { lat = c[0]; lon = c[1]; } }
+    if (lat == null) { const ctr = map.getCenter(); lat = ctr.lat; lon = ctr.lng; }
+    window.open(`https://earth.google.com/web/@${lat.toFixed(6)},${lon.toFixed(6)},700a,500d,35y,0h,55t,0r`, '_blank', 'noopener');
   });
   return d;
 };

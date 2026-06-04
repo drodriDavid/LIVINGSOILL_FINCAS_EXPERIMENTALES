@@ -457,7 +457,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
       <button class="btn" id="fitAll">Ver todas</button>
     </div>
     <div id="resumen" class="resumen" aria-label="Resumen del proyecto"></div>
-    <div class="resumen-actions"><button id="dlResumen" class="linklike" title="Genera un PDF con una ficha (instantánea) por finca">⤓ Descargar resumen por finca (PDF)</button></div>
+    <div class="resumen-actions"><button id="dlResumen" class="linklike" title="Genera un PDF con una ficha (instantánea) por finca">⤓ Descargar resumen de fincas (PDF)</button></div>
     <div class="section-title"><span>Fincas experimentales</span><span id="listCount"></span></div>
     <div class="farm-legend"><span><i class="fl-dot act"></i>Soluciones aplicadas</span><span><i class="fl-dot noact"></i>Soluciones no aplicadas</span></div>
     <div id="farmList"></div>
@@ -1332,6 +1332,22 @@ function renderList() {
     el.addEventListener('click', sel);
     el.addEventListener('keydown', e => { if (e.key==='Enter' || e.key===' ') { e.preventDefault(); sel(); } });
   });
+  updateResumenBtn();
+}
+// Texto del botón de descarga según haya finca seleccionada o no.
+function updateResumenBtn(){
+  const b = document.getElementById('dlResumen');
+  if (!b) return;
+  if (selectedFarm) {
+    const f = FINCAS.find(x => String(x.exps) === String(selectedFarm));
+    const code = 'EXPS' + String(selectedFarm).padStart(2,'0');
+    const nom = f ? f.municipio : code;
+    b.textContent = '⤓ Descargar resumen finca ' + nom + ' (PDF)';
+    b.title = 'Genera un PDF con la ficha de ' + nom;
+  } else {
+    b.textContent = '⤓ Descargar resumen de fincas (PDF)';
+    b.title = 'Genera un PDF con una ficha (instantánea) por finca';
+  }
 }
 function populateFilters() {
   const ff=document.getElementById('farmFilter');

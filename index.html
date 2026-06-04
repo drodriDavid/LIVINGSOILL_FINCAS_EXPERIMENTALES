@@ -1781,8 +1781,8 @@ function farmBounds(exps){
 }
 // Margen para encuadrar dejando hueco bajo el panel de fotos.
 function cam3dPad(){
-  if (typeof panelIsMobile === 'function' && panelIsMobile()) return {top:20, right:20, bottom:20, left:20};
-  return {top:40, right:50, bottom:150, left:50};
+  if (typeof panelIsMobile === 'function' && panelIsMobile()) return {top:40, right:40, bottom:40, left:40};
+  return {top:80, right:90, bottom:190, left:90};
 }
 // Encuadra (y centra) la finca usando su bbox; instant=true sin animación.
 function frame3dFarm(exps, instant){
@@ -1790,7 +1790,7 @@ function frame3dFarm(exps, instant){
   const b = farmBounds(exps);
   if (!b) return;
   // Vista cenital (pitch 0, norte arriba): así la finca queda siempre centrada.
-  try { map3d.fitBounds(b, { padding:cam3dPad(), pitch:0, bearing:0, maxZoom:17.8, duration: instant ? 0 : 650, essential:true }); }
+  try { map3d.fitBounds(b, { padding:cam3dPad(), pitch:0, bearing:0, maxZoom:16.8, duration: instant ? 0 : 650, essential:true }); }
   catch(e) { console.warn('frame3dFarm', e); }
 }
 // Caja que engloba todas las fincas (con margen) para acotar el 3D y que no se

@@ -2042,12 +2042,12 @@ function init3d(center, zoom, pitch){
       if (!mod(e)) return;
       e.preventDefault();
       map3d.setBearing(map3d.getBearing() + (e.deltaX||0) * 0.6);
-      map3d.setPitch(Math.max(0, Math.min(mp(), map3d.getPitch() - (e.deltaY||0) * 0.4)));
+      map3d.setPitch(Math.max(0, Math.min(mp(), map3d.getPitch() + (e.deltaY||0) * 0.4)));
     }, { passive:false });
     // Arrastrar con modificador -> girar/inclinar.
     let rot = null;
     cv.addEventListener('mousedown', e => { if (mod(e)) { rot={x:e.clientX,y:e.clientY,b:map3d.getBearing(),p:map3d.getPitch()}; try{map3d.dragPan.disable();}catch(_){} cv.style.cursor='grabbing'; e.preventDefault(); e.stopPropagation(); } }, true);
-    window.addEventListener('mousemove', e => { if(!rot) return; map3d.setBearing(rot.b - (e.clientX-rot.x)*0.4); map3d.setPitch(Math.max(0, Math.min(mp(), rot.p + (e.clientY-rot.y)*0.4))); });
+    window.addEventListener('mousemove', e => { if(!rot) return; map3d.setBearing(rot.b - (e.clientX-rot.x)*0.4); map3d.setPitch(Math.max(0, Math.min(mp(), rot.p - (e.clientY-rot.y)*0.4))); });
     window.addEventListener('mouseup', () => { if(rot){ rot=null; try{map3d.dragPan.enable();}catch(_){} cv.style.cursor=''; } });
     cv.addEventListener('contextmenu', e => e.preventDefault());
   })();

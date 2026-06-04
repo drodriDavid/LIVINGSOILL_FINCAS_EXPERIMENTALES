@@ -231,13 +231,13 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .basemap-switcher button.eye-btn.active { background:var(--green); border-color:var(--green); }
 .basemap-switcher button.eye-btn.active svg { stroke:#fff; }
 /* Menú desplegable de capas (se abre con el botón del ojo) */
-.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:6px; margin-top:6px; display:none; flex-direction:column; gap:1px; font-size:12.5px; font-weight:800; min-width:172px; }
+.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row wrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:min(640px, calc(100vw - 36px)); }
 .layers-menu.open { display:flex; }
-.layers-menu .lm-h { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:950; padding:4px 8px 6px; }
-.layers-menu label { display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none; padding:7px 9px; border-radius:9px; white-space:nowrap; }
+.layers-menu .lm-h { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:950; padding:0 8px 0 2px; margin-right:2px; border-right:1px solid var(--line); align-self:stretch; display:flex; align-items:center; }
+.layers-menu label { display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; padding:6px 8px; border-radius:9px; white-space:nowrap; }
 .layers-menu label:hover { background:#f0f7f3; }
 .layers-menu input { width:auto; accent-color:var(--green); margin:0; cursor:pointer; }
-.layers-menu .dot { width:11px; height:11px; flex-shrink:0; }
+.layers-menu .dot { width:10px; height:10px; flex-shrink:0; }
 .leaflet-tooltip.farm-label { background:var(--green); border:1px solid var(--green); color:#fff; border-radius:6px; padding:1px 7px; font-weight:900; white-space:nowrap; box-shadow:0 2px 5px rgba(0,0,0,.28); font-size:var(--farm-fs,10px); letter-spacing:.04em; }
 .leaflet-tooltip.farm-label::before { display:none !important; }
 .leaflet-tooltip.province-label { background:rgba(255,255,255,.72); border:1px solid rgba(20,51,49,.16); color:#143331; font-weight:700; font-size:var(--prov-fs,11px); letter-spacing:.14em; text-transform:uppercase; padding:1px 8px; border-radius:999px; box-shadow:0 1px 3px rgba(0,0,0,.12); text-shadow:none; backdrop-filter:blur(3px); }
@@ -483,6 +483,9 @@ const IOT = {
 let MUESTRAS = null;
 let _openZone = null;
 fetch('data/iot_muestras.json').then(r => r.ok ? r.json() : null).then(d => { MUESTRAS = d; if (_openZone) openInfoPanel(_openZone); }).catch(() => {});
+// Manifiesto de imágenes del repo (evita depender de la API de GitHub, que tiene límite de peticiones)
+let IMAGENES = null;
+fetch('data/imagenes.json').then(r => r.ok ? r.json() : null).then(d => { IMAGENES = d; if (_openZone) { renderFotos(_openZone.exps); renderFotosSol(_openZone.exps); } }).catch(() => {});
 function _pct(v){ return v==null ? '—' : (v*100).toFixed(1)+'%'; }
 function _tc(v){ return v==null ? '—' : v+' °C'; }
 function lineChart(series, w, h, meta){
@@ -808,15 +811,15 @@ function infoPanelHtml(z) {
 // Panel inferior: datos de los sensores (tabla + valores actuales) y gráficas de muestras
 function sensorsPanelHtml(z){
   const charts = muestrasChartsHtml(z.exps);
-  return `<div class="dock-title">Datos de los sensores</div><div class="popup"><div class="sensors-layout"><div class="sensors-side">${iotHtml(z.exps)}</div>${charts?`<div class="sensors-charts">${charts}</div>`:''}</div></div>`;
+  return `<div class="dock-title">Datos de sensores</div><div class="popup"><div class="sensors-layout"><div class="sensors-side">${iotHtml(z.exps)}</div>${charts?`<div class="sensors-charts">${charts}</div>`:''}</div></div>`;
 }
 // Panel derecho: fotos (muestreo y aplicación de soluciones)
 function fotosPanelHtml(z){
-  return `<div class="dock-title">Fotos · muestreo y soluciones</div><div class="popup">
+  return `<div class="dock-title">Imágenes · muestreo y soluciones</div><div class="popup">
     <div class="fotos-cols">
     <div class="popup-fotos">
       <div class="fotos-head">
-        <span class="fotos-label">Fotos · Muestreo</span>
+        <span class="fotos-label">Imágenes · Muestreo</span>
         <span class="fotos-head-actions">
           <button class="fotos-gallery-btn" onclick="openGallery(${z.exps},'muestreo')" data-exps="${z.exps}" style="display:none">Ver galería</button>
           <button class="fotos-cfg-btn" onclick="setGhToken()" title="Configurar subida de fotos (token de GitHub)">🔑</button>
@@ -826,7 +829,7 @@ function fotosPanelHtml(z){
     </div>
     <div class="popup-fotos popup-fotos-sol" style="display:none">
       <div class="fotos-head">
-        <span class="fotos-label">Fotos · Aplicación de soluciones</span>
+        <span class="fotos-label">Imágenes · Aplicación de soluciones</span>
         <span class="fotos-head-actions">
           <button class="fotos-gallery-btn fotos-gallery-btn-sol" onclick="openGallery(${z.exps},'sol')" data-exps="${z.exps}" style="display:none">Ver galería</button>
         </span>
@@ -854,6 +857,11 @@ const fotosSolCache = {};
 async function listFotosSol(exps, force) {
   const key = String(exps);
   if (fotosSolCache[key] && !force) return fotosSolCache[key];
+  // Sin token: usar el manifiesto del repo (rápido y sin límite de API)
+  if (!force && !ghToken() && IMAGENES && IMAGENES[key]) {
+    const arr = (IMAGENES[key].sol || []).map(n => ({ name:n, url: solDir(exps)+'/'+n }));
+    fotosSolCache[key] = arr; return arr;
+  }
   const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${solDir(exps)}?ref=${GH.branch}`;
   try {
     const headers = { 'Accept':'application/vnd.github+json' };
@@ -911,6 +919,11 @@ const fotosCache = {};
 async function listFotos(exps, force) {
   const key = String(exps);
   if (fotosCache[key] && !force) return fotosCache[key];
+  // Sin token: usar el manifiesto del repo (rápido y sin límite de API)
+  if (!force && !ghToken() && IMAGENES && IMAGENES[key]) {
+    const arr = (IMAGENES[key].muestreo || []).map(n => ({ name:n, url: ghDir(exps)+'/'+n, sha:null }));
+    fotosCache[key] = arr; return arr;
+  }
   const url = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${ghDir(exps)}?ref=${GH.branch}`;
   try {
     const headers = { 'Accept':'application/vnd.github+json' };

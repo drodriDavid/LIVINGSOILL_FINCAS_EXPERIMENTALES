@@ -321,12 +321,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sensors-side { flex:0 0 290px; max-width:100%; }
 .sensors-charts { flex:1 1 320px; min-width:0; }
 .sensors-charts .iot-chart { height:62px; }
-.panel-tag { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:950; padding:8px 0 2px; position:sticky; top:0; background:#fff; z-index:6; }
+/* Título de cada panel (canvas) */
+.dock-title { position:sticky; top:0; z-index:8; margin:0 -14px 7px; padding:10px 42px 8px 14px; background:#fff; color:var(--green); font-size:12.5px; font-weight:950; letter-spacing:.01em; border-bottom:1px solid var(--line); box-shadow:0 7px 9px -8px rgba(0,0,0,.18); }
+.info-panel .close-x { z-index:9; }
+/* En la ficha de info, el nombre de la finca ya no es sticky (lo es el título del panel) */
+.info-panel .popup h3 { position:static; box-shadow:none; }
+/* Fotos en la franja inferior: miniaturas pequeñas que llenan el ancho */
+.dock-bottom .fotos-grid { grid-template-columns:repeat(auto-fill, minmax(92px, 1fr)); }
+.dock-bottom .popup-fotos { margin-top:6px; }
 @media (min-width: 981px) {
   /* Posiciones de los tres paneles en escritorio (mismo aspecto que .info-panel) */
-  .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:236px; width:340px; min-width:0; max-width:42vw; resize:none; direction:ltr; transform:translateX(-130%); }
-  .info-panel.dock-right { left:auto; right:18px; top:140px; bottom:236px; width:320px; min-width:0; max-width:40vw; resize:none; direction:ltr; transform:translateX(130%); }
-  .info-panel.dock-bottom{ left:18px; right:18px; top:auto; bottom:18px; width:auto; min-width:0; max-width:none; height:206px; resize:none; direction:ltr; transform:translateY(140%); }
+  .info-panel.dock-left  { left:18px; right:auto; top:140px; bottom:240px; width:380px; min-width:0; max-width:44vw; resize:none; direction:ltr; transform:translateX(-130%); }
+  .info-panel.dock-right { left:auto; right:18px; top:140px; bottom:240px; width:330px; min-width:0; max-width:40vw; resize:none; direction:ltr; transform:translateX(130%); }
+  .info-panel.dock-bottom{ left:18px; right:18px; top:auto; bottom:18px; width:auto; min-width:0; max-width:none; height:210px; resize:none; direction:ltr; transform:translateY(140%); }
   .info-panel.dock-left.open, .info-panel.dock-right.open { transform:translateX(0); }
   .info-panel.dock-bottom.open { transform:translateY(0); }
 }
@@ -358,15 +365,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   <main class="map-wrap">
     <div id="map"></div>
     <div class="map-title"><b>LivingSoiLL · Fincas experimentales</b><p>Visor de las 16 fincas experimentales del Living Lab Andaluz. Selecciona una finca para ver sus zonas, problemas del suelo, soluciones aplicadas, muestras de suelo, sensores IoT y fotos.</p></div>
-    <aside id="infoPanel" class="info-panel dock-left" aria-hidden="true" aria-label="Información de la parcela">
+    <aside id="infoPanel" class="info-panel dock-right" aria-hidden="true" aria-label="Información de la parcela">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
       <div id="infoPanelBody"></div>
     </aside>
-    <aside id="sensorsPanel" class="info-panel dock-bottom" aria-hidden="true" aria-label="Datos de los sensores">
+    <aside id="sensorsPanel" class="info-panel dock-left" aria-hidden="true" aria-label="Datos de los sensores">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
       <div id="sensorsPanelBody"></div>
     </aside>
-    <aside id="fotosPanel" class="info-panel dock-right" aria-hidden="true" aria-label="Fotos de la finca">
+    <aside id="fotosPanel" class="info-panel dock-bottom" aria-hidden="true" aria-label="Fotos de la finca">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
       <div id="fotosPanelBody"></div>
     </aside>
@@ -730,7 +737,7 @@ function infoPanelHtml(z) {
   const fechaTxt = fechas.length ? (fechas[0] + (fechas.length>1 ? ' – ' + fechas[fechas.length-1] : '')) : '—';
   const muestreoTxt = `${cnt.test} test · ${cnt.control} control${cnt.r?` · ${cnt.r} remues.`:''}`;
   const ptsRows = pts.map(p => `<tr><td><span class="pt-badge ${p.tipo}">${esc(p.id)}</span></td><td>${p.lat.toFixed(6)}</td><td>${p.lon.toFixed(6)}</td><td>${p.fecha?esc(p.fecha.split(' ')[0]):'—'}</td></tr>`).join('');
-  return `<div class="popup">
+  return `<div class="dock-title">Información de la parcela</div><div class="popup">
     <h3>${esc(z.finca)}</h3>
     <div class="sub">${esc(z.municipio)} · ${esc(z.provincia)} · ${esc(z.panel)}</div>
     <span class="pill ${typeClass}">${z.group}</span><span class="pill">${esc(z.zone_label)}</span>
@@ -768,11 +775,11 @@ function infoPanelHtml(z) {
 // Panel inferior: datos de los sensores (tabla + valores actuales) y gráficas de muestras
 function sensorsPanelHtml(z){
   const charts = muestrasChartsHtml(z.exps);
-  return `<div class="popup"><div class="sensors-layout"><div class="sensors-side">${iotHtml(z.exps)}</div>${charts?`<div class="sensors-charts">${charts}</div>`:''}</div></div>`;
+  return `<div class="dock-title">Datos de los sensores</div><div class="popup"><div class="sensors-layout"><div class="sensors-side">${iotHtml(z.exps)}</div>${charts?`<div class="sensors-charts">${charts}</div>`:''}</div></div>`;
 }
 // Panel derecho: fotos (muestreo y aplicación de soluciones)
 function fotosPanelHtml(z){
-  return `<div class="popup">
+  return `<div class="dock-title">Fotos · muestreo y soluciones</div><div class="popup">
     <div class="popup-fotos">
       <div class="fotos-head">
         <span class="fotos-label">Fotos · Muestreo</span>

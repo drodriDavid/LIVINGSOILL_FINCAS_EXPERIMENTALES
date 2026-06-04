@@ -1762,7 +1762,7 @@ function fly3dToFarm(exps){
   try {
     highlight3dFarm(exps);
     update3dFeatures(exps);
-    frame3dFarm(exps, false);   // encuadra y centra la finca con su bbox
+    frame3dFarm(exps, true);    // salto instantáneo (evita la transición rara entre fincas)
   } catch(e) { console.warn('fly3dToFarm', e); }
 }
 // Precarga silenciosa: mueve el mapa 3D (oculto) a la finca para que sus teselas

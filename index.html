@@ -72,6 +72,8 @@ body.mode-3d #map3d { z-index:560; opacity:1; pointer-events:auto; }
 /* En 3D ocultamos los azulejos del 2D (solo el panel del mapa, no los controles)
    para que nunca se transparenten por detrás del 3D. */
 body.mode-3d #map .leaflet-map-pane { visibility:hidden; }
+.rot-hint { position:absolute; left:14px; bottom:14px; z-index:1100; display:none; background:rgba(10,61,43,.85); color:#fff; font:700 11px system-ui,sans-serif; padding:6px 10px; border-radius:8px; pointer-events:none; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+body.mode-3d .rot-hint { display:block; }
 /* Barra de carga de la nube de puntos (centrada abajo) */
 .cloud-loading { position:absolute; left:50%; bottom:300px; transform:translateX(-50%); z-index:1300; display:none; background:rgba(10,61,43,.93); color:#fff; padding:10px 16px 12px; border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,.32); min-width:240px; text-align:center; pointer-events:none; }
 .cloud-loading.show { display:block; }
@@ -276,7 +278,7 @@ body.mode-3d .map-title { display:none !important; }
 .m3d-tag.sens { background:#0a3d2b; color:#fff; }
 .m3d-tag.sens.control { background:#7a1f1f; }
 /* Menú desplegable de capas (se abre con el botón del ojo) */
-.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row nowrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:none; width:max-content; white-space:nowrap; overflow-x:auto; }
+.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row nowrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; width:max-content; max-width:calc(100vw - 24px); white-space:nowrap; overflow-x:auto; }
 .layers-menu.open { display:flex; }
 .layers-menu .lm-h { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:950; padding:0 8px 0 2px; margin-right:2px; border-right:1px solid var(--line); align-self:stretch; display:flex; align-items:center; }
 .layers-menu label { display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; padding:6px 8px; border-radius:9px; white-space:nowrap; }
@@ -474,6 +476,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     <div id="map"></div>
     <div id="map3d"></div>
     <div id="cloudLoading" class="cloud-loading"><div class="cl-txt">Cargando nube de puntos…</div><div class="cl-bar"><div class="cl-bar-i"></div></div></div>
+    <div id="rotHint" class="rot-hint">🖱️ Ctrl + arrastrar para girar · rueda/2 dedos para zoom</div>
     <div class="map-title"><b>LivingSoiLL · Fincas experimentales</b><p>Visor de las 16 fincas experimentales del Living Lab Andaluz. Selecciona una finca para ver sus zonas, problemas del suelo, soluciones aplicadas, muestras de suelo, sensores IoT y fotos.</p></div>
     <aside id="infoPanel" class="info-panel dock-right" aria-hidden="true" aria-label="Información de la parcela">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
@@ -2024,6 +2027,13 @@ function init3d(center, zoom, pitch){
     }
   });
   map3d.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'bottom-right');
+  // Girar/inclinar con el touchpad: Ctrl (o ⌘) + arrastrar.
+  (function(){
+    const cv = map3d.getCanvas(); let rot = null;
+    cv.addEventListener('mousedown', e => { if ((e.ctrlKey||e.metaKey) && e.button===0){ rot={x:e.clientX,y:e.clientY,b:map3d.getBearing(),p:map3d.getPitch()}; map3d.dragPan.disable(); cv.style.cursor='grabbing'; e.preventDefault(); } });
+    window.addEventListener('mousemove', e => { if(!rot) return; map3d.setBearing(rot.b - (e.clientX-rot.x)*0.4); map3d.setPitch(Math.max(0, Math.min(map3d.getMaxPitch?map3d.getMaxPitch():60, rot.p + (e.clientY-rot.y)*0.4))); });
+    window.addEventListener('mouseup', () => { if(rot){ rot=null; map3d.dragPan.enable(); cv.style.cursor=''; } });
+  })();
   map3d.on('load', () => {
     try { map3d.setTerrain({ source:'dem', exaggeration:EXAG3D }); } catch(e) {}
     map3d.addSource('zonas', { type:'geojson', data:_zonasGeoJSON() });

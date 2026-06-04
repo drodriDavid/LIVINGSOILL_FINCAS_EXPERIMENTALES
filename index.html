@@ -276,7 +276,7 @@ body.mode-3d .map-title { display:none !important; }
 .m3d-tag.sens { background:#0a3d2b; color:#fff; }
 .m3d-tag.sens.control { background:#7a1f1f; }
 /* Menú desplegable de capas (se abre con el botón del ojo) */
-.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row nowrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:none; white-space:nowrap; }
+.layers-menu { background:rgba(255,255,255,.98); border:1px solid var(--line); border-radius:14px; box-shadow:0 14px 32px rgba(0,0,0,.18); padding:5px 8px; margin-top:6px; display:none; flex-flow:row wrap; align-items:center; gap:3px 4px; font-size:12px; font-weight:800; max-width:min(92vw, 720px); white-space:nowrap; justify-content:flex-end; }
 .layers-menu.open { display:flex; }
 .layers-menu .lm-h { font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green); font-weight:950; padding:0 8px 0 2px; margin-right:2px; border-right:1px solid var(--line); align-self:stretch; display:flex; align-items:center; }
 .layers-menu label { display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; padding:6px 8px; border-radius:9px; white-space:nowrap; }
@@ -867,7 +867,7 @@ fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
 
 // ===== Nubes de puntos en 3D (deck.gl sobre el terreno de MapLibre) =====
 let NUBES = {};
-let _deckOverlay = null, _deckLoaded = {};   // _deckLoaded[exps] = layer ya construida
+let _deckOverlay = null;
 fetch('data/nubes.json').then(r => r.ok ? r.json() : {}).then(j => {
   NUBES = j || {};
   if (!Object.keys(NUBES).length) return;
@@ -897,7 +897,7 @@ function _cloudLayers(exps){
     id: 'nube-'+exps, data: ortoTilesAbs(n.file), loaders: [_LASLoader],
     onDataLoad: () => showCloudLoading(false), onError: () => showCloudLoading(false),
     coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [n.origin[0], n.origin[1], n.zOffset || 0],
-    getNormal: [0, 0, 1], pointSize: size,
+    getNormal: [0, 0, 1], pointSize: size, material: false, sizeUnits: 'pixels',
     getColor: (o, {data, index}) => {   // RGB de LAS suele venir en 16 bits -> a 0..255
       const c = data.attributes.COLOR_0 || data.attributes.colors;
       if (!c) return [220, 220, 220];

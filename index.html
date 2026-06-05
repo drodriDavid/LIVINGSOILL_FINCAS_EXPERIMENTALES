@@ -387,6 +387,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sensors-charts .iot-chart { height:62px; }
 /* Título de cada panel (canvas) */
 .dock-title { position:sticky; top:0; z-index:8; margin:0 -14px 7px; padding:11px 42px 8px 14px; background:#fff; color:var(--green); font-size:12.5px; font-weight:950; letter-spacing:.01em; border-bottom:1px solid var(--line); box-shadow:0 7px 9px -8px rgba(0,0,0,.18); }
+/* Pestañas del panel inferior (Imágenes / Capas y opciones) */
+.dock-tabs { display:flex; gap:6px; position:sticky; top:0; z-index:8; background:#fff; margin:0 -14px 8px; padding:8px 44px 8px 14px; border-bottom:1px solid var(--line); }
+.dock-tab { border:0; background:#eef4f1; color:var(--muted); font-weight:900; font-size:12.5px; padding:7px 12px; border-radius:9px; cursor:pointer; white-space:nowrap; }
+.dock-tab:hover { background:#e2ede8; }
+.dock-tab.active { background:var(--green); color:#fff; }
+.dock-tabc[hidden] { display:none; }
+.capas-grid { display:flex; flex-wrap:wrap; gap:8px 12px; padding:4px 2px 10px; }
+.capas-grid label { display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:800; font-size:13px; padding:7px 11px; border:1px solid var(--line); border-radius:10px; user-select:none; }
+.capas-grid label:hover { background:#f0f7f3; border-color:var(--green); }
+.capas-grid input[type=checkbox] { accent-color:var(--green); cursor:pointer; width:auto; margin:0; }
+.capas-grid .dot { width:11px; height:11px; flex-shrink:0; }
+.capas-grid #nubeSizeLbl input[type=range] { width:96px; margin-left:8px; accent-color:var(--green); }
 .info-panel .close-x { z-index:9; }
 /* En la ficha de info, el nombre de la finca ya no es sticky (lo es el título del panel) */
 .info-panel .popup h3 { position:static; box-shadow:none; padding-top:4px; margin-top:0; }
@@ -486,9 +498,25 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
       <div id="sensorsPanelBody"></div>
     </aside>
-    <aside id="fotosPanel" class="info-panel dock-bottom" aria-hidden="true" aria-label="Fotos de la finca">
+    <aside id="fotosPanel" class="info-panel dock-bottom" aria-hidden="true" aria-label="Imágenes y capas">
       <button class="close-x" onclick="closeInfoPanel()" aria-label="Cerrar">×</button>
-      <div id="fotosPanelBody"></div>
+      <div class="dock-tabs">
+        <button class="dock-tab active" data-tab="imagenes" type="button">Imágenes de muestreo</button>
+        <button class="dock-tab" data-tab="capas" type="button">Capas y opciones</button>
+      </div>
+      <div id="fotosPanelBody" class="dock-tabc" data-tabc="imagenes"></div>
+      <div id="capasPanelBody" class="dock-tabc" data-tabc="capas" hidden>
+        <div class="capas-grid">
+          <label><input id="showTest" type="checkbox" checked><span class="dot test"></span>TEST</label>
+          <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
+          <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
+          <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
+          <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
+          <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>
+          <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox"><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos</label>
+          <label id="nubeSizeLbl" style="display:none">Grosor nube<input id="nubeSize" type="range" min="0.5" max="5" step="0.5" value="2"></label>
+        </div>
+      </div>
     </aside>
   </main>
 </div>
@@ -781,11 +809,13 @@ bmCtrl.onAdd = () => {
   d.querySelectorAll('button[data-base]').forEach(b => b.addEventListener('click', () => setBasemap(b.dataset.base)));
   const eye = d.querySelector('#eyeBtn');
   if (eye) eye.addEventListener('click', () => {
-    const menu = document.querySelector('.layers-menu');
-    if (!menu) return;
-    const open = menu.classList.toggle('open');
-    eye.classList.toggle('active', open);
-    eye.setAttribute('aria-expanded', open ? 'true' : 'false');
+    const p = document.getElementById('fotosPanel');
+    const open = p && p.classList.contains('open');
+    if (open && document.querySelector('.dock-tab[data-tab="capas"]').classList.contains('active')) {
+      closeDock('fotosPanel'); eye.classList.remove('active');     // si ya está en Capas, cerrar
+    } else {
+      openDock('fotosPanel'); setBottomTab('capas'); eye.classList.add('active');
+    }
   });
   const b3d = d.querySelector('#btn3d');
   if (b3d) b3d.addEventListener('click', () => window.toggle3d());
@@ -793,24 +823,6 @@ bmCtrl.onAdd = () => {
 };
 bmCtrl.addTo(map);
 
-const togCtrl = L.control({position:'topright'});
-togCtrl.onAdd = () => {
-  const d = L.DomUtil.create('div','layers-menu');
-  d.innerHTML = `
-    <div class="lm-h">Capas visibles</div>
-    <label><input id="showTest" type="checkbox" checked><span class="dot test"></span>TEST</label>
-    <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
-    <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
-    <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
-    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
-    <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>
-    <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox"><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos</label>
-    <label id="nubeSizeLbl" style="display:none;gap:5px">Grosor<input id="nubeSize" type="range" min="0.5" max="5" step="0.5" value="2" style="width:64px;cursor:pointer"></label>`;
-  L.DomEvent.disableClickPropagation(d);
-  L.DomEvent.disableScrollPropagation(d);
-  return d;
-};
-togCtrl.addTo(map);
 
 // ===== Ortofotos de dron (capa activable, 2D + 3D) desde data/ortos.json =====
 let ORTOS = {};
@@ -1068,7 +1080,7 @@ function sensorsPanelHtml(z){
 }
 // Panel derecho: fotos (muestreo y aplicación de soluciones)
 function fotosPanelHtml(z){
-  return `<div class="dock-title">Imágenes · muestreo y soluciones</div><div class="popup">
+  return `<div class="popup">
     <div class="fotos-cols">
     <div class="popup-fotos">
       <div class="fotos-head"><span class="fotos-label">Imágenes · Muestreo 2025</span></div>
@@ -1321,13 +1333,14 @@ window.openInfoPanel = function(z) {
   const fBody = document.getElementById('fotosPanelBody');
   if (panelIsMobile()) {
     // Móvil: los tres paneles se combinan en la ficha a pantalla completa
-    infoBody.innerHTML = infoPanelHtml(z) + sensorsPanelHtml(z) + fotosPanelHtml(z);
+    infoBody.innerHTML = infoPanelHtml(z) + sensorsPanelHtml(z) + '<div class="dock-title">Imágenes de muestreo</div>' + fotosPanelHtml(z);
     if (sBody) sBody.innerHTML = ''; if (fBody) fBody.innerHTML = '';
     openDock('infoPanel'); closeDock('sensorsPanel'); closeDock('fotosPanel');
   } else {
     infoBody.innerHTML = infoPanelHtml(z);
     if (sBody) sBody.innerHTML = sensorsPanelHtml(z);
     if (fBody) fBody.innerHTML = fotosPanelHtml(z);
+    setBottomTab('imagenes');
     openDock('infoPanel'); openDock('sensorsPanel'); openDock('fotosPanel');
   }
   renderFotos(z.exps);
@@ -1338,8 +1351,16 @@ window.openInfoPanel = function(z) {
 window.closeInfoPanel = function() {
   _openZone = null;
   ['infoPanel','sensorsPanel','fotosPanel'].forEach(closeDock);
+  const eb = document.getElementById('eyeBtn'); if (eb) eb.classList.remove('active');
   try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch(_) {}
 };
+// Pestañas del panel inferior (Imágenes / Capas y opciones)
+function setBottomTab(tab){
+  document.querySelectorAll('#fotosPanel .dock-tab').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('#fotosPanel .dock-tabc').forEach(c => { c.hidden = (c.dataset.tabc!==tab); });
+  if (tab==='imagenes'){ const b=document.getElementById('fotosPanelBody'); if (b && !b.innerHTML.trim()) b.innerHTML='<p style="color:#667085;padding:10px 2px">Selecciona una finca para ver sus imágenes de muestreo.</p>'; }
+}
+(function(){ document.querySelectorAll('#fotosPanel .dock-tab').forEach(b => b.addEventListener('click', () => setBottomTab(b.dataset.tab))); })();
 function openInfoPanelByExps(exps) {
   if (!exps) { closeInfoPanel(); return; }
   const zs = ZONES.filter(z => z.exps === Number(exps));

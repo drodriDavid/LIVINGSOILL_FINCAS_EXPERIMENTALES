@@ -960,7 +960,7 @@ function buildColorFn(exps, n){
 function rgbColorFn(o,{data,index}){ const c=data.attributes.COLOR_0; if(!c) return [200,200,200]; const v=c.value,s=c.size||4,i=index*s,m=(v[i]>255)?(1/257):1; return [v[i]*m,v[i+1]*m,v[i+2]*m]; }
 function _mkCloud(id, file, origin, zOff, size, colorFn, trig){
   return new deck.PointCloudLayer({
-    id, data: ortoTilesAbs(file), loaders: [_LASLoader],
+    id, data: ortoTilesAbs(file) + '?v=20260605', loaders: [_LASLoader],
     onDataLoad: () => showCloudLoading(false), onError: () => showCloudLoading(false),
     coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [origin[0], origin[1], zOff || 0],
     getNormal: [0, 0, 1], pointSize: size, material: false, sizeUnits: 'pixels',

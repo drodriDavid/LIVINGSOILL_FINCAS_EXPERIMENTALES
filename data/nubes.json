@@ -4,6 +4,15 @@
     "file": "data/nubes/torredelcampo.laz",
     "origin": [-3.8400583, 37.8134778],
     "zOffset": -45,
-    "pointSize": 3
+    "pointSize": 3,
+    "puntos": "5,77 M (submuestreada de 231 M)",
+    "tamano": "39 MB",
+    "seg": {
+      "file": "data/nubes/torredelcampo_seg.laz",
+      "origin": [-3.8400583, 37.8134778],
+      "zOffset": -45,
+      "puntos": "3,21 M · olivos segmentados (zona test)",
+      "tamano": "8 MB"
+    }
   }
 }

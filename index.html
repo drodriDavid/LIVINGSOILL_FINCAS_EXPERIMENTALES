@@ -396,9 +396,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .capas-grid { display:flex; flex-wrap:wrap; gap:8px 12px; padding:4px 2px 10px; }
 .capas-grid label { display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:800; font-size:13px; padding:7px 11px; border:1px solid var(--line); border-radius:10px; user-select:none; }
 .capas-grid label:hover { background:#f0f7f3; border-color:var(--green); }
-.capas-grid input[type=checkbox] { accent-color:var(--green); cursor:pointer; width:auto; margin:0; }
-.capas-grid .dot { width:11px; height:11px; flex-shrink:0; }
-.capas-grid #nubeSizeLbl input[type=range] { width:96px; margin-left:8px; accent-color:var(--green); }
+.capas-grid input[type=checkbox] { accent-color:var(--green); cursor:pointer; width:13px; height:13px; margin:0; flex-shrink:0; }
+.capas-grid .dot { width:10px; height:10px; flex-shrink:0; }
+.capas-grid #nubeSizeLbl input[type=range] { width:62px; height:3px; margin-left:8px; accent-color:var(--green); }
+.proc-info { margin:8px 2px 4px; font-size:12px; color:var(--ink); line-height:1.5; }
+.proc-info b { color:var(--green); }
+.proc-info .pi-row { padding:3px 0; border-top:1px solid var(--line); }
 .info-panel .close-x { z-index:9; }
 /* En la ficha de info, el nombre de la finca ya no es sticky (lo es el título del panel) */
 .info-panel .popup h3 { position:static; box-shadow:none; padding-top:4px; margin-top:0; }
@@ -505,10 +508,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
         <div class="dock-title">Datos procesados (dron)</div>
         <div class="capas-grid">
           <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>
+          <label id="segLbl" style="display:none"><input id="showSeg" type="checkbox"><span class="dot" style="background:#c026d3;border-radius:3px"></span>Segmentación (máscara)</label>
           <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox"><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos (3D)</label>
+          <label id="nubeSegLbl" style="display:none"><input id="showNubeSeg" type="checkbox"><span class="dot" style="background:#0ea5e9;border-radius:50%"></span>Olivos segmentados (test, 3D)</label>
           <label id="nubeSizeLbl" style="display:none">Grosor nube<input id="nubeSize" type="range" min="0.5" max="5" step="0.5" value="2"></label>
         </div>
-        <p id="procEmpty" style="color:#667085;padding:4px 2px;font-size:12.5px">Esta finca no tiene ortofoto ni nube de puntos.</p>
+        <div id="procInfo" class="proc-info"></div>
+        <p id="procEmpty" style="color:#667085;padding:4px 2px;font-size:12.5px">Esta finca no tiene datos procesados.</p>
       </div>
     </aside>
     <aside id="fotosPanel" class="info-panel dock-bottom" aria-hidden="true" aria-label="Imágenes de la finca">
@@ -838,37 +844,45 @@ togCtrl.addTo(map);
 
 // ===== Ortofotos de dron (capa activable, 2D + 3D) desde data/ortos.json =====
 let ORTOS = {};
-let ortoLayer2d = null;
+let ortoLayer2d = null, segLayer2d = null;
 function _ortoBaseDir(){ return location.href.split(/[?#]/)[0].replace(/\/[^/]*$/, '/'); }
 function ortoTilesAbs(rel){ return _ortoBaseDir() + rel; }   // URL absoluta para MapLibre
 function sync3dOrto(){
   if (!map3d || !map3d.isStyleLoaded()) return;
-  const on = !!(document.getElementById('showOrto') && document.getElementById('showOrto').checked);
-  Object.keys(ORTOS).forEach(k => { const v=on?'visible':'none';
-    if (map3d.getLayer('orto-'+k)) map3d.setLayoutProperty('orto-'+k,'visibility', v);
-    if (map3d.getLayer('ortoline-'+k)) map3d.setLayoutProperty('ortoline-'+k,'visibility', v);
+  const onO = !!document.getElementById('showOrto')?.checked;
+  const onS = !!document.getElementById('showSeg')?.checked;
+  Object.keys(ORTOS).forEach(k => {
+    const vO=onO?'visible':'none', vS=onS?'visible':'none';
+    if (map3d.getLayer('orto-'+k)) map3d.setLayoutProperty('orto-'+k,'visibility', vO);
+    if (map3d.getLayer('ortoline-'+k)) map3d.setLayoutProperty('ortoline-'+k,'visibility', vO);
+    if (map3d.getLayer('seg-'+k)) map3d.setLayoutProperty('seg-'+k,'visibility', vS);
   });
 }
 function add3dOrtoLayers(){
   if (!map3d || !Object.keys(ORTOS).length) return;
   if (!map3d.isStyleLoaded()) { map3d.once('idle', add3dOrtoLayers); return; }   // espera a que el estilo cargue
-  const on = !!(document.getElementById('showOrto') && document.getElementById('showOrto').checked);
+  const onO = !!document.getElementById('showOrto')?.checked;
+  const onS = !!document.getElementById('showSeg')?.checked;
   Object.keys(ORTOS).forEach(k => {
-    const o=ORTOS[k], sid='ortosrc-'+k, lid='orto-'+k;
+    const o=ORTOS[k];
+    const before = map3d.getLayer('zonas-fill') ? 'zonas-fill' : undefined;   // bajo las parcelas
     try {
-      if (map3d.getLayer(lid)) return;
-      if (!map3d.getSource(sid)) map3d.addSource(sid, { type:'raster', tiles:[ortoTilesAbs(o.tiles)], tileSize:256, minzoom:o.minzoom||14, maxzoom:o.maxzoom||20, bounds:o.bounds });
-      const before = map3d.getLayer('zonas-fill') ? 'zonas-fill' : undefined;   // bajo las parcelas
-      map3d.addLayer({ id:lid, type:'raster', source:sid, layout:{ visibility: on?'visible':'none' } }, before);
-      if (o.footprint) {   // contorno (huella) del orto
-        const lsid='ortolinesrc-'+k, llid='ortoline-'+k;
-        if (!map3d.getSource(lsid)) map3d.addSource(lsid, { type:'geojson', data: ortoTilesAbs(o.footprint) });
-        map3d.addLayer({ id:llid, type:'line', source:lsid, layout:{ visibility: on?'visible':'none', 'line-join':'round' }, paint:{ 'line-color':'#ff8c00', 'line-width':2.5, 'line-dasharray':[3,2] } }, before);
+      if (!map3d.getLayer('orto-'+k)) {
+        if (!map3d.getSource('ortosrc-'+k)) map3d.addSource('ortosrc-'+k, { type:'raster', tiles:[ortoTilesAbs(o.tiles)], tileSize:256, minzoom:o.minzoom||14, maxzoom:o.maxzoom||20, bounds:o.bounds });
+        map3d.addLayer({ id:'orto-'+k, type:'raster', source:'ortosrc-'+k, layout:{ visibility: onO?'visible':'none' } }, before);
+        if (o.footprint) {
+          if (!map3d.getSource('ortolinesrc-'+k)) map3d.addSource('ortolinesrc-'+k, { type:'geojson', data: ortoTilesAbs(o.footprint) });
+          map3d.addLayer({ id:'ortoline-'+k, type:'line', source:'ortolinesrc-'+k, layout:{ visibility: onO?'visible':'none', 'line-join':'round' }, paint:{ 'line-color':'#ff8c00', 'line-width':2.5, 'line-dasharray':[3,2] } }, before);
+        }
+      }
+      if (o.seg && !map3d.getLayer('seg-'+k)) {
+        if (!map3d.getSource('segsrc-'+k)) map3d.addSource('segsrc-'+k, { type:'raster', tiles:[ortoTilesAbs(o.seg.tiles)], tileSize:256, minzoom:o.seg.minzoom||14, maxzoom:o.seg.maxzoom||20, bounds:o.seg.bounds });
+        map3d.addLayer({ id:'seg-'+k, type:'raster', source:'segsrc-'+k, layout:{ visibility: onS?'visible':'none' } }, before);
       }
     } catch(e) { console.warn('add3dOrtoLayers', e); }
   });
 }
-fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
+fetch('data/ortos.json?t='+Date.now()).then(r => r.ok ? r.json() : {}).then(j => {
   ORTOS = j || {};
   const keys = Object.keys(ORTOS);
   if (!keys.length) return;
@@ -883,6 +897,17 @@ fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
       if (gj) L.geoJSON(gj, { style:{ color:'#ff8c00', weight:2.5, opacity:.95, fill:false, dashArray:'6 4' }, interactive:false }).addTo(ortoLayer2d);
     }).catch(() => {});
   });
+  // Segmentación (máscara) en 2D
+  segLayer2d = L.layerGroup(keys.filter(k=>ORTOS[k].seg).map(k => {
+    const s = ORTOS[k].seg;
+    const b = L.latLngBounds([s.bounds[1], s.bounds[0]], [s.bounds[3], s.bounds[2]]);
+    return L.tileLayer(s.tiles, { minZoom:s.minzoom||14, maxNativeZoom:s.maxzoom||20, maxZoom:22, bounds:b });
+  }));
+  const cs = document.getElementById('showSeg');
+  if (cs) cs.addEventListener('change', () => {
+    if (cs.checked) segLayer2d.addTo(map); else map.removeLayer(segLayer2d);
+    if (map3d) { add3dOrtoLayers(); sync3dOrto(); }
+  });
   const cb = document.getElementById('showOrto');
   if (cb) cb.addEventListener('change', () => {
     if (cb.checked) ortoLayer2d.addTo(map); else map.removeLayer(ortoLayer2d);
@@ -895,14 +920,10 @@ fetch('data/ortos.json').then(r => r.ok ? r.json() : {}).then(j => {
 // ===== Nubes de puntos en 3D (deck.gl sobre el terreno de MapLibre) =====
 let NUBES = {};
 let _deckOverlay = null;
-fetch('data/nubes.json').then(r => r.ok ? r.json() : {}).then(j => {
+fetch('data/nubes.json?t='+Date.now()).then(r => r.ok ? r.json() : {}).then(j => {
   NUBES = j || {};
   if (!Object.keys(NUBES).length) return;
-  const cb = document.getElementById('showNube');
-  if (cb) cb.addEventListener('change', () => {
-    if (!document.body.classList.contains('mode-3d')) return;
-    if (cb.checked) update3dCloud(selectedFarm); else hide3dCloud();
-  });
+  ['showNube','showNubeSeg'].forEach(id => { const c=document.getElementById(id); if (c) c.addEventListener('change', () => { if (document.body.classList.contains('mode-3d')) update3dCloud(selectedFarm); }); });
   const sz = document.getElementById('nubeSize');
   if (sz) sz.addEventListener('input', () => setCloudPointSize(parseFloat(sz.value)));
   if (selectedFarm) updateProcesados(selectedFarm);
@@ -935,26 +956,36 @@ function buildColorFn(exps, n){
     return [r,g,b];
   };
 }
-function _cloudLayers(exps){
-  const n = NUBES[String(exps)];
-  const size = _cloudPointSize || n.pointSize || 1.5;
-  if (_colorExps !== String(exps)) { _colorFn = buildColorFn(exps, n); _colorExps = String(exps); }
-  const cloud = new deck.PointCloudLayer({
-    id: 'nube-'+exps, data: ortoTilesAbs(n.file), loaders: [_LASLoader],
+function rgbColorFn(o,{data,index}){ const c=data.attributes.COLOR_0; if(!c) return [200,200,200]; const v=c.value,s=c.size||4,i=index*s,m=(v[i]>255)?(1/257):1; return [v[i]*m,v[i+1]*m,v[i+2]*m]; }
+function _mkCloud(id, file, origin, zOff, size, colorFn, trig){
+  return new deck.PointCloudLayer({
+    id, data: ortoTilesAbs(file), loaders: [_LASLoader],
     onDataLoad: () => showCloudLoading(false), onError: () => showCloudLoading(false),
-    coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [n.origin[0], n.origin[1], n.zOffset || 0],
+    coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [origin[0], origin[1], zOff || 0],
     getNormal: [0, 0, 1], pointSize: size, material: false, sizeUnits: 'pixels',
-    getColor: _colorFn, updateTriggers: { getColor: String(exps) }
+    getColor: colorFn, updateTriggers: { getColor: trig }
   });
-  return [cloud];
+}
+function _cloudLayers(exps){
+  const n = NUBES[String(exps)]; if (!n) return [];
+  const size = _cloudPointSize || n.pointSize || 1.5;
+  const layers = [];
+  if (document.getElementById('showNube')?.checked && n.file){
+    if (_colorExps !== String(exps)) { _colorFn = buildColorFn(exps, n); _colorExps = String(exps); }
+    layers.push(_mkCloud('nube-'+exps, n.file, n.origin, n.zOffset, size, _colorFn, String(exps)));
+  }
+  if (document.getElementById('showNubeSeg')?.checked && n.seg){
+    layers.push(_mkCloud('nubeseg-'+exps, n.seg.file, n.seg.origin, n.seg.zOffset, size, rgbColorFn, 'seg'+exps));
+  }
+  return layers;
 }
 function hide3dCloud(){ if (_deckOverlay) try { _deckOverlay.setProps({ layers: [] }); } catch(e){} showCloudLoading(false); setSat3d(true); sync3dOrto(); setMaplibreZonas(true); setTerrain3d(true); }
 function update3dCloud(exps){
   if (!map3d) return;
   if (!map3d.isStyleLoaded()) { map3d.once('idle', () => update3dCloud(exps)); return; }   // espera a que cargue
-  const cb = document.getElementById('showNube');
   const n = NUBES[String(exps)];
-  if (!n || (cb && !cb.checked)) { hide3dCloud(); return; }
+  const any = n && ((document.getElementById('showNube')?.checked && n.file) || (document.getElementById('showNubeSeg')?.checked && n.seg));
+  if (!any) { hide3dCloud(); return; }
   setTerrain3d(true, 1.0);  // terreno real (sin exagerar): la nube se apoya en él (parcela en pendiente)
   setMaplibreZonas(false);  // las zonas se proyectan sobre la nube (no hacen falta las 2D)
   showCloudLoading(true);
@@ -1373,15 +1404,24 @@ function setPanelTab(panelId, tab){
   p.querySelectorAll('.dock-tabc').forEach(c => { c.hidden = (c.dataset.tabc!==tab); });
 }
 (function(){ document.querySelectorAll('.dock-tab').forEach(b => b.addEventListener('click', () => { const pan = b.closest('.info-panel'); if (pan) setPanelTab(pan.id, b.dataset.tab); })); })();
-// "Datos procesados": muestra orto/nube/grosor según los tenga la finca.
+// "Datos procesados": muestra capas e info según los productos de la finca.
 function updateProcesados(exps){
-  const hasO = !!(typeof ORTOS!=='undefined' && ORTOS[String(exps)]);
-  const hasN = !!(typeof NUBES!=='undefined' && NUBES[String(exps)]);
-  const ol=document.getElementById('ortoLbl'), nl=document.getElementById('nubeLbl'), sz=document.getElementById('nubeSizeLbl'), pe=document.getElementById('procEmpty');
-  if (ol) ol.style.display = hasO ? '' : 'none';
-  if (nl) nl.style.display = hasN ? '' : 'none';
-  if (sz) sz.style.display = hasN ? '' : 'none';
-  if (pe) pe.style.display = (hasO||hasN) ? 'none' : '';
+  const o = (typeof ORTOS!=='undefined') ? ORTOS[String(exps)] : null;
+  const n = (typeof NUBES!=='undefined') ? NUBES[String(exps)] : null;
+  const hasO=!!o, hasSeg=!!(o&&o.seg), hasN=!!(n&&n.file), hasNSeg=!!(n&&n.seg);
+  const show=(id,v)=>{ const e=document.getElementById(id); if(e) e.style.display=v?'':'none'; };
+  show('ortoLbl',hasO); show('segLbl',hasSeg); show('nubeLbl',hasN); show('nubeSegLbl',hasNSeg);
+  show('nubeSizeLbl', hasN||hasNSeg);
+  const pe=document.getElementById('procEmpty'); if(pe) pe.style.display=(hasO||hasSeg||hasN||hasNSeg)?'none':'';
+  const info=document.getElementById('procInfo');
+  if (info){
+    let h='';
+    if (o) h+=`<div class="pi-row"><b>Ortofoto dron:</b> ${o.resolucion||'—'}${o.tamano?' · '+o.tamano:''}</div>`;
+    if (o&&o.seg) h+=`<div class="pi-row"><b>Segmentación:</b> ${o.seg.resolucion||'—'}</div>`;
+    if (n&&n.file) h+=`<div class="pi-row"><b>Nube de puntos:</b> ${n.puntos||'—'}${n.tamano?' · '+n.tamano:''}</div>`;
+    if (n&&n.seg) h+=`<div class="pi-row"><b>Olivos segmentados:</b> ${n.seg.puntos||'—'}${n.seg.tamano?' · '+n.seg.tamano:''}</div>`;
+    info.innerHTML = h;
+  }
 }
 function openInfoPanelByExps(exps) {
   if (!exps) { closeInfoPanel(); return; }

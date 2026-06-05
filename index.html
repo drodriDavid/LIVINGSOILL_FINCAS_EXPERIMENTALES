@@ -394,15 +394,20 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .dock-tab:hover { color:var(--ink); }
 .dock-tab.active { background:#fff; color:var(--green); box-shadow:0 1px 3px rgba(0,0,0,.22); }
 .dock-tabc[hidden] { display:none; }
-.capas-grid { display:flex; flex-wrap:wrap; gap:8px 12px; padding:4px 2px 10px; }
-.capas-grid label { display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:800; font-size:13px; padding:7px 11px; border:1px solid var(--line); border-radius:10px; user-select:none; }
-.capas-grid label:hover { background:#f0f7f3; border-color:var(--green); }
-.capas-grid input[type=checkbox] { accent-color:var(--green); cursor:pointer; width:13px; height:13px; margin:0; flex-shrink:0; }
-.capas-grid .dot { width:10px; height:10px; flex-shrink:0; }
-.capas-grid #nubeSizeLbl input[type=range] { width:62px; height:3px; margin-left:8px; accent-color:var(--green); }
-.proc-info { margin:8px 2px 4px; font-size:12px; color:var(--ink); line-height:1.5; }
-.proc-info b { color:var(--green); }
-.proc-info .pi-row { padding:3px 0; border-top:1px solid var(--line); }
+.capas-list { display:flex; flex-direction:column; gap:9px; padding:6px 2px 10px; }
+.proc-card { border:1px solid var(--line); border-radius:12px; padding:10px 13px; background:#fff; transition:border-color .15s, box-shadow .15s, background .15s; }
+.proc-card[hidden] { display:none; }
+.proc-card:hover { border-color:var(--green); box-shadow:0 2px 9px -5px rgba(0,0,0,.22); }
+.proc-card:has(input[type=checkbox]:checked), .proc-card.on { border-color:var(--green); background:#f4faf7; }
+.proc-card .proc-head { display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:850; font-size:13.5px; color:var(--ink); user-select:none; margin:0; }
+.proc-card input[type=checkbox] { accent-color:var(--green); cursor:pointer; width:15px; height:15px; margin:0; flex-shrink:0; }
+.proc-card .dot { width:11px; height:11px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,.06); }
+.proc-card .dot.square { border-radius:3px; }
+.proc-card .proc-name { flex:1; }
+.proc-card .proc-meta { margin:7px 0 0 25px; font-size:11.5px; color:#667085; line-height:1.5; }
+.proc-card .proc-meta b { color:var(--green); font-weight:800; }
+.proc-card.proc-slider .proc-head { cursor:default; }
+.proc-card.proc-slider input[type=range] { flex:1; height:3px; accent-color:var(--green); margin-left:10px; max-width:130px; cursor:pointer; }
 .info-panel .close-x { z-index:9; }
 /* En la ficha de info, el nombre de la finca ya no es sticky (lo es el título del panel) */
 .info-panel .popup h3 { position:static; box-shadow:none; padding-top:4px; margin-top:0; }
@@ -507,14 +512,27 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
       <div id="sensorsPanelBody" class="dock-tabc" data-tabc="sensores"></div>
       <div id="procesadosBody" class="dock-tabc" data-tabc="procesados" hidden>
         <div class="dock-title">Datos procesados (dron)</div>
-        <div class="capas-grid">
-          <label id="ortoLbl" style="display:none"><input id="showOrto" type="checkbox"><span class="dot" style="background:#b06a2c;border-radius:3px"></span>Ortofoto dron</label>
-          <label id="segLbl" style="display:none"><input id="showSeg" type="checkbox"><span class="dot" style="background:#c026d3;border-radius:3px"></span>Segmentación (máscara)</label>
-          <label id="nubeLbl" style="display:none"><input id="showNube" type="checkbox"><span class="dot" style="background:#5a3fc0;border-radius:50%"></span>Nube de puntos (3D)</label>
-          <label id="nubeSegLbl" style="display:none"><input id="showNubeSeg" type="checkbox"><span class="dot" style="background:#0ea5e9;border-radius:50%"></span>Olivos segmentados (test, 3D)</label>
-          <label id="nubeSizeLbl" style="display:none">Grosor nube<input id="nubeSize" type="range" min="0.5" max="5" step="0.5" value="2"></label>
+        <div class="capas-list">
+          <div class="proc-card" id="cardOrto" hidden>
+            <label class="proc-head"><input id="showOrto" type="checkbox"><span class="dot square" style="background:#b06a2c"></span><span class="proc-name">Ortofoto dron</span></label>
+            <div class="proc-meta" id="metaOrto"></div>
+          </div>
+          <div class="proc-card" id="cardSeg" hidden>
+            <label class="proc-head"><input id="showSeg" type="checkbox"><span class="dot square" style="background:#c026d3"></span><span class="proc-name">Segmentación (máscara)</span></label>
+            <div class="proc-meta" id="metaSeg"></div>
+          </div>
+          <div class="proc-card" id="cardNube" hidden>
+            <label class="proc-head"><input id="showNube" type="checkbox"><span class="dot" style="background:#5a3fc0"></span><span class="proc-name">Nube de puntos (3D)</span></label>
+            <div class="proc-meta" id="metaNube"></div>
+          </div>
+          <div class="proc-card" id="cardNubeSeg" hidden>
+            <label class="proc-head"><input id="showNubeSeg" type="checkbox"><span class="dot" style="background:#0ea5e9"></span><span class="proc-name">Olivos segmentados (test, 3D)</span></label>
+            <div class="proc-meta" id="metaNubeSeg"></div>
+          </div>
+          <div class="proc-card proc-slider" id="cardNubeSize" hidden>
+            <label class="proc-head"><span class="proc-name">Grosor de la nube</span><input id="nubeSize" type="range" min="0.5" max="5" step="0.5" value="2"></label>
+          </div>
         </div>
-        <div id="procInfo" class="proc-info"></div>
         <p id="procEmpty" style="color:#667085;padding:4px 2px;font-size:12.5px">Esta finca no tiene datos procesados.</p>
       </div>
     </aside>
@@ -937,7 +955,20 @@ function setSat3d(on){ if (map3d && map3d.getLayer && map3d.getLayer('sat')) map
 function hideOrto3d(){ Object.keys(ORTOS).forEach(k => ['orto-'+k,'ortoline-'+k].forEach(id => { if (map3d.getLayer && map3d.getLayer(id)) map3d.setLayoutProperty(id,'visibility','none'); })); }
 function showCloudLoading(on){ const e=document.getElementById('cloudLoading'); if(e) e.classList.toggle('show', !!on); }
 let _cloudPointSize = 2;
-function setMaplibreZonas(vis){ if(!map3d) return; ['zonas-fill','zonas-line'].forEach(id => { if (map3d.getLayer && map3d.getLayer(id)) map3d.setLayoutProperty(id,'visibility', vis?'visible':'none'); }); }
+// vis: muestra/oculta las zonas. outlineOnly: deja SOLO el perímetro (sin relleno),
+// útil en modo nube para que el contorno test/control quede proyectado sin tapar los puntos.
+function setMaplibreZonas(vis, outlineOnly){
+  if(!map3d) return;
+  const set=(id,v)=>{ if(map3d.getLayer && map3d.getLayer(id)) map3d.setLayoutProperty(id,'visibility', v?'visible':'none'); };
+  set('zonas-fill', vis && !outlineOnly);
+  set('zonas-line-halo', vis);
+  set('zonas-line', vis);
+  // En modo perímetro engrosamos el contorno para que se lea bien sobre la nube.
+  if (map3d.getLayer && map3d.getLayer('zonas-line')) {
+    map3d.setPaintProperty('zonas-line','line-width', outlineOnly ? 3.6 : 2.6);
+    if (map3d.getLayer('zonas-line-halo')) map3d.setPaintProperty('zonas-line-halo','line-width', outlineOnly ? 8 : 6);
+  }
+}
 // Función de color que PROYECTA las zonas (test/control) sobre la nube: tiñe los
 // puntos que caen dentro de cada polígono de zona. Cacheada por finca para que el
 // deslizador de grosor no recalcule 5,8 M de puntos.
@@ -988,7 +1019,7 @@ function update3dCloud(exps){
   const any = n && ((document.getElementById('showNube')?.checked && n.file) || (document.getElementById('showNubeSeg')?.checked && n.seg));
   if (!any) { hide3dCloud(); return; }
   setTerrain3d(true, 1.0);  // terreno real (sin exagerar): la nube se apoya en él (parcela en pendiente)
-  setMaplibreZonas(false);  // las zonas se proyectan sobre la nube (no hacen falta las 2D)
+  setMaplibreZonas(true, true);  // solo el PERÍMETRO test/control proyectado (sin relleno, para no tapar la nube)
   showCloudLoading(true);
   ensureDeck().then(() => {
     const layers = _cloudLayers(exps);
@@ -1410,20 +1441,22 @@ function updateProcesados(exps){
   const o = (typeof ORTOS!=='undefined') ? ORTOS[String(exps)] : null;
   const n = (typeof NUBES!=='undefined') ? NUBES[String(exps)] : null;
   const hasO=!!o, hasSeg=!!(o&&o.seg), hasN=!!(n&&n.file), hasNSeg=!!(n&&n.seg);
-  const show=(id,v)=>{ const e=document.getElementById(id); if(e) e.style.display=v?'':'none'; };
-  show('ortoLbl',hasO); show('segLbl',hasSeg); show('nubeLbl',hasN); show('nubeSegLbl',hasNSeg);
-  show('nubeSizeLbl', hasN||hasNSeg);
+  const card=(id,v)=>{ const e=document.getElementById(id); if(e) e.hidden=!v; };
+  const meta=(id,html)=>{ const e=document.getElementById(id); if(e) e.innerHTML=html||''; };
+  card('cardOrto',hasO); card('cardSeg',hasSeg); card('cardNube',hasN); card('cardNubeSeg',hasNSeg);
+  card('cardNubeSize', hasN||hasNSeg);
   const pe=document.getElementById('procEmpty'); if(pe) pe.style.display=(hasO||hasSeg||hasN||hasNSeg)?'none':'';
-  const info=document.getElementById('procInfo');
-  if (info){
-    let h='';
-    if (o) h+=`<div class="pi-row"><b>Ortofoto dron:</b> ${o.resolucion||'—'}${o.tamano?' · '+o.tamano:''}</div>`;
-    if (o&&o.seg) h+=`<div class="pi-row"><b>Segmentación:</b> ${o.seg.resolucion||'—'}</div>`;
-    if (n&&n.file) h+=`<div class="pi-row"><b>Nube de puntos:</b> ${n.puntos||'—'}${n.tamano?' · '+n.tamano:''}</div>`;
-    if (n&&n.seg) h+=`<div class="pi-row"><b>Olivos segmentados:</b> ${n.seg.puntos||'—'}${n.seg.tamano?' · '+n.seg.tamano:''}</div>`;
-    info.innerHTML = h;
-  }
+  // Info de cada producto, debajo de su propia tarjeta.
+  const dash='—';
+  meta('metaOrto', o ? `<b>Resolución</b> ${o.resolucion||dash}${o.tamano?` · <b>Tamaño</b> ${o.tamano}`:''}` : '');
+  meta('metaSeg', (o&&o.seg) ? `<b>Resolución</b> ${o.seg.resolucion||dash}` : '');
+  meta('metaNube', (n&&n.file) ? `<b>Puntos</b> ${n.puntos||dash}${n.tamano?` · <b>Tamaño</b> ${n.tamano}`:''}` : '');
+  meta('metaNubeSeg', (n&&n.seg) ? `<b>Puntos</b> ${n.seg.puntos||dash}${n.seg.tamano?` · <b>Tamaño</b> ${n.seg.tamano}`:''}` : '');
+  syncProcCards();
 }
+// Resalta la tarjeta cuyo dato está activo (respaldo de :has() para navegadores que no lo apliquen).
+function syncProcCards(){ document.querySelectorAll('#procesadosBody .proc-card').forEach(c => { const cb=c.querySelector('input[type=checkbox]'); c.classList.toggle('on', !!(cb&&cb.checked)); }); }
+(function(){ const body=document.getElementById('procesadosBody'); if (body) body.addEventListener('change', syncProcCards); })();
 function openInfoPanelByExps(exps) {
   if (!exps) { closeInfoPanel(); return; }
   const zs = ZONES.filter(z => z.exps === Number(exps));
@@ -2139,7 +2172,9 @@ function init3d(center, zoom, pitch){
     try { map3d.setTerrain({ source:'dem', exaggeration:EXAG3D }); } catch(e) {}
     map3d.addSource('zonas', { type:'geojson', data:_zonasGeoJSON() });
     map3d.addLayer({ id:'zonas-fill', type:'fill', source:'zonas', paint:{ 'fill-color':['match',['get','group'],'TEST','#00a86b','#e24444'], 'fill-opacity':0.28 } });
-    map3d.addLayer({ id:'zonas-line', type:'line', source:'zonas', paint:{ 'line-color':['match',['get','group'],'TEST','#00e08a','#ff5a5a'], 'line-width':2.6 } });
+    // Halo blanco bajo el contorno para que el perímetro resalte sobre nube oscura o satélite.
+    map3d.addLayer({ id:'zonas-line-halo', type:'line', source:'zonas', layout:{ 'line-join':'round', 'line-cap':'round' }, paint:{ 'line-color':'#ffffff', 'line-width':6, 'line-opacity':0.85, 'line-blur':0.4 } });
+    map3d.addLayer({ id:'zonas-line', type:'line', source:'zonas', layout:{ 'line-join':'round', 'line-cap':'round' }, paint:{ 'line-color':['match',['get','group'],'TEST','#00e08a','#ff5a5a'], 'line-width':2.6 } });
     map3d.addSource('puntos', { type:'geojson', data:_puntosGeoJSON() });
     map3d.addLayer({ id:'puntos-c', type:'circle', source:'puntos', paint:{ 'circle-radius':5, 'circle-color':['match',['get','tipo'],'test','#00e08a','control','#ff5a5a','#2f6df6'], 'circle-stroke-color':'#fff', 'circle-stroke-width':1.5 } });
     // Clic en una finca: misma selección + ficha que en el 2D

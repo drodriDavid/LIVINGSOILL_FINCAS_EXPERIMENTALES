@@ -427,7 +427,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sigpac-ficha b { color:var(--green); }
 .sigpac-ficha .sf-id { margin:2px 0 4px; }
 .sigpac-ficha .sf-foot { margin-top:3px; color:#667085; font-size:11px; font-weight:700; }
-.sigpac-label { background:#222; border:1.5px solid #ffd400; color:#ffd400; font:800 11.5px system-ui; white-space:nowrap; padding:2px 8px; border-radius:999px; box-shadow:0 1px 6px rgba(0,0,0,.35); transform:translate(-50%,-150%); }
+.sigpac-label { background:#fff; border:1.5px solid #ff2d9b; color:#ff2d9b; font:800 11.5px system-ui; white-space:nowrap; padding:2px 8px; border-radius:999px; box-shadow:0 1px 6px rgba(0,0,0,.35); transform:translate(-50%,-150%); }
 .info-panel .close-x { z-index:9; }
 /* En la ficha de info, el nombre de la finca ya no es sticky (lo es el título del panel) */
 .info-panel .popup h3 { position:static; box-shadow:none; padding-top:4px; margin-top:0; }
@@ -892,8 +892,8 @@ togCtrl.onAdd = () => {
 togCtrl.addTo(map);
 // Capa SIGPAC (recintos) activable desde el menú del ojo: overlay WMS en 2D + capa en 3D.
 function setSigpacLayer(on){
-  if (on) { if (!map.hasLayer(sigpacWms)) sigpacWms.addTo(map); }
-  else { if (map.hasLayer(sigpacWms)) map.removeLayer(sigpacWms); if (typeof sigpacClearHighlight==='function') sigpacClearHighlight(); }
+  if (on) { if (!map.hasLayer(sigpacWms)) sigpacWms.addTo(map); if (typeof sigpacPreload==='function' && selectedFarm) sigpacPreload(selectedFarm); }
+  else { if (map.hasLayer(sigpacWms)) map.removeLayer(sigpacWms); if (typeof sigpacClearHighlight==='function') sigpacClearHighlight(); _sigpacParcels=[]; _sigpacPreloadKey=null; }
   if (map3d && map3d.getLayer && map3d.getLayer('sigpac3d')) { try { map3d.setLayoutProperty('sigpac3d','visibility', on?'visible':'none'); } catch(_){} }
 }
 (function(){ const c=document.getElementById('showSigpac'); if (c) c.addEventListener('change', () => setSigpacLayer(c.checked)); })();
@@ -1900,9 +1900,19 @@ function updateZoomScale() {
   sensorLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 13 ? '' : 'none'; });
 }
 map.on('zoomend', updateZoomScale);
-map.on('click', (e) => { if (document.getElementById('showSigpac')?.checked) { sigpacIdentify(e.latlng, e.containerPoint, true); return; } closeInfoPanel(); });
+map.on('click', (e) => {
+  if (document.getElementById('showSigpac')?.checked) {
+    const hit = _sigpacParcels.find(pc => pipRings(e.latlng.lat, e.latlng.lng, pc.rings));
+    if (hit) { if (hit.key !== _sigpacKey) sigpacDrawParcel(hit.rings, hit.props, hit.key, hit.isMulti);
+      L.popup({ maxWidth:280 }).setLatLng(e.latlng).setContent(sigpacInfoHtml(hit.props)).openOn(map); }
+    else sigpacIdentify(e.latlng, e.containerPoint, true);
+    return;
+  }
+  closeInfoPanel();
+});
 // ===== SIGPAC: resalta el recinto bajo el ratón (relleno translúcido) + info al pulsar =====
 let sigpacLabel = null, sigpacHiLayer = null, _sigpacKey = null, _sigpacRings = null, _sigpacHoverTimer = null;
+let _sigpacParcels = [], _sigpacPreloadKey = null;   // recintos precargados alrededor de la finca
 function sigpacInfoHtml(p){
   const num=(v,d)=> (v==null||v==='')?'—':Number(v).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d});
   const muni=(p.municipio||'').replace(/^\d+\s*-\s*/,''), prov=(p.provincia||'').replace(/^\d+\s*-\s*/,'');
@@ -1966,13 +1976,47 @@ function sigpacIdentify(latlng, pt, openPopup){
     }).catch(()=>{});
   }).catch(() => {});
 }
-// Hover: resalta el recinto bajo el ratón; solo consulta al CAMBIAR de parcela (point-in-polygon).
+function _sigpacIds(p){ return { prov:parseInt(p.provincia,10), mun:parseInt(p.municipio,10), agg:p.agregado||0, zona:p.zona||0, pol:p.poligono, par:p.parcela, rec:p.recinto }; }
+function _sigpacKeyOf(p){ const d=_sigpacIds(p); return [d.prov,d.mun,d.agg,d.zona,d.pol,d.par,d.rec].join('/'); }
+// GetFeatureInfo en un punto (ventana de 50 m) -> propiedades del recinto (o null).
+function sigpacGfiPoint(lat,lng){
+  const c = L.CRS.EPSG3857.project(L.latLng(lat,lng)), d = 25;
+  const url = 'https://sigpac-hubcloud.es/wms/wms?service=WMS&version=1.1.1&request=GetFeatureInfo'
+    + '&layers=AU.Sigpac:recinto&query_layers=AU.Sigpac:recinto&styles=&srs=EPSG:3857'
+    + '&bbox=' + [c.x-d,c.y-d,c.x+d,c.y+d].join(',') + '&width=256&height=256&x=128&y=128&info_format=application/json&feature_count=1';
+  return fetch(url).then(r => r.ok ? r.json() : null).then(j => (j&&j.features&&j.features[0]) ? j.features[0].properties : null).catch(()=>null);
+}
+// Precarga (una vez por finca) los recintos SIGPAC alrededor de la finca: muestreo en rejilla
+// -> recinfo (geometría WKT) -> _sigpacParcels. Así el hover es INSTANTÁNEO (sin red).
+function sigpacPreload(exps){
+  if (!exps) return;
+  const pk = 'f'+exps; if (_sigpacPreloadKey === pk) return;
+  _sigpacPreloadKey = pk; _sigpacParcels = [];
+  const b = farmBounds(exps); if (!b) return;
+  const mnLo=b[0][0], mnLa=b[0][1], mxLo=b[1][0], mxLa=b[1][1];
+  const midLa=(mnLa+mxLa)/2, mLat=111320, mLng=111320*Math.cos(midLa*Math.PI/180), mar=90;
+  const la0=mnLa-mar/mLat, la1=mxLa+mar/mLat, lo0=mnLo-mar/mLng, lo1=mxLo+mar/mLng, N=5, pts=[];
+  for (let i=0;i<N;i++) for (let j=0;j<N;j++) pts.push([la0+(la1-la0)*i/(N-1), lo0+(lo1-lo0)*j/(N-1)]);
+  Promise.all(pts.map(([la,lo]) => sigpacGfiPoint(la,lo))).then(arr => {
+    const seen=new Set(), uniq=[];
+    arr.forEach(p => { if(!p||p.poligono==null) return; const k=_sigpacKeyOf(p); if(!seen.has(k)){seen.add(k);uniq.push(p);} });
+    return Promise.all(uniq.map(p => { const d=_sigpacIds(p);
+      const u=`https://sigpac-hubcloud.es/servicioconsultassigpac/query/recinfo/${d.prov}/${d.mun}/${d.agg}/${d.zona}/${d.pol}/${d.par}/${d.rec}.json`;
+      return fetch(u).then(r=>r.ok?r.json():null).then(a=>{ const w=a&&a[0]&&a[0].wkt; if(!w) return null; return { key:_sigpacKeyOf(p), rings:wktRings(w), isMulti:/^\s*MULTIPOLYGON/i.test(w), props:p }; }).catch(()=>null);
+    }));
+  }).then(list => { _sigpacParcels = (list||[]).filter(Boolean); }).catch(()=>{ _sigpacPreloadKey = null; });
+}
+// Hover: si la parcela está precargada -> resalta al instante; si no, consulta bajo demanda.
 map.on('mousemove', (e) => {
   if (!document.getElementById('showSigpac')?.checked) return;
-  if (_sigpacRings && pipRings(e.latlng.lat, e.latlng.lng, _sigpacRings)) return;   // sigue dentro de la resaltada
+  if (selectedFarm) sigpacPreload(selectedFarm);
+  const la=e.latlng.lat, lo=e.latlng.lng;
+  if (_sigpacRings && pipRings(la, lo, _sigpacRings)) return;   // sigue dentro de la resaltada
+  const hit = _sigpacParcels.find(pc => pipRings(la, lo, pc.rings));
+  if (hit) { if (hit.key !== _sigpacKey) sigpacDrawParcel(hit.rings, hit.props, hit.key, hit.isMulti); return; }
   clearTimeout(_sigpacHoverTimer);
   const latlng = e.latlng, pt = e.containerPoint;
-  _sigpacHoverTimer = setTimeout(() => sigpacIdentify(latlng, pt, false), 160);
+  _sigpacHoverTimer = setTimeout(() => sigpacIdentify(latlng, pt, false), 180);
 });
 map.on('mouseout', () => clearTimeout(_sigpacHoverTimer));
 setTimeout(updateZoomScale, 0);

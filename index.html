@@ -408,6 +408,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .proc-card .proc-meta b { color:var(--green); font-weight:800; }
 .proc-card.proc-slider .proc-head { cursor:default; }
 .proc-card.proc-slider input[type=range] { flex:1; height:3px; accent-color:var(--green); margin-left:10px; max-width:130px; cursor:pointer; }
+.proc-card .proc-head.no-cb { cursor:default; }
+.proc-card .zone-toggles { display:flex; gap:8px; margin:9px 0 0 25px; }
+.proc-card .ztog { display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-weight:800; font-size:12px; padding:4px 10px; border:1px solid var(--line); border-radius:999px; user-select:none; color:#667085; transition:background .15s, border-color .15s, color .15s; }
+.proc-card .ztog input { width:13px; height:13px; margin:0; cursor:pointer; }
+.proc-card .ztog.test input { accent-color:#00a86b; }
+.proc-card .ztog.control input { accent-color:#e24444; }
+.proc-card .ztog.test:has(input:checked), .proc-card .ztog.test.on { background:#e6f7ef; border-color:#00a86b; color:#0a6b46; }
+.proc-card .ztog.control:has(input:checked), .proc-card .ztog.control.on { background:#fdeaea; border-color:#e24444; color:#a32020; }
+.olivo-ficha { font:600 12px system-ui; color:var(--ink); line-height:1.55; min-width:170px; }
+.olivo-ficha b { color:var(--green); }
+.olivo-ficha > b { color:#0a3d2b; font-size:13px; }
+.olivo-ficha .of-zona { margin-top:3px; color:#667085; font-size:11px; font-weight:700; }
 .info-panel .close-x { z-index:9; }
 /* En la ficha de info, el nombre de la finca ya no es sticky (lo es el título del panel) */
 .info-panel .popup h3 { position:static; box-shadow:none; padding-top:4px; margin-top:0; }
@@ -518,7 +530,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
             <div class="proc-meta" id="metaOrto"></div>
           </div>
           <div class="proc-card" id="cardSeg" hidden>
-            <label class="proc-head"><input id="showSeg" type="checkbox"><span class="dot square" style="background:#c026d3"></span><span class="proc-name">Segmentación (máscara)</span></label>
+            <div class="proc-head no-cb"><span class="dot square" style="background:#c026d3"></span><span class="proc-name">Segmentación (máscara)</span></div>
+            <div class="zone-toggles">
+              <label class="ztog test"><input id="showSegTest" type="checkbox"><span>Test</span></label>
+              <label class="ztog control"><input id="showSegControl" type="checkbox"><span>Control</span></label>
+            </div>
             <div class="proc-meta" id="metaSeg"></div>
           </div>
           <div class="proc-card" id="cardNube" hidden>
@@ -526,8 +542,16 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
             <div class="proc-meta" id="metaNube"></div>
           </div>
           <div class="proc-card" id="cardNubeSeg" hidden>
-            <label class="proc-head"><input id="showNubeSeg" type="checkbox"><span class="dot" style="background:#0ea5e9"></span><span class="proc-name">Olivos segmentados (test, 3D)</span></label>
+            <div class="proc-head no-cb"><span class="dot" style="background:#0ea5e9"></span><span class="proc-name">Olivos segmentados (3D)</span></div>
+            <div class="zone-toggles">
+              <label class="ztog test"><input id="showNubeSegTest" type="checkbox"><span>Test</span></label>
+              <label class="ztog control"><input id="showNubeSegControl" type="checkbox"><span>Control</span></label>
+            </div>
             <div class="proc-meta" id="metaNubeSeg"></div>
+          </div>
+          <div class="proc-card" id="cardOlivos" hidden>
+            <label class="proc-head"><input id="showOlivos" type="checkbox"><span class="dot" style="background:#16a34a"></span><span class="proc-name">Olivos detectados (dendrometría)</span></label>
+            <div class="proc-meta" id="metaOlivos"></div>
           </div>
           <div class="proc-card proc-slider" id="cardNubeSize" hidden>
             <label class="proc-head"><span class="proc-name">Grosor de la nube</span><input id="nubeSize" type="range" min="0.5" max="5" step="0.5" value="2"></label>
@@ -863,25 +887,28 @@ togCtrl.addTo(map);
 
 // ===== Ortofotos de dron (capa activable, 2D + 3D) desde data/ortos.json =====
 let ORTOS = {};
-let ortoLayer2d = null, segLayer2d = null;
+let ortoLayer2d = null, segLayers2d = {};
 function _ortoBaseDir(){ return location.href.split(/[?#]/)[0].replace(/\/[^/]*$/, '/'); }
 function ortoTilesAbs(rel){ return _ortoBaseDir() + rel; }   // URL absoluta para MapLibre
+// Zonas de segmentación: [clave en manifiesto, sufijo de checkbox].
+const SEG_ZONES = [['test','Test'], ['control','Control']];
 function sync3dOrto(){
   if (!map3d || !map3d.isStyleLoaded()) return;
   const onO = !!document.getElementById('showOrto')?.checked;
-  const onS = !!document.getElementById('showSeg')?.checked;
   Object.keys(ORTOS).forEach(k => {
-    const vO=onO?'visible':'none', vS=onS?'visible':'none';
+    const vO=onO?'visible':'none';
     if (map3d.getLayer('orto-'+k)) map3d.setLayoutProperty('orto-'+k,'visibility', vO);
     if (map3d.getLayer('ortoline-'+k)) map3d.setLayoutProperty('ortoline-'+k,'visibility', vO);
-    if (map3d.getLayer('seg-'+k)) map3d.setLayoutProperty('seg-'+k,'visibility', vS);
+    SEG_ZONES.forEach(([z,suf]) => {
+      const on = !!document.getElementById('showSeg'+suf)?.checked;
+      if (map3d.getLayer('seg-'+z+'-'+k)) map3d.setLayoutProperty('seg-'+z+'-'+k,'visibility', on?'visible':'none');
+    });
   });
 }
 function add3dOrtoLayers(){
   if (!map3d || !Object.keys(ORTOS).length) return;
   if (!map3d.isStyleLoaded()) { map3d.once('idle', add3dOrtoLayers); return; }   // espera a que el estilo cargue
   const onO = !!document.getElementById('showOrto')?.checked;
-  const onS = !!document.getElementById('showSeg')?.checked;
   Object.keys(ORTOS).forEach(k => {
     const o=ORTOS[k];
     const before = map3d.getLayer('zonas-fill') ? 'zonas-fill' : undefined;   // bajo las parcelas
@@ -894,10 +921,14 @@ function add3dOrtoLayers(){
           map3d.addLayer({ id:'ortoline-'+k, type:'line', source:'ortolinesrc-'+k, layout:{ visibility: onO?'visible':'none', 'line-join':'round' }, paint:{ 'line-color':'#ff8c00', 'line-width':2.5, 'line-dasharray':[3,2] } }, before);
         }
       }
-      if (o.seg && !map3d.getLayer('seg-'+k)) {
-        if (!map3d.getSource('segsrc-'+k)) map3d.addSource('segsrc-'+k, { type:'raster', tiles:[ortoTilesAbs(o.seg.tiles)], tileSize:256, minzoom:o.seg.minzoom||14, maxzoom:o.seg.maxzoom||20, bounds:o.seg.bounds });
-        map3d.addLayer({ id:'seg-'+k, type:'raster', source:'segsrc-'+k, layout:{ visibility: onS?'visible':'none' } }, before);
-      }
+      SEG_ZONES.forEach(([z,suf]) => {
+        const s = o.seg && o.seg[z]; if (!s) return;
+        const on = !!document.getElementById('showSeg'+suf)?.checked;
+        if (!map3d.getLayer('seg-'+z+'-'+k)) {
+          if (!map3d.getSource('segsrc-'+z+'-'+k)) map3d.addSource('segsrc-'+z+'-'+k, { type:'raster', tiles:[ortoTilesAbs(s.tiles)], tileSize:256, minzoom:s.minzoom||14, maxzoom:s.maxzoom||20, bounds:s.bounds });
+          map3d.addLayer({ id:'seg-'+z+'-'+k, type:'raster', source:'segsrc-'+z+'-'+k, layout:{ visibility: on?'visible':'none' } }, before);
+        }
+      });
     } catch(e) { console.warn('add3dOrtoLayers', e); }
   });
 }
@@ -916,16 +947,19 @@ fetch('data/ortos.json?t='+Date.now()).then(r => r.ok ? r.json() : {}).then(j =>
       if (gj) L.geoJSON(gj, { style:{ color:'#ff8c00', weight:2.5, opacity:.95, fill:false, dashArray:'6 4' }, interactive:false }).addTo(ortoLayer2d);
     }).catch(() => {});
   });
-  // Segmentación (máscara) en 2D
-  segLayer2d = L.layerGroup(keys.filter(k=>ORTOS[k].seg).map(k => {
-    const s = ORTOS[k].seg;
-    const b = L.latLngBounds([s.bounds[1], s.bounds[0]], [s.bounds[3], s.bounds[2]]);
-    return L.tileLayer(s.tiles, { minZoom:s.minzoom||14, maxNativeZoom:s.maxzoom||20, maxZoom:22, bounds:b });
-  }));
-  const cs = document.getElementById('showSeg');
-  if (cs) cs.addEventListener('change', () => {
-    if (cs.checked) segLayer2d.addTo(map); else map.removeLayer(segLayer2d);
-    if (map3d) { add3dOrtoLayers(); sync3dOrto(); }
+  // Segmentación (máscara) en 2D, una capa por zona (test/control).
+  SEG_ZONES.forEach(([z,suf]) => {
+    const grp = L.layerGroup(keys.filter(k=>ORTOS[k].seg && ORTOS[k].seg[z]).map(k => {
+      const s = ORTOS[k].seg[z];
+      const b = L.latLngBounds([s.bounds[1], s.bounds[0]], [s.bounds[3], s.bounds[2]]);
+      return L.tileLayer(s.tiles, { minZoom:s.minzoom||14, maxNativeZoom:s.maxzoom||20, maxZoom:22, bounds:b });
+    }));
+    segLayers2d[z] = grp;
+    const cs = document.getElementById('showSeg'+suf);
+    if (cs) cs.addEventListener('change', () => {
+      if (cs.checked) grp.addTo(map); else map.removeLayer(grp);
+      if (map3d) { add3dOrtoLayers(); sync3dOrto(); }
+    });
   });
   const cb = document.getElementById('showOrto');
   if (cb) cb.addEventListener('change', () => {
@@ -942,9 +976,62 @@ let _deckOverlay = null;
 fetch('data/nubes.json?t='+Date.now()).then(r => r.ok ? r.json() : {}).then(j => {
   NUBES = j || {};
   if (!Object.keys(NUBES).length) return;
-  ['showNube','showNubeSeg'].forEach(id => { const c=document.getElementById(id); if (c) c.addEventListener('change', () => { if (document.body.classList.contains('mode-3d')) update3dCloud(selectedFarm); }); });
+  ['showNube','showNubeSegTest','showNubeSegControl'].forEach(id => { const c=document.getElementById(id); if (c) c.addEventListener('change', () => { if (document.body.classList.contains('mode-3d')) update3dCloud(selectedFarm); }); });
   const sz = document.getElementById('nubeSize');
   if (sz) sz.addEventListener('input', () => setCloudPointSize(parseFloat(sz.value)));
+  if (selectedFarm) updateProcesados(selectedFarm);
+}).catch(() => {});
+
+// ===== Olivos detectados (dendrometría) desde data/olivos.json =====
+let OLIVOS = {}, olivosFC = { type:'FeatureCollection', features:[] }, olivosLayer2d = null, _olivosLoaded = false;
+function olivoFichaHtml(p){
+  const f=(v,u,d=2)=> (v==null||isNaN(Number(v)))?'—':(Number(v).toFixed(d)+(u||''));
+  const np = (p.num_puntos!=null) ? Number(p.num_puntos).toLocaleString('es-ES') : '—';
+  return `<div class="olivo-ficha"><b>Olivo #${p.id??'—'}</b>`+
+    `<div>Altura <b>${f(p.altura_m,' m')}</b> · Esbeltez ${f(p.esbeltez,'',2)}</div>`+
+    `<div>Copa Ø ${f(p.diam_copa_m,' m')} · ${f(p.area_copa_m2,' m²')} · ${f(p.volumen_copa_m3,' m³')}</div>`+
+    `<div>Prof. copa ${f(p.prof_copa_m,' m')}</div>`+
+    `<div>Puntos ${np} (${f(p.dens_pts_m2,'/m²',0)})</div>`+
+    `<div class="of-zona">Zona ${String(p._zona||'').toUpperCase()}</div></div>`;
+}
+function buildOlivos2d(){
+  if (olivosLayer2d) map.removeLayer(olivosLayer2d);
+  olivosLayer2d = L.geoJSON(olivosFC, {
+    pointToLayer:(f,latlng)=>L.circleMarker(latlng,{ radius:4, color:'#0a3d2b', weight:1, fillColor:'#16a34a', fillOpacity:.9 }),
+    onEachFeature:(f,layer)=>layer.bindPopup(olivoFichaHtml(f.properties||{}))
+  });
+  if (document.getElementById('showOlivos')?.checked) olivosLayer2d.addTo(map);
+}
+function addOlivos3d(){
+  if (!map3d || !_olivosLoaded) return;
+  if (!map3d.isStyleLoaded()) { map3d.once('idle', addOlivos3d); return; }
+  if (!map3d.getSource('olivos')) map3d.addSource('olivos', { type:'geojson', data:olivosFC });
+  const on = !!document.getElementById('showOlivos')?.checked;
+  if (!map3d.getLayer('olivos-c')) {
+    map3d.addLayer({ id:'olivos-c', type:'circle', source:'olivos', layout:{ visibility:on?'visible':'none' },
+      paint:{ 'circle-radius':5, 'circle-color':'#16a34a', 'circle-stroke-color':'#0a3d2b', 'circle-stroke-width':1.4, 'circle-pitch-alignment':'map' } });
+    map3d.on('click','olivos-c', e => { const p=e.features[0].properties;
+      new maplibregl.Popup({ offset:10, closeButton:true }).setLngLat(e.lngLat).setHTML(olivoFichaHtml(p)).addTo(map3d); });
+    map3d.on('mouseenter','olivos-c', () => { map3d.getCanvas().style.cursor='pointer'; });
+    map3d.on('mouseleave','olivos-c', () => { map3d.getCanvas().style.cursor=''; });
+  }
+}
+function toggleOlivos(){
+  const on = !!document.getElementById('showOlivos')?.checked;
+  if (olivosLayer2d){ if(on) olivosLayer2d.addTo(map); else map.removeLayer(olivosLayer2d); }
+  if (map3d){ addOlivos3d(); if (map3d.getLayer('olivos-c')) map3d.setLayoutProperty('olivos-c','visibility', on?'visible':'none'); }
+}
+fetch('data/olivos.json?t='+Date.now()).then(r => r.ok ? r.json() : {}).then(j => {
+  OLIVOS = j || {};
+  const jobs = [];
+  Object.keys(OLIVOS).forEach(k => SEG_ZONES.forEach(([z]) => {
+    const e = OLIVOS[k][z]; if (!e || !e.file) return;
+    jobs.push(fetch(e.file+'?t='+Date.now()).then(r => r.ok ? r.json() : null).then(gj => {
+      if (gj && gj.features) gj.features.forEach(f => { f.properties = f.properties||{}; f.properties._exps=Number(k); f.properties._zona=z; olivosFC.features.push(f); });
+    }).catch(()=>{}));
+  }));
+  Promise.all(jobs).then(() => { _olivosLoaded = true; buildOlivos2d(); if (map3d) addOlivos3d(); });
+  const c = document.getElementById('showOlivos'); if (c) c.addEventListener('change', toggleOlivos);
   if (selectedFarm) updateProcesados(selectedFarm);
 }).catch(() => {});
 function setTerrain3d(on, exag){
@@ -991,7 +1078,7 @@ function buildColorFn(exps, n){
 function rgbColorFn(o,{data,index}){ const c=data.attributes.COLOR_0; if(!c) return [200,200,200]; const v=c.value,s=c.size||4,i=index*s,m=(v[i]>255)?(1/257):1; return [v[i]*m,v[i+1]*m,v[i+2]*m]; }
 function _mkCloud(id, file, origin, zOff, size, colorFn, trig){
   return new deck.PointCloudLayer({
-    id, data: ortoTilesAbs(file) + '?v=20260605', loaders: [_LASLoader],
+    id, data: ortoTilesAbs(file) + '?v=20260605b', loaders: [_LASLoader],
     onDataLoad: () => showCloudLoading(false), onError: () => showCloudLoading(false),
     coordinateSystem: deck.COORDINATE_SYSTEM.METER_OFFSETS, coordinateOrigin: [origin[0], origin[1], zOff || 0],
     getNormal: [0, 0, 1], pointSize: size, material: false, sizeUnits: 'pixels',
@@ -1006,8 +1093,13 @@ function _cloudLayers(exps){
     if (_colorExps !== String(exps)) { _colorFn = buildColorFn(exps, n); _colorExps = String(exps); }
     layers.push(_mkCloud('nube-'+exps, n.file, n.origin, n.zOffset, size, _colorFn, String(exps)));
   }
-  if (document.getElementById('showNubeSeg')?.checked && n.seg){
-    layers.push(_mkCloud('nubeseg-'+exps, n.seg.file, n.seg.origin, n.seg.zOffset, size, rgbColorFn, 'seg'+exps));
+  if (n.seg){
+    const oSeg = n.seg.origin || n.origin, zSeg = (n.seg.zOffset!=null)?n.seg.zOffset:n.zOffset;
+    SEG_ZONES.forEach(([z,suf]) => {
+      const s = n.seg[z]; if (!s || !s.file) return;
+      if (document.getElementById('showNubeSeg'+suf)?.checked)
+        layers.push(_mkCloud('nubeseg-'+z+'-'+exps, s.file, oSeg, zSeg, size, rgbColorFn, 'seg'+z+exps));
+    });
   }
   return layers;
 }
@@ -1016,7 +1108,8 @@ function update3dCloud(exps){
   if (!map3d) return;
   if (!map3d.isStyleLoaded()) { map3d.once('idle', () => update3dCloud(exps)); return; }   // espera a que cargue
   const n = NUBES[String(exps)];
-  const any = n && ((document.getElementById('showNube')?.checked && n.file) || (document.getElementById('showNubeSeg')?.checked && n.seg));
+  const segOn = n && n.seg && SEG_ZONES.some(([z,suf]) => document.getElementById('showNubeSeg'+suf)?.checked && n.seg[z]);
+  const any = n && ((document.getElementById('showNube')?.checked && n.file) || segOn);
   if (!any) { hide3dCloud(); return; }
   setTerrain3d(true, 1.0);  // terreno real (sin exagerar): la nube se apoya en él (parcela en pendiente)
   setMaplibreZonas(true, true);  // solo el PERÍMETRO test/control proyectado (sin relleno, para no tapar la nube)
@@ -1440,22 +1533,40 @@ function setPanelTab(panelId, tab){
 function updateProcesados(exps){
   const o = (typeof ORTOS!=='undefined') ? ORTOS[String(exps)] : null;
   const n = (typeof NUBES!=='undefined') ? NUBES[String(exps)] : null;
-  const hasO=!!o, hasSeg=!!(o&&o.seg), hasN=!!(n&&n.file), hasNSeg=!!(n&&n.seg);
+  const ol = (typeof OLIVOS!=='undefined') ? OLIVOS[String(exps)] : null;
+  const segZ  = (o&&o.seg) ? SEG_ZONES.filter(([z])=>o.seg[z]) : [];
+  const nsegZ = (n&&n.seg) ? SEG_ZONES.filter(([z])=>n.seg[z]&&n.seg[z].file) : [];
+  const hasO=!!o, hasSeg=segZ.length>0, hasN=!!(n&&n.file), hasNSeg=nsegZ.length>0;
+  const hasOlivos = !!(ol && SEG_ZONES.some(([z])=>ol[z]));
   const card=(id,v)=>{ const e=document.getElementById(id); if(e) e.hidden=!v; };
   const meta=(id,html)=>{ const e=document.getElementById(id); if(e) e.innerHTML=html||''; };
-  card('cardOrto',hasO); card('cardSeg',hasSeg); card('cardNube',hasN); card('cardNubeSeg',hasNSeg);
+  const ztog=(id,v)=>{ const e=document.getElementById(id), lab=e&&e.closest('.ztog'); if(lab) lab.style.display=v?'':'none'; };
+  card('cardOrto',hasO); card('cardSeg',hasSeg); card('cardNube',hasN); card('cardNubeSeg',hasNSeg); card('cardOlivos',hasOlivos);
   card('cardNubeSize', hasN||hasNSeg);
-  const pe=document.getElementById('procEmpty'); if(pe) pe.style.display=(hasO||hasSeg||hasN||hasNSeg)?'none':'';
+  // Mostrar solo los sub-toggles de zona disponibles.
+  ztog('showSegTest', !!(o&&o.seg&&o.seg.test)); ztog('showSegControl', !!(o&&o.seg&&o.seg.control));
+  ztog('showNubeSegTest', !!(n&&n.seg&&n.seg.test&&n.seg.test.file)); ztog('showNubeSegControl', !!(n&&n.seg&&n.seg.control&&n.seg.control.file));
+  const pe=document.getElementById('procEmpty'); if(pe) pe.style.display=(hasO||hasSeg||hasN||hasNSeg||hasOlivos)?'none':'';
   // Info de cada producto, debajo de su propia tarjeta.
   const dash='—';
+  const segInfo = segZ.length ? `<b>Resolución</b> ${o.seg[segZ[0][0]].resolucion||dash} · ${segZ.map(([z])=>z).join(' + ')}` : '';
+  const nsegInfo = nsegZ.map(([z,suf])=>`<b>${suf}</b> ${n.seg[z].puntos||dash}`).join(' · ');
+  const olInfo = hasOlivos ? SEG_ZONES.filter(([z])=>ol[z]).map(([z])=>`<b>${ol[z].n||'—'}</b> olivos · zona ${z}`).join(' · ') : '';
   meta('metaOrto', o ? `<b>Resolución</b> ${o.resolucion||dash}${o.tamano?` · <b>Tamaño</b> ${o.tamano}`:''}` : '');
-  meta('metaSeg', (o&&o.seg) ? `<b>Resolución</b> ${o.seg.resolucion||dash}` : '');
+  meta('metaSeg', segInfo);
   meta('metaNube', (n&&n.file) ? `<b>Puntos</b> ${n.puntos||dash}${n.tamano?` · <b>Tamaño</b> ${n.tamano}`:''}` : '');
-  meta('metaNubeSeg', (n&&n.seg) ? `<b>Puntos</b> ${n.seg.puntos||dash}${n.seg.tamano?` · <b>Tamaño</b> ${n.seg.tamano}`:''}` : '');
+  meta('metaNubeSeg', nsegInfo);
+  meta('metaOlivos', olInfo);
   syncProcCards();
 }
-// Resalta la tarjeta cuyo dato está activo (respaldo de :has() para navegadores que no lo apliquen).
-function syncProcCards(){ document.querySelectorAll('#procesadosBody .proc-card').forEach(c => { const cb=c.querySelector('input[type=checkbox]'); c.classList.toggle('on', !!(cb&&cb.checked)); }); }
+// Resalta la tarjeta/pill cuyo dato está activo (respaldo de :has() para navegadores que no lo apliquen).
+function syncProcCards(){
+  document.querySelectorAll('#procesadosBody .proc-card').forEach(c => {
+    const cbs=[...c.querySelectorAll('input[type=checkbox]')];
+    c.classList.toggle('on', cbs.some(cb=>cb.checked));
+  });
+  document.querySelectorAll('#procesadosBody .ztog').forEach(l => { const cb=l.querySelector('input'); l.classList.toggle('on', !!(cb&&cb.checked)); });
+}
 (function(){ const body=document.getElementById('procesadosBody'); if (body) body.addEventListener('change', syncProcCards); })();
 function openInfoPanelByExps(exps) {
   if (!exps) { closeInfoPanel(); return; }
@@ -2194,6 +2305,7 @@ function init3d(center, zoom, pitch){
     if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); }
     else update3dFeatures('');
     add3dOrtoLayers();   // capa(s) de ortofoto bajo las parcelas (según checkbox)
+    addOlivos3d();       // olivos detectados (puntos clicables con dendrometría)
   });
 }
 function enter3d(){

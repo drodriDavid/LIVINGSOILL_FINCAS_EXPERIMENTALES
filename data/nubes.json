@@ -8,11 +8,18 @@
     "puntos": "5,77 M (submuestreada de 231 M)",
     "tamano": "39 MB",
     "seg": {
-      "file": "data/nubes/torredelcampo_seg.laz",
       "origin": [-3.8400583, 37.8134778],
       "zOffset": -45,
-      "puntos": "3,21 M · olivos segmentados (zona test)",
-      "tamano": "8 MB"
+      "test": {
+        "file": "data/nubes/torredelcampo_seg.laz",
+        "puntos": "3,21 M",
+        "tamano": "9 MB"
+      },
+      "control": {
+        "file": "data/nubes/torredelcampo_seg_control.laz",
+        "puntos": "12,35 M",
+        "tamano": "33 MB"
+      }
     }
   }
 }

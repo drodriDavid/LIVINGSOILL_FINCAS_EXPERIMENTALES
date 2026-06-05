@@ -9,11 +9,20 @@
     "resolucion": "1,6 cm/px (servida a ~5 cm)",
     "tamano": "original 3 GB · teselas 173 MB",
     "seg": {
-      "tiles": "data/ortos/torredelcampo_seg/{z}/{x}/{y}.png",
-      "minzoom": 14,
-      "maxzoom": 21,
-      "bounds": [-3.840125, 37.813478, -3.834050, 37.819317],
-      "resolucion": "7,85 cm/px"
+      "test": {
+        "tiles": "data/ortos/torredelcampo_seg/{z}/{x}/{y}.png",
+        "minzoom": 14,
+        "maxzoom": 21,
+        "bounds": [-3.840125, 37.813478, -3.834050, 37.819317],
+        "resolucion": "7,85 cm/px"
+      },
+      "control": {
+        "tiles": "data/ortos/torredelcampo_seg_control/{z}/{x}/{y}.png",
+        "minzoom": 14,
+        "maxzoom": 21,
+        "bounds": [-3.840125, 37.813478, -3.834050, 37.819317],
+        "resolucion": "7,85 cm/px"
+      }
     }
   }
 }

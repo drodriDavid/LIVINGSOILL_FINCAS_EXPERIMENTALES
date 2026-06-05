@@ -1,0 +1,9 @@
+{
+  "1": {
+    "test": {
+      "file": "data/olivos/torredelcampo_olivos.geojson",
+      "n": 82,
+      "zona": "test"
+    }
+  }
+}

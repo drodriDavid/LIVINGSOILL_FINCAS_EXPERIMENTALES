@@ -2176,6 +2176,7 @@ function enter3d(){
   // Activa realmente el 3D (oculta el 2D, crea/mueve el mapa). Solo cuando MapLibre
   // está listo, para no dejar pantalla en blanco mientras se descarga la librería.
   const apply = () => {
+   try {
     document.body.classList.add('mode-3d');
     if (b) { b.classList.remove('loading'); b.classList.add('active'); const s=b.querySelector('span'); if(s) s.textContent='2D'; b.title='Volver al 2D'; }
     if (selectedFarm) openInfoPanelByExps(selectedFarm);   // mantener la ficha abierta al pasar de 2D a 3D
@@ -2185,6 +2186,12 @@ function enter3d(){
     const settle = () => { if (!map3d) return; map3d.resize(); if (selectedFarm) { frame3dFarm(selectedFarm, true); update3dCloud(selectedFarm); } };
     setTimeout(settle, 70);
     setTimeout(settle, 260);
+   } catch(err){
+    // Si algo falla al crear el mapa 3D, no dejamos el botón colgado: volvemos al 2D.
+    console.error('Error activando el 3D', err);
+    document.body.classList.remove('mode-3d');
+    if (b){ b.classList.remove('loading','active'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; }
+   }
   };
   if (window.maplibregl) { apply(); }
   else {
@@ -2197,9 +2204,9 @@ function enter3d(){
 function exit3d(){ _want3d = false; document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active','loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } hide3dCloud(); refreshMap(true); }
 window.toggle3d = function(){
   const b = document.getElementById('btn3d');
-  if (b && b.classList.contains('loading')) {   // estaba cargando: cancelar
-    _want3d = false; b.classList.remove('loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; return;
-  }
+  // Si ya se está activando (MapLibre cargando), ignorar el re-clic: NO cancelar,
+  // para no romper la activación pendiente. Antes un doble clic dejaba el 3D sin abrir.
+  if (b && b.classList.contains('loading')) return;
   document.body.classList.contains('mode-3d') ? exit3d() : enter3d();
 };
 // Empezar a descargar MapLibre en segundo plano cuanto antes (no bloquea el 2D),

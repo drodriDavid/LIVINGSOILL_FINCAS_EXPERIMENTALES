@@ -893,7 +893,7 @@ togCtrl.addTo(map);
 // Capa SIGPAC (recintos) activable desde el menú del ojo: overlay WMS en 2D + capa en 3D.
 function setSigpacLayer(on){
   if (on) { if (!map.hasLayer(sigpacWms)) sigpacWms.addTo(map); }
-  else { if (map.hasLayer(sigpacWms)) map.removeLayer(sigpacWms); if (typeof sigpacLabel!=='undefined' && sigpacLabel) { map.removeLayer(sigpacLabel); sigpacLabel = null; } }
+  else { if (map.hasLayer(sigpacWms)) map.removeLayer(sigpacWms); if (typeof sigpacClearHighlight==='function') sigpacClearHighlight(); }
   if (map3d && map3d.getLayer && map3d.getLayer('sigpac3d')) { try { map3d.setLayoutProperty('sigpac3d','visibility', on?'visible':'none'); } catch(_){} }
 }
 (function(){ const c=document.getElementById('showSigpac'); if (c) c.addEventListener('change', () => setSigpacLayer(c.checked)); })();
@@ -1900,9 +1900,9 @@ function updateZoomScale() {
   sensorLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 13 ? '' : 'none'; });
 }
 map.on('zoomend', updateZoomScale);
-map.on('click', (e) => { if (document.getElementById('showSigpac')?.checked) { sigpacGetInfo(e.latlng, e.containerPoint); return; } closeInfoPanel(); });
-// ===== SIGPAC: info de parcela al pulsar (WMS GetFeatureInfo) + etiqueta del nº de parcela =====
-let sigpacLabel = null;
+map.on('click', (e) => { if (document.getElementById('showSigpac')?.checked) { sigpacIdentify(e.latlng, e.containerPoint, true); return; } closeInfoPanel(); });
+// ===== SIGPAC: resalta el recinto bajo el ratón (relleno translúcido) + info al pulsar =====
+let sigpacLabel = null, sigpacHiLayer = null, _sigpacKey = null, _sigpacRings = null, _sigpacHoverTimer = null;
 function sigpacInfoHtml(p){
   const num=(v,d)=> (v==null||v==='')?'—':Number(v).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d});
   const muni=(p.municipio||'').replace(/^\d+\s*-\s*/,''), prov=(p.provincia||'').replace(/^\d+\s*-\s*/,'');
@@ -1913,26 +1913,68 @@ function sigpacInfoHtml(p){
     `<div>${muni||'—'}${prov?' ('+prov+')':''}${p.altitud!=null?' · '+p.altitud+' m':''}</div>`+
     `<div class="sf-foot">Coef. regadío ${num(p.coef_regadio,0)} · Región PB ${p.region??'—'}</div></div>`;
 }
-function sigpacGetInfo(latlng, pt){
-  const size = map.getSize();
-  const b = map.getBounds();
+// WKT POLYGON/MULTIPOLYGON -> anillos [[lat,lng]…] (SIGPAC da "lng lat", srid 4258 ≈ WGS84).
+function wktRings(wkt){
+  const rings=[]; const re=/\(([\-\d.,\seE+]+)\)/g; let m;
+  while((m=re.exec(wkt))){
+    const pts=m[1].trim().split(',').map(s=>{ const a=s.trim().split(/\s+/); return [parseFloat(a[1]), parseFloat(a[0])]; }).filter(p=>isFinite(p[0])&&isFinite(p[1]));
+    if(pts.length>=3) rings.push(pts);
+  }
+  return rings;
+}
+function ringsCentroid(rings){
+  let best=rings[0]; rings.forEach(r=>{ if(r.length>best.length) best=r; });
+  let la=0,lo=0; best.forEach(p=>{la+=p[0];lo+=p[1];}); return [la/best.length, lo/best.length];
+}
+function pipRings(lat,lng,rings){
+  let inside=false;
+  for(const r of rings){ for(let i=0,j=r.length-1;i<r.length;j=i++){ const yi=r[i][0],xi=r[i][1],yj=r[j][0],xj=r[j][1]; if(((yi>lat)!==(yj>lat)) && (lng < (xj-xi)*(lat-yi)/(yj-yi)+xi)) inside=!inside; } }
+  return inside;
+}
+function sigpacClearHighlight(){ if(sigpacHiLayer){map.removeLayer(sigpacHiLayer);sigpacHiLayer=null;} if(sigpacLabel){map.removeLayer(sigpacLabel);sigpacLabel=null;} _sigpacKey=null; _sigpacRings=null; }
+function sigpacDrawParcel(rings,p,key,isMulti){
+  if(sigpacHiLayer) map.removeLayer(sigpacHiLayer);
+  if(sigpacLabel) map.removeLayer(sigpacLabel);
+  const st = { color:'#ffd400', weight:2.5, opacity:.95, fillColor:'#ffd400', fillOpacity:.35, interactive:false };
+  // POLYGON: rings = [exterior, hueco…] en un solo polígono (respeta huecos). MULTIPOLYGON: una pieza por anillo.
+  const shapes = isMulti ? rings.map(r => L.polygon(r, st)) : [ L.polygon(rings, st) ];
+  sigpacHiLayer = L.layerGroup(shapes).addTo(map);
+  const c = ringsCentroid(rings);
+  sigpacLabel = L.marker(c, { interactive:false, icon:L.divIcon({ className:'sigpac-label', html:`Pol ${p.poligono} · Parc ${p.parcela}`, iconSize:[0,0] }) }).addTo(map);
+  _sigpacKey = key; _sigpacRings = rings;
+}
+// Identifica el recinto en (latlng/píxel): GetFeatureInfo -> recinfo (geometría WKT) -> resalta.
+function sigpacIdentify(latlng, pt, openPopup){
+  const size = map.getSize(), b = map.getBounds();
   const sw = L.CRS.EPSG3857.project(b.getSouthWest()), ne = L.CRS.EPSG3857.project(b.getNorthEast());
-  const url = 'https://sigpac-hubcloud.es/wms/wms?service=WMS&version=1.1.1&request=GetFeatureInfo'
+  const gfi = 'https://sigpac-hubcloud.es/wms/wms?service=WMS&version=1.1.1&request=GetFeatureInfo'
     + '&layers=AU.Sigpac:recinto&query_layers=AU.Sigpac:recinto&styles=&srs=EPSG:3857'
-    + '&bbox=' + [sw.x, sw.y, ne.x, ne.y].join(',')
-    + '&width=' + size.x + '&height=' + size.y
-    + '&x=' + Math.round(pt.x) + '&y=' + Math.round(pt.y)
-    + '&info_format=application/json&feature_count=1';
-  fetch(url).then(r => r.ok ? r.json() : null).then(j => {
+    + '&bbox=' + [sw.x, sw.y, ne.x, ne.y].join(',') + '&width=' + size.x + '&height=' + size.y
+    + '&x=' + Math.round(pt.x) + '&y=' + Math.round(pt.y) + '&info_format=application/json&feature_count=1';
+  fetch(gfi).then(r => r.ok ? r.json() : null).then(j => {
     const f = j && j.features && j.features[0];
-    if (!f) { L.popup({maxWidth:240}).setLatLng(latlng).setContent('<div class="sigpac-ficha">Sin recinto SIGPAC aquí.</div>').openOn(map); return; }
+    if (!f) { if(openPopup) L.popup({maxWidth:240}).setLatLng(latlng).setContent('<div class="sigpac-ficha">Sin recinto SIGPAC aquí.</div>').openOn(map); return; }
     const p = f.properties;
-    L.popup({ maxWidth:280 }).setLatLng(latlng).setContent(sigpacInfoHtml(p)).openOn(map);
-    // Pinta el nº de parcela en el mapa (etiqueta persistente hasta el siguiente clic).
-    if (sigpacLabel) map.removeLayer(sigpacLabel);
-    sigpacLabel = L.marker(latlng, { interactive:false, icon: L.divIcon({ className:'sigpac-label', html:`Pol ${p.poligono} · Parc ${p.parcela}`, iconSize:[0,0] }) }).addTo(map);
+    if (openPopup) L.popup({ maxWidth:280 }).setLatLng(latlng).setContent(sigpacInfoHtml(p)).openOn(map);
+    const prov=parseInt(p.provincia,10), mun=parseInt(p.municipio,10), agg=p.agregado||0, zona=p.zona||0;
+    const key = [prov,mun,agg,zona,p.poligono,p.parcela,p.recinto].join('/');
+    if (key === _sigpacKey) return;   // misma parcela ya resaltada: nada que hacer
+    const rurl = `https://sigpac-hubcloud.es/servicioconsultassigpac/query/recinfo/${prov}/${mun}/${agg}/${zona}/${p.poligono}/${p.parcela}/${p.recinto}.json`;
+    fetch(rurl).then(r => r.ok ? r.json() : null).then(arr => {
+      const wkt = arr && arr[0] && arr[0].wkt; if (!wkt) return;
+      const rings = wktRings(wkt); if (rings.length) sigpacDrawParcel(rings, p, key, /^\s*MULTIPOLYGON/i.test(wkt));
+    }).catch(()=>{});
   }).catch(() => {});
 }
+// Hover: resalta el recinto bajo el ratón; solo consulta al CAMBIAR de parcela (point-in-polygon).
+map.on('mousemove', (e) => {
+  if (!document.getElementById('showSigpac')?.checked) return;
+  if (_sigpacRings && pipRings(e.latlng.lat, e.latlng.lng, _sigpacRings)) return;   // sigue dentro de la resaltada
+  clearTimeout(_sigpacHoverTimer);
+  const latlng = e.latlng, pt = e.containerPoint;
+  _sigpacHoverTimer = setTimeout(() => sigpacIdentify(latlng, pt, false), 160);
+});
+map.on('mouseout', () => clearTimeout(_sigpacHoverTimer));
 setTimeout(updateZoomScale, 0);
 // Tooltip interactivo de las mini-gráficas de muestras (valor exacto por punto)
 (function(){

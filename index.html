@@ -421,6 +421,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .olivo-ficha b { color:var(--green); }
 .olivo-ficha > b { color:#0a3d2b; font-size:13px; }
 .olivo-ficha .of-zona { margin-top:3px; color:#667085; font-size:11px; font-weight:700; }
+.sigpac-ficha { font:600 12px system-ui; color:var(--ink); line-height:1.55; min-width:180px; }
+.sigpac-ficha > b { color:#0a3d2b; font-size:13px; }
+.sigpac-ficha b { color:var(--green); }
+.sigpac-ficha .sf-id { margin:2px 0 4px; }
+.sigpac-ficha .sf-foot { margin-top:3px; color:#667085; font-size:11px; font-weight:700; }
+.sigpac-label { background:#fff; border:1.5px solid var(--green); color:#0a3d2b; font:800 11px system-ui; white-space:nowrap; padding:2px 7px; border-radius:999px; box-shadow:0 1px 6px rgba(0,0,0,.25); transform:translate(-50%,-150%); }
 .info-panel .close-x { z-index:9; }
 /* En la ficha de info, el nombre de la finca ya no es sticky (lo es el título del panel) */
 .info-panel .popup h3 { position:static; box-shadow:none; padding-top:4px; margin-top:0; }
@@ -840,6 +846,7 @@ function setBasemap(key) {
   if (!next || next === currentBase) return;
   map.removeLayer(currentBase); next.addTo(map); currentBase = next; currentBaseKey = key;
   document.querySelectorAll('.basemap-switcher button').forEach(b => b.classList.toggle('active', b.dataset.base === key));
+  if (key !== 'sigpac' && typeof sigpacLabel !== 'undefined' && sigpacLabel) { map.removeLayer(sigpacLabel); sigpacLabel = null; }
   sync3dBasemap();
 }
 const bmHtml = `
@@ -1889,7 +1896,40 @@ function updateZoomScale() {
   sensorLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 13 ? '' : 'none'; });
 }
 map.on('zoomend', updateZoomScale);
-map.on('click', () => closeInfoPanel());
+map.on('click', (e) => { if (currentBaseKey === 'sigpac') { sigpacGetInfo(e.latlng, e.containerPoint); return; } closeInfoPanel(); });
+// ===== SIGPAC: info de parcela al pulsar (WMS GetFeatureInfo) + etiqueta del nº de parcela =====
+let sigpacLabel = null;
+function sigpacInfoHtml(p){
+  const num=(v,d)=> (v==null||v==='')?'—':Number(v).toLocaleString('es-ES',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const muni=(p.municipio||'').replace(/^\d+\s*-\s*/,''), prov=(p.provincia||'').replace(/^\d+\s*-\s*/,'');
+  return `<div class="sigpac-ficha"><b>SIGPAC · Recinto</b>`+
+    `<div class="sf-id">Pol. <b>${p.poligono??'—'}</b> · Parc. <b>${p.parcela??'—'}</b> · Rec. <b>${p.recinto??'—'}</b></div>`+
+    `<div>Uso: <b>${p.uso_sigpac||'—'}</b></div>`+
+    `<div>Superficie: ${num(p.superficie_ha,3)} ha · Pendiente: ${num(p.pendiente,1)}%</div>`+
+    `<div>${muni||'—'}${prov?' ('+prov+')':''}${p.altitud!=null?' · '+p.altitud+' m':''}</div>`+
+    `<div class="sf-foot">Coef. regadío ${num(p.coef_regadio,0)} · Región PB ${p.region??'—'}</div></div>`;
+}
+function sigpacGetInfo(latlng, pt){
+  if (!map.hasLayer(currentBase)) return;
+  const size = map.getSize();
+  const b = map.getBounds();
+  const sw = L.CRS.EPSG3857.project(b.getSouthWest()), ne = L.CRS.EPSG3857.project(b.getNorthEast());
+  const url = 'https://sigpac-hubcloud.es/wms/wms?service=WMS&version=1.1.1&request=GetFeatureInfo'
+    + '&layers=AU.Sigpac:recinto&query_layers=AU.Sigpac:recinto&styles=&srs=EPSG:3857'
+    + '&bbox=' + [sw.x, sw.y, ne.x, ne.y].join(',')
+    + '&width=' + size.x + '&height=' + size.y
+    + '&x=' + Math.round(pt.x) + '&y=' + Math.round(pt.y)
+    + '&info_format=application/json&feature_count=1';
+  fetch(url).then(r => r.ok ? r.json() : null).then(j => {
+    const f = j && j.features && j.features[0];
+    if (!f) { L.popup({maxWidth:240}).setLatLng(latlng).setContent('<div class="sigpac-ficha">Sin recinto SIGPAC aquí.</div>').openOn(map); return; }
+    const p = f.properties;
+    L.popup({ maxWidth:280 }).setLatLng(latlng).setContent(sigpacInfoHtml(p)).openOn(map);
+    // Pinta el nº de parcela en el mapa (etiqueta persistente hasta el siguiente clic).
+    if (sigpacLabel) map.removeLayer(sigpacLabel);
+    sigpacLabel = L.marker(latlng, { interactive:false, icon: L.divIcon({ className:'sigpac-label', html:`Pol ${p.poligono} · Parc ${p.parcela}`, iconSize:[0,0] }) }).addTo(map);
+  }).catch(() => {});
+}
 setTimeout(updateZoomScale, 0);
 // Tooltip interactivo de las mini-gráficas de muestras (valor exacto por punto)
 (function(){

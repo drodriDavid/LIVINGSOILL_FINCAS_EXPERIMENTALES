@@ -3,7 +3,7 @@
     "name": "Torredelcampo",
     "file": "data/nubes/torredelcampo.laz",
     "origin": [-3.8400583, 37.8134778],
-    "zOffset": 0,
+    "zOffset": -45,
     "pointSize": 3
   }
 }

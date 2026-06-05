@@ -48,6 +48,7 @@ input:focus, select:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba
 .toggle input { width:auto; accent-color:var(--green); }
 .dot { display:inline-block; width:10px; height:10px; border-radius:999px; }
 .dot.test { background:var(--green2); } .dot.control { background:var(--red); } .dot.vertex { background:var(--amber); }
+.dot.sigpac { background:transparent; border:2px solid #ff8c00; border-radius:2px; box-sizing:border-box; }
 .btn { border:0; background:var(--green); color:#fff; font-weight:900; cursor:pointer; box-shadow:0 10px 20px rgba(0,102,106,.18); }
 .btn.secondary { background:#fff; color:var(--green); border:1px solid var(--line); box-shadow:none; }
 .overview { margin:14px 0; background:#fff; border:1px solid var(--line); border-radius:18px; padding:10px; }
@@ -824,34 +825,29 @@ const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{
 // Ortofoto PNOA del IGN (máxima resolución para España) + nombres
 const PNOA_URL = 'https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileCol={x}&TileRow={y}';
 const pnoa = L.layerGroup([ L.tileLayer(PNOA_URL, { maxZoom: 20, attribution: 'PNOA © IGN España' }), L.tileLayer(REF_URL, { maxZoom: 20 }) ]);
-// SIGPAC: recintos agrícolas (FEGA, GeoServer WMS) sobre la ortofoto PNOA.
+// SIGPAC: recintos agrícolas (FEGA, GeoServer WMS) como CAPA activable (no basemap).
 const sigpacWms = L.tileLayer.wms('https://sigpac-hubcloud.es/wms/wms', { layers:'AU.Sigpac:recinto', format:'image/png', transparent:true, version:'1.3.0', maxZoom:20, attribution:'SIGPAC © FEGA' });
-const sigpac = L.layerGroup([ L.tileLayer(PNOA_URL, { maxZoom: 20, attribution: 'PNOA © IGN España' }), sigpacWms, L.tileLayer(REF_URL, { maxZoom: 20 }) ]);
-const BASEMAPS = { hibrido, sigpac, pnoa, carto };
+const BASEMAPS = { hibrido, pnoa, carto };
 let currentBase = hibrido;
 let currentBaseKey = 'hibrido';
 hibrido.addTo(map);
 // Imagen que usa el 3D según el mapa elegido en 2D, para que coincidan (misma fuente/fecha).
 const CARTO_URL = 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
-const SAT3D = { hibrido:IMG_URL, pnoa:PNOA_URL, sigpac:PNOA_URL, carto:CARTO_URL };
+const SAT3D = { hibrido:IMG_URL, pnoa:PNOA_URL, carto:CARTO_URL };
 function sync3dBasemap(){
   if (!map3d) return;
   const src = map3d.getSource('sat');
   if (src && src.setTiles) { try { src.setTiles([SAT3D[currentBaseKey] || IMG_URL]); } catch(_) {} }
-  // Capa de recintos SIGPAC en 3D solo cuando el basemap activo es SIGPAC.
-  if (map3d.getLayer && map3d.getLayer('sigpac3d')) { try { map3d.setLayoutProperty('sigpac3d','visibility', currentBaseKey==='sigpac'?'visible':'none'); } catch(_){} }
 }
 function setBasemap(key) {
   const next = BASEMAPS[key];
   if (!next || next === currentBase) return;
   map.removeLayer(currentBase); next.addTo(map); currentBase = next; currentBaseKey = key;
   document.querySelectorAll('.basemap-switcher button').forEach(b => b.classList.toggle('active', b.dataset.base === key));
-  if (key !== 'sigpac' && typeof sigpacLabel !== 'undefined' && sigpacLabel) { map.removeLayer(sigpacLabel); sigpacLabel = null; }
   sync3dBasemap();
 }
 const bmHtml = `
   <button data-base="hibrido" class="active" title="Satélite con nombres" aria-label="Satélite con nombres"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/><circle cx="12" cy="9" r="1.6" fill="currentColor" stroke="none"/></svg></button>
-  <button data-base="sigpac" title="SIGPAC · parcelas agrícolas (FEGA)" aria-label="SIGPAC parcelas agrícolas"><svg viewBox="0 0 24 24"><path d="M3 5h18v14H3z"/><path d="M3 11h7M10 5v9M10 14h11M16 14v5"/></svg></button>
   <button data-base="pnoa" title="Ortofoto PNOA · alta resolución (IGN España)" aria-label="Ortofoto PNOA alta resolución"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7.2" height="7.2" rx="1.4"/><rect x="13.3" y="3.5" width="7.2" height="7.2" rx="1.4"/><rect x="3.5" y="13.3" width="7.2" height="7.2" rx="1.4"/><rect x="13.3" y="13.3" width="7.2" height="7.2" rx="1.4"/></svg></button>
   <button data-base="carto" title="Mapa claro" aria-label="Mapa claro"><svg viewBox="0 0 24 24"><path d="M9 4l-6 2v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></button>
   <span class="bm-sep"></span>
@@ -887,12 +883,20 @@ togCtrl.onAdd = () => {
     <label><input id="showControl" type="checkbox" checked><span class="dot control"></span>CONTROL</label>
     <label><input id="showNumbers" type="checkbox"><span class="dot vertex"></span>Vértices</label>
     <label><input id="showPuntos" type="checkbox" checked><span class="dot punto"></span>Muestreo</label>
-    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>`;
+    <label><input id="showSensores" type="checkbox" checked><span class="dot sensor"></span>Sensores</label>
+    <label><input id="showSigpac" type="checkbox"><span class="dot sigpac"></span>Parcelas SIGPAC</label>`;
   L.DomEvent.disableClickPropagation(d);
   L.DomEvent.disableScrollPropagation(d);
   return d;
 };
 togCtrl.addTo(map);
+// Capa SIGPAC (recintos) activable desde el menú del ojo: overlay WMS en 2D + capa en 3D.
+function setSigpacLayer(on){
+  if (on) { if (!map.hasLayer(sigpacWms)) sigpacWms.addTo(map); }
+  else { if (map.hasLayer(sigpacWms)) map.removeLayer(sigpacWms); if (typeof sigpacLabel!=='undefined' && sigpacLabel) { map.removeLayer(sigpacLabel); sigpacLabel = null; } }
+  if (map3d && map3d.getLayer && map3d.getLayer('sigpac3d')) { try { map3d.setLayoutProperty('sigpac3d','visibility', on?'visible':'none'); } catch(_){} }
+}
+(function(){ const c=document.getElementById('showSigpac'); if (c) c.addEventListener('change', () => setSigpacLayer(c.checked)); })();
 
 
 // ===== Ortofotos de dron (capa activable, 2D + 3D) desde data/ortos.json =====
@@ -1896,7 +1900,7 @@ function updateZoomScale() {
   sensorLayers.forEach(o => { const tt = o.marker.getTooltip(); if (tt && tt.getElement()) tt.getElement().style.display = z >= 13 ? '' : 'none'; });
 }
 map.on('zoomend', updateZoomScale);
-map.on('click', (e) => { if (currentBaseKey === 'sigpac') { sigpacGetInfo(e.latlng, e.containerPoint); return; } closeInfoPanel(); });
+map.on('click', (e) => { if (document.getElementById('showSigpac')?.checked) { sigpacGetInfo(e.latlng, e.containerPoint); return; } closeInfoPanel(); });
 // ===== SIGPAC: info de parcela al pulsar (WMS GetFeatureInfo) + etiqueta del nº de parcela =====
 let sigpacLabel = null;
 function sigpacInfoHtml(p){
@@ -1910,7 +1914,6 @@ function sigpacInfoHtml(p){
     `<div class="sf-foot">Coef. regadío ${num(p.coef_regadio,0)} · Región PB ${p.region??'—'}</div></div>`;
 }
 function sigpacGetInfo(latlng, pt){
-  if (!map.hasLayer(currentBase)) return;
   const size = map.getSize();
   const b = map.getBounds();
   const sw = L.CRS.EPSG3857.project(b.getSouthWest()), ne = L.CRS.EPSG3857.project(b.getNorthEast());
@@ -2293,7 +2296,7 @@ function init3d(center, zoom, pitch){
         sigpac:{ type:'raster', tiles:['https://sigpac-hubcloud.es/wms/wms?service=WMS&version=1.1.1&request=GetMap&layers=AU.Sigpac:recinto&styles=&format=image/png&transparent=true&width=256&height=256&srs=EPSG:3857&bbox={bbox-epsg-3857}'], tileSize:256, attribution:'SIGPAC © FEGA' },
         dem:{ type:'raster-dem', tiles:['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], tileSize:256, encoding:'terrarium', maxzoom:14 }
       },
-      layers:[ {id:'bg',type:'background',paint:{'background-color':'#aebfce'}}, {id:'sat',type:'raster',source:'sat'}, {id:'sigpac3d',type:'raster',source:'sigpac',layout:{visibility: currentBaseKey==='sigpac'?'visible':'none'}} ],
+      layers:[ {id:'bg',type:'background',paint:{'background-color':'#aebfce'}}, {id:'sat',type:'raster',source:'sat'}, {id:'sigpac3d',type:'raster',source:'sigpac',layout:{visibility: document.getElementById('showSigpac')?.checked ?'visible':'none'}} ],
       sky:{
         'sky-color':'#9ec9f2', 'sky-horizon-blend':0.6,
         'horizon-color':'#e6eef7', 'horizon-fog-blend':0.5,

@@ -388,10 +388,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* Título de cada panel (canvas) */
 .dock-title { position:sticky; top:0; z-index:8; margin:0 -14px 7px; padding:11px 42px 8px 14px; background:#fff; color:var(--green); font-size:12.5px; font-weight:950; letter-spacing:.01em; border-bottom:1px solid var(--line); box-shadow:0 7px 9px -8px rgba(0,0,0,.18); }
 /* Pestañas del panel inferior (Imágenes / Capas y opciones) */
-.dock-tabs { display:flex; gap:6px; position:sticky; top:0; z-index:8; background:#fff; margin:0 -14px 8px; padding:8px 44px 8px 14px; border-bottom:1px solid var(--line); }
-.dock-tab { border:0; background:#eef4f1; color:var(--muted); font-weight:900; font-size:12.5px; padding:7px 12px; border-radius:9px; cursor:pointer; white-space:nowrap; }
-.dock-tab:hover { background:#e2ede8; }
-.dock-tab.active { background:var(--green); color:#fff; }
+.dock-tabs { display:flex; gap:2px; position:sticky; top:0; z-index:8; background:#fff; margin:0 -14px 8px; padding:0 44px 0 14px; border-bottom:1px solid var(--line); }
+.dock-tab { border:0; background:transparent; color:var(--muted); font-weight:800; font-size:12.5px; padding:9px 12px; cursor:pointer; white-space:nowrap; border-bottom:2.5px solid transparent; margin-bottom:-1px; }
+.dock-tab:hover { color:var(--ink); }
+.dock-tab.active { color:var(--green); border-bottom-color:var(--green); }
 .dock-tabc[hidden] { display:none; }
 .capas-grid { display:flex; flex-wrap:wrap; gap:8px 12px; padding:4px 2px 10px; }
 .capas-grid label { display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:800; font-size:13px; padding:7px 11px; border:1px solid var(--line); border-radius:10px; user-select:none; }

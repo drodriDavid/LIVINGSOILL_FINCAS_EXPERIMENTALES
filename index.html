@@ -2281,11 +2281,25 @@ function openFromHash(){
   if (FINCAS.some(f=>String(f.exps)===ex) && String(selectedFarm)!==ex) selectFarmMap(ex);
 }
 window.addEventListener('hashchange', openFromHash);
-openFromHash();
+// Diferido: openFromHash -> selectFarmMap -> warm3d lee `map3d`, que se declara MÁS ABAJO.
+// Si se llamara aquí en línea, al cargar con #EXPSnn daría TDZ y CORTARÍA el resto del
+// script (toggle3d/preload3d no se definirían y el botón 3D quedaba muerto). Lo aplazamos
+// a un microtask para que todo el script esté ya inicializado.
+setTimeout(() => { try { openFromHash(); } catch(e) { console.error('[hash] openFromHash', e); } }, 0);
 
 // ===== Modo 3D dentro del visor (MapLibre GL + relieve del terreno) =====
 let map3d = null;
 let _want3d = false;   // el usuario quiere entrar en 3D (aunque MapLibre aún cargue)
+let _ml_watchdog = null;
+// Estado único del botón 3D para que nunca se desincronice: 'off'(3D) | 'loading'(…) | 'on'(2D).
+function _set3dBtn(state){
+  const b = document.getElementById('btn3d'); if (!b) return;
+  const s = b.querySelector('span');
+  b.classList.toggle('loading', state==='loading');
+  b.classList.toggle('active', state==='on');
+  if (s) s.textContent = state==='loading' ? '…' : (state==='on' ? '2D' : '3D');
+  b.title = state==='on' ? 'Volver al 2D' : 'Ver el relieve en 3D';
+}
 // MapLibre (~785 KB) se carga solo cuando se necesita el 3D, para no ralentizar
 // la carga inicial del visor 2D.
 let _mlPromise = null;
@@ -2498,38 +2512,50 @@ function enter3d(){
   // Activa realmente el 3D (oculta el 2D, crea/mueve el mapa). Solo cuando MapLibre
   // está listo, para no dejar pantalla en blanco mientras se descarga la librería.
   const apply = () => {
+   clearTimeout(_ml_watchdog);
+   if (!_want3d) return;   // el usuario canceló mientras cargaba MapLibre
    try {
     document.body.classList.add('mode-3d');
-    if (b) { b.classList.remove('loading'); b.classList.add('active'); const s=b.querySelector('span'); if(s) s.textContent='2D'; b.title='Volver al 2D'; }
+    _set3dBtn('on');
     if (selectedFarm) openInfoPanelByExps(selectedFarm);   // mantener la ficha abierta al pasar de 2D a 3D
     if (!map3d) init3d(center, zoom, pitch);
     else { map3d.jumpTo({ center, zoom, pitch, bearing:18 }); if (selectedFarm) { highlight3dFarm(selectedFarm); update3dFeatures(selectedFarm); } }
     // Tras hacerse visible el contenedor: reajustar el lienzo y encuadrar la finca.
-    const settle = () => { if (!map3d) return; map3d.resize(); if (selectedFarm) { frame3dFarm(selectedFarm, true); update3dCloud(selectedFarm); } };
+    const settle = () => { if (!map3d) return; try { map3d.resize(); } catch(_){} if (selectedFarm) { frame3dFarm(selectedFarm, true); update3dCloud(selectedFarm); } };
     setTimeout(settle, 70);
     setTimeout(settle, 260);
    } catch(err){
     // Si algo falla al crear el mapa 3D, no dejamos el botón colgado: volvemos al 2D.
-    console.error('Error activando el 3D', err);
+    console.error('[3D] error activando el 3D', err);
+    _want3d = false;
     document.body.classList.remove('mode-3d');
-    if (b){ b.classList.remove('loading','active'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; }
+    _set3dBtn('off');
    }
   };
+  _want3d = true;
   if (window.maplibregl) { apply(); }
   else {
-    // MapLibre aún cargando: nos quedamos en 2D y damos feedback en el botón.
-    if (b) { b.classList.add('loading'); const s=b.querySelector('span'); if(s) s.textContent='…'; }
-    _want3d = true;
-    ensureMapLibre().then(() => { if (_want3d) apply(); }).catch(() => { if (b) { b.classList.remove('loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; } });
+    // MapLibre aún cargando: feedback en el botón + watchdog para no quedar pillado.
+    _set3dBtn('loading');
+    clearTimeout(_ml_watchdog);
+    _ml_watchdog = setTimeout(() => {
+      if (!document.body.classList.contains('mode-3d')) {
+        console.warn('[3D] MapLibre tardó demasiado en cargar; botón restaurado, vuelve a pulsar.');
+        _want3d = false; _set3dBtn('off');
+      }
+    }, 12000);
+    ensureMapLibre()
+      .then(() => { clearTimeout(_ml_watchdog); if (_want3d) apply(); })
+      .catch((e) => { clearTimeout(_ml_watchdog); console.error('[3D] no se pudo cargar MapLibre', e); _want3d = false; _set3dBtn('off'); });
   }
 }
-function exit3d(){ _want3d = false; document.body.classList.remove('mode-3d'); const b = document.getElementById('btn3d'); if (b) { b.classList.remove('active','loading'); const s=b.querySelector('span'); if(s) s.textContent='3D'; b.title='Ver el relieve en 3D'; } hide3dCloud(); refreshMap(true); }
+function exit3d(){ _want3d = false; clearTimeout(_ml_watchdog); document.body.classList.remove('mode-3d'); _set3dBtn('off'); hide3dCloud(); refreshMap(true); }
 window.toggle3d = function(){
   const b = document.getElementById('btn3d');
-  // Si ya se está activando (MapLibre cargando), ignorar el re-clic: NO cancelar,
-  // para no romper la activación pendiente. Antes un doble clic dejaba el 3D sin abrir.
-  if (b && b.classList.contains('loading')) return;
-  document.body.classList.contains('mode-3d') ? exit3d() : enter3d();
+  if (document.body.classList.contains('mode-3d')) { exit3d(); return; }
+  // Si está cargando, un re-clic CANCELA (recuperable): así nunca se queda pillado.
+  if (b && b.classList.contains('loading')) { _want3d = false; clearTimeout(_ml_watchdog); _set3dBtn('off'); return; }
+  enter3d();
 };
 // Empezar a descargar MapLibre en segundo plano cuanto antes (no bloquea el 2D),
 // y crear el mapa 3D cuando el navegador esté ocioso para que abra al instante.

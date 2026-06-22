@@ -1246,11 +1246,32 @@ function zoneCentroid(z) {
   let la=0, lo=0; z.coords.forEach(p => { la+=p[0]; lo+=p[1]; });
   return [la/z.coords.length, lo/z.coords.length];
 }
+// Área de un polígono [[lat,lon],...] en m² (proyección equirectangular local; exacta a escala de finca).
+function zoneAreaM2(coords){
+  if(!coords || coords.length<3) return 0;
+  const R=6378137, c=Math.cos(coords[0][0]*Math.PI/180);
+  let a=0;
+  for(let i=0;i<coords.length;i++){
+    const p=coords[i], q=coords[(i+1)%coords.length];
+    const x1=R*(p[1]*Math.PI/180)*c, y1=R*(p[0]*Math.PI/180);
+    const x2=R*(q[1]*Math.PI/180)*c, y2=R*(q[0]*Math.PI/180);
+    a += x1*y2 - x2*y1;
+  }
+  return Math.abs(a/2);
+}
+// Superficie test/control/total (m²) de una finca, sumando todas sus zonas.
+function superficieZonas(exps){
+  let test=0, control=0;
+  ZONES.forEach(z => { if(z.exps!==exps) return; const ar=zoneAreaM2(z.coords); if(z.group==='TEST') test+=ar; else if(z.group==='CONTROL') control+=ar; });
+  return { test, control, total: test+control };
+}
+const _ha = m => (m/10000).toLocaleString('es-ES',{minimumFractionDigits:2, maximumFractionDigits:2});
 function infoPanelHtml(z) {
   const typeClass = z.group === 'TEST' ? 'test' : 'control';
   const chars = (CARACTERISTICAS[z.exps] || []).map(c => `<li>${esc(c)}</li>`).join('');
   const rows = z.vertices.map(v => `<tr><td>V${v.n}</td><td>${v.lat.toFixed(8)}</td><td>${v.lon.toFixed(8)}</td></tr>`).join('');
   const finca = FINCAS.find(f => f.exps === z.exps) || {};
+  const sup = superficieZonas(z.exps);
   const exps = 'EXPS' + String(z.exps).padStart(2,'0');
   const [clat, clon] = zoneCentroid(z);
   const gmaps = `https://www.google.com/maps?q=${clat.toFixed(6)},${clon.toFixed(6)}&z=18&t=k`;
@@ -1269,6 +1290,7 @@ function infoPanelHtml(z) {
       <div class="meta-grid">
         <b>Código</b><span>${exps}</span>
         <b>Zonas</b><span>${finca.n_zones||'—'} (${finca.n_test||0} TEST · ${finca.n_control||0} CONTROL)</span>
+        <b>Superficie</b><span>${_ha(sup.total)} ha <span class="iot-sub">(${_ha(sup.test)} test · ${_ha(sup.control)} control)</span></span>
         <b>Vértices</b><span>${finca.n_vertices||z.vertices.length}</span>
         <b>Muestreo</b><span>${cnt.total ? muestreoTxt : '—'}</span>
         <b>Fechas</b><span>${fechaTxt}</span>
@@ -2211,6 +2233,7 @@ function reportFincaHtml(exps){
   const code = 'EXPS' + String(exps).padStart(2,'0');
   const chars = (CARACTERISTICAS[exps] || []).map(c => `<li>${esc(c)}</li>`).join('') || '<li><i>Sin características catalogadas.</i></li>';
   const cnt = contarPuntos(exps);
+  const sup = superficieZonas(exps);
   const muestreoTxt = cnt.total ? `${cnt.test} test · ${cnt.control} control` : '—';
   const im = (IMAGENES && IMAGENES[String(exps)]) || {muestreo:[], sol:[]};
   const muImgs = (im.muestreo || []).map(n => `<img src="${ghDir(exps)}/${esc(n)}" alt="">`).join('');
@@ -2221,7 +2244,7 @@ function reportFincaHtml(exps){
       <div class="rep-bt"><div class="rep-mun">${esc(finca.municipio||'')} <small>${esc(finca.provincia||'')}</small></div>
       <div class="rep-finca">${z.finca?esc(z.finca):''}</div></div>
     </div>
-    <div class="rep-meta"><b>Zonas:</b> ${finca.n_zones||'—'} (${finca.n_test||0} test · ${finca.n_control||0} control) &nbsp;·&nbsp; <b>Vértices:</b> ${finca.n_vertices||'—'} &nbsp;·&nbsp; <b>Muestreo:</b> ${muestreoTxt}</div>
+    <div class="rep-meta"><b>Zonas:</b> ${finca.n_zones||'—'} (${finca.n_test||0} test · ${finca.n_control||0} control) &nbsp;·&nbsp; <b>Superficie:</b> ${_ha(sup.total)} ha (${_ha(sup.test)} test · ${_ha(sup.control)} control) &nbsp;·&nbsp; <b>Vértices:</b> ${finca.n_vertices||'—'} &nbsp;·&nbsp; <b>Muestreo:</b> ${muestreoTxt}</div>
     <div class="rep-top">
       <div class="rep-col">
         <h3>Problemas encontrados</h3><ul class="chars">${chars}</ul>

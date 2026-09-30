@@ -842,69 +842,89 @@ function suelHtml(exps){
   if(!rows.length) return "";
   return `<div class="sol-block"><div class="sol-head">Analítica de suelo <span class="iot-sub">media de la finca</span></div><table class="sue-table"><tbody>${rows.join("")}</tbody></table></div>` + gsqiHtml(exps);
 }
-// Índice Global de Calidad del Suelo (GSQI) — Aranda, Calero, Comino, Montejo y Serrano (2014).
-// Mismo modelo que salud-suelo/index.html (autodiagnóstico): puntuación 0,1–1 por indicador según su
-// escala óptima CatPCA (q) y sentido de la carga en CP1; índice = media ponderada por |carga|.
+// Índice Global de Salud del Suelo (GSQI, 0–100) — hoja «Global Soil Quality Index (GSQI).xlsx» (J. Calero)
+// y Aranda, Calero et al. (2014). MISMO MODELO que salud-suelo/index.html: si se cambia, cambiarlo en los dos.
+// Puntuación 0,1–1 por variable según su cuantificación CatPCA (q) y sentido (dir); índice = 100·Σs·w/Σw.
 const GSQI_IND = [
-  {id:"oc",    k:"oc",    n:"Carbono orgánico", u:"%", load:-.868, cls:[[0.1,0.2],[0.3,1.5],[1.6,2.8],[2.9,4.2],[4.3,5.9],[6.1,13.8]], q:[-1.52,-0.81,-0.077,0.656,1.366,2.099]},
-  {id:"dryValue", n:"Brillo Munsell en seco", load:.915},
-  {id:"moistValue", n:"Brillo Munsell en húmedo", load:.902},
-  {id:"caco3", k:"caco3", n:"Carbonatos", u:"%", load:.740, herencia:true, cls:[[0,16],[17,30],[31,42],[43,56],[57,76],[77,78]], q:[-1.503,-0.856,-0.19,0.477,1.124,1.791]},
-  {id:"cec",   k:"cec",   n:"CIC", u:" cmol/kg", load:-.719, cls:[[3.7,4.4],[4.5,12],[12,18],[19,24],[25,30],[31,39],[40,53]], q:[-2.171,-1.476,-0.78,-0.085,0.611,1.306,2.002]},
-  {id:"roots", n:"Abundancia de raíces", load:-.682},
-  {id:"w33",   k:"w33",   n:"Humedad a 33 kPa", u:"%", load:-.624, cls:[[8,17],[18,22],[23,27],[28,32],[33,38],[39,42],[43,57]], q:[-2.128,-1.446,-0.765,-0.102,0.58,1.243,1.925]},
-  {id:"w1500", k:"w1500", n:"Humedad a 1500 kPa", u:"%", load:-.585, cls:[[1,6],[7,10],[11,15],[16,18],[19,21],[22,25],[26,35]], q:[-2.074,-1.422,-0.751,-0.099,0.572,1.243,1.895]},
-  {id:"dryHue", n:"Matiz Munsell", load:-.498, herencia:true},
-  {id:"ntot",  k:"n",     n:"Nitrógeno total", u:"%", load:-.163, cls:[[0.012,0.120],[0.121,0.230],[0.231,0.250],[0.251,0.400],[0.401,1.520]], q:[-0.738,0.141,1.033,1.911,2.790]},
-  {id:"texture", k:"tex", n:"Textura", load:-.125, herencia:true, cats:["C","SiC","SiCL","SC","SiL","CL","L","SCL","SL","LS"], q:[-1.119,-0.959,-0.461,-0.408,-0.212,-0.052,0.517,0.962,2.42,3.273]},
-  {id:"stick", n:"Adhesividad", load:.115, herencia:true},
-  {id:"clay",  k:"clay",  n:"Arcilla", u:"%", load:.110, herencia:true, cls:[[4,13],[14,23],[24,31],[32,38],[39,47],[48,57],[58,82]], q:[-2.123,-1.438,-0.754,-0.092,0.592,1.255,1.939]},
-  {id:"sand",  k:"sand",  n:"Arena", u:"%", load:-.096, herencia:true, cls:[[2,12],[12,21],[22,31],[32,42],[43,54],[55,84]], q:[-1.334,-0.662,0.02,0.701,1.373,2.055]},
-  {id:"bd",    k:"bd",    n:"Densidad aparente", u:" g/cm³", load:-.039, cls:[[0.95,1.10],[1.11,1.38],[1.39,1.44],[1.45,1.49],[1.50,1.55],[1.56,1.64]], q:[-2.856,-1.97,-1.073,-0.175,0.723,1.608]},
+  // analíticas
+  {id:"sand", name:"Arena", unit:"%", dir:1, w:.7479481701326981, managed:false,
+   cls:[[2,12],[12,21],[22,31],[32,42],[43,54],[55,84]], q:[-1.293442003170254,-0.6153497919054691,0.06274241935931575,0.7408346306241007,1.4189268418888854,2.0970190531536703]},
+  {id:"clay", name:"Arcilla", unit:"%", dir:-1, w:.7256657012257395, managed:false,
+   cls:[[4,13],[14,23],[24,31],[32,38],[39,47],[48,57],[58,82]], q:[-1.9658665615248951,-1.2901419768197897,-0.6144173921146842,0.061307192590421514,0.7370317772955272,1.4127563620006327,2.0884809467057384]},
+  {id:"bd", name:"Densidad aparente", unit:"g/cm³", dir:1, w:.9565915764478402, managed:true,
+   cls:[[0.95,1.10],[1.11,1.38],[1.39,1.44],[1.45,1.49],[1.50,1.55],[1.56,1.64]], q:[-2.774897037032311,-1.8803346258682785,-0.9857722147042461,-0.0912098035402135,0.803352607623819,1.697915018787852]},
+  {id:"w33", name:"Humedad a 33 kPa", sub:"capacidad de campo", unit:"%", dir:1, w:.8433516093889986, managed:true,
+   cls:[[8,17],[18,22],[23,27],[28,32],[33,38],[39,42],[43,57]], q:[-1.9954795814898514,-1.3207251780761555,-0.6459707746624594,0.02878362875123676,0.7035380321649328,1.378292435578629,2.053046838992325]},
+  {id:"w1500", name:"Humedad a 1500 kPa", sub:"punto de marchitez", unit:"%", dir:1, w:.80355450297066, managed:true,
+   cls:[[1,6],[7,10],[11,15],[16,18],[19,21],[22,25],[26,35]], q:[-1.9522823559396008,-1.2887183268225681,-0.6251542977055359,0.03840973141149665,0.7019737605285292,1.3655377896455616,2.029101818762594]},
+  {id:"oc", name:"Carbono orgánico", unit:"%", dir:1, w:.7666385668621443, managed:true,
+   cls:[[0.1,0.2],[0.3,1.5],[1.6,2.8],[2.9,4.2],[4.3,5.9],[6.1,13.8]], q:[-1.369199538568743,-0.6442820421520474,0.08063545426464806,0.8055529506813437,1.5304704470980393,2.2553879435147346]},
+  {id:"ntot", name:"Nitrógeno total", unit:"%", dir:1, w:.9225501838478646, managed:true,
+   cls:[[0.012,0.120],[0.121,0.230],[0.231,0.250],[0.251,0.400],[0.401,1.520]], q:[-0.7359881111618596,0.146250176947745,1.0284884650573498,1.9107267531669545,2.792965041276559]},
+  {id:"caco3", name:"Carbonatos", sub:"CaCO₃ equivalente", unit:"%", dir:-1, w:.5871118977795764, managed:false,
+   cls:[[0,16],[17,30],[31,42],[43,56],[57,76],[77,78]], q:[-1.36991509288633,-0.711384432814054,-0.05285377274178077,0.6056768873304924,1.2642075474027654,1.9227382074750385]},
+  {id:"cec", name:"CIC", sub:"capacidad de intercambio catiónico", unit:"cmol/kg", dir:1, w:.7060633859070911, managed:true,
+   cls:[[3.7,4.4],[4.5,12],[12,18],[19,24],[25,30],[31,39],[40,53]], q:[-1.9522823559396008,-1.2887183268225681,-0.6251542977055359,0.03840973141149665,0.7019737605285292,1.3655377896455616,2.029101818762594]},
+  // morfológicas
+  {id:"dryValue", name:"Brillo Munsell en seco", sub:"value", dir:-1, w:.8550481402497961, managed:true, kind:"ord",
+   cats:["2","2.5","3","3.5","4","4.5","5","5.5","6","6.5","7","7.5","8"],
+   q:[-2.4911888104851934,-1.5782346807052337,-1.5782346807052337,-0.40395787521141596,-0.40395787521141596,-0.36220103990667507,0.6180245769693651,0.6639756446205035,0.6639756446205035,0.8561097913641308,1.0009927091031758,1.0009927091031758,1.001]},
+  {id:"moistValue", name:"Brillo Munsell en húmedo", sub:"value", dir:-1, w:.8863164163844558, managed:true, kind:"ord",
+   cats:["1.5","2","2.5","3","3.5","4","4.5","5","5.5","6","6.5","7"],
+   q:[-1.91981911352823,-1.9183162859030396,-1.442526004418897,-1.442526004418897,-0.3147989839782885,-0.1868935780062311,0.5803221140517115,0.6995100598168723,0.8800884535908337,0.8853433384881392,1.1015253786562373,1.1659727926192298]},
+  {id:"dryHue", name:"Matiz Munsell en seco", sub:"hue", dir:1, w:.2965690859311225, managed:false, kind:"nom",
+   cats:["2.5Y","10YR","7.5YR","5YR","2.5YR"], q:[-1.6826982981255005,-0.30954638265272777,0.9391166035854283,2.3301729833486604,1.857303197310169]},
+  {id:"texture", name:"Clase textural", sub:"USDA", dir:1, w:.8001965135497339, managed:false, kind:"nom",
+   cats:["C","SiC","Si","SiCL","SC","SiL","CL","L","SCL","SL","LS","S"],
+   labels:["Arcillosa","Arcillo-limosa","Limosa","Franco-arcillo-limosa","Arcillo-arenosa","Franco-limosa","Franco-arcillosa","Franca","Franco-arcillo-arenosa","Franco-arenosa","Arenoso-franca","Arenosa"],
+   q:[-0.9974511110656697,-0.840609826348694,-0.840609826348694,-0.3413571966839059,-0.2813658345843171,-0.09435340258562727,0.07351998945810793,0.6424531582852481,1.080109059492798,2.533869022211039,3.387771807889188,3.387771807889188]},
+  {id:"stick", name:"Adhesividad", sub:"stickiness", dir:-1, w:.19825136264362156, managed:false, kind:"ord",
+   cats:["NS","SS","S","VS"], labels:["No adherente","Ligeramente adherente","Adherente","Muy adherente"], q:[-1.852852831736085,-0.6747090928942296,0.9821333942712702,0.9821333942712702]},
+  {id:"roots", name:"Abundancia de raíces", dir:1, w:.5621580710988435, managed:true, kind:"ord",
+   cats:["VF","F","C","M"], labels:["Muy pocas","Pocas","Frecuentes","Abundantes"], q:[-0.5990018677686478,-0.5990018677686478,-0.47541376505867483,1.8856153071579427]},
 ];
-const GSQI_TEX = {"clay":"C","silty clay":"SiC","silty clay loam":"SiCL","sandy clay":"SC","silt loam":"SiL","silty loam":"SiL","silt":"SiL","clay loam":"CL","loam":"L","sandy clay loam":"SCL","sandy loam":"SL","loamy sand":"LS","sand":"LS"};
-const GSQI_OLIVAR_CONV = 0.263;   // media del olivar convencional en la base de Jaén (tabla IV)
-function gsqiScore(d, q){ const mn=Math.min(...d.q), mx=Math.max(...d.q); const m=.1+.9*(q-mn)/(mx-mn); return d.load<0 ? m : 1.1-m; }
+GSQI_IND.forEach(d=>{ d.kind ||= "num"; const mn=Math.min(...d.q), mx=Math.max(...d.q); d.s=d.q.map(q=>{ const m=.1+.9*(q-mn)/(mx-mn); return d.dir>0?m:1.1-m; }); });
+const GSQI_KEY = {sand:"sand",clay:"clay",bd:"bd",w33:"w33",w1500:"w1500",oc:"oc",ntot:"n",caco3:"caco3",cec:"cec",texture:"tex"};  // campo en SUELO
+const GSQI_TEX = {"clay":"C","silty clay":"SiC","silt":"Si","silty clay loam":"SiCL","sandy clay":"SC","silt loam":"SiL","silty loam":"SiL","clay loam":"CL","loam":"L","sandy clay loam":"SCL","sandy loam":"SL","loamy sand":"LS","sand":"S"};
+const GSQI_OLIVAR_CONV = 26.3;   // media del olivar convencional en la base de Jaén (tabla IV, ×100)
 function gsqiFinca(exps){
   const s = SUELO[exps] || {}; let sw=0, sws=0, wAll=0, wHer=0; const rows=[], falta=[];
   for(const d of GSQI_IND){
-    const w=Math.abs(d.load); wAll+=w;
-    const raw = d.k ? s[d.k] : null; let q=null, txt="";
-    if(raw!=null && d.cls){
-      let i=0; for(; i<d.cls.length-1; i++){ if(raw <= (d.cls[i][1]+d.cls[i+1][0])/2) break; }
-      q=d.q[i]; txt=`${raw}${d.u}`;
-    } else if(raw!=null && d.cats){
-      const c=GSQI_TEX[String(raw).toLowerCase()]; const i=d.cats.indexOf(c);
-      if(i>=0){ q=d.q[i]; txt=String(raw); }
+    wAll+=d.w;
+    const raw = GSQI_KEY[d.id] ? s[GSQI_KEY[d.id]] : null; let i=-1, txt="";
+    if(raw!=null && d.kind==="num"){
+      i=0; for(; i<d.cls.length-1; i++){ if(raw <= (d.cls[i][1]+d.cls[i+1][0])/2) break; }
+      txt=`${raw} ${d.unit}`;
+    } else if(raw!=null){
+      i=d.cats.indexOf(GSQI_TEX[String(raw).toLowerCase()]); txt=String(raw);
     }
-    if(q==null){ falta.push(d.n); continue; }
-    const sc=gsqiScore(d,q); sw+=w; sws+=sc*w; if(d.herencia) wHer+=w;
+    if(i<0){ falta.push(d.name); continue; }
+    const sc=d.s[i]; sw+=d.w; sws+=sc*d.w; if(!d.managed) wHer+=d.w;
     rows.push({d, s:sc, txt});
   }
-  return sw ? {g:sws/sw, cov:sw/wAll, her:wHer/sw, rows, falta} : null;
+  return sw ? {g:100*sws/sw, cov:sw/wAll, her:wHer/sw, rows, falta} : null;
 }
 function gsqiUrl(exps){
   const s=SUELO[exps]||{}, f=FINCAS.find(x=>String(x.exps)===String(exps));
   const p=new URLSearchParams({name:`EXPS${String(exps).padStart(2,"0")} · ${f?f.finca:""}`, lut:"Olivar convencional"});
-  for(const d of GSQI_IND){ const v=d.k?s[d.k]:null; if(v==null) continue; p.set(d.id, d.cats ? (GSQI_TEX[String(v).toLowerCase()]||"") : v); }
+  if(f&&f.municipio) p.set("mun", f.municipio);
+  for(const d of GSQI_IND){ const v=GSQI_KEY[d.id]?s[GSQI_KEY[d.id]]:null; if(v==null) continue; p.set(d.id, d.kind==="num" ? v : (GSQI_TEX[String(v).toLowerCase()]||"")); }
   return "salud-suelo/?"+p.toString();
 }
 function gsqiHtml(exps){
   const r=gsqiFinca(exps); if(!r) return "";
-  if(r.cov<.05) return `<div class="sol-block gsqi-block"><div class="sol-head">Salud del suelo · GSQI</div>
-    <div class="gsqi-note">Sin datos suficientes para calcular el índice (${r.rows.length} de 15 indicadores). <b>Medir:</b> ${r.falta.map(esc).join(", ")}.</div>
-    <a class="gsqi-link" href="${gsqiUrl(exps)}" target="_blank" rel="noopener">Completar autodiagnóstico →</a></div>`;
-  const pos=v=>((v-.1)/.9*100).toFixed(1)+"%";
+  const link=`<a class="gsqi-link" href="${gsqiUrl(exps)}" target="_blank" rel="noopener">Completar autodiagnóstico →</a>`;
+  if(r.cov<.1) return `<div class="sol-block gsqi-block"><div class="sol-head">Salud del suelo · GSQI</div>
+    <div class="gsqi-note">Sin datos suficientes para calcular el índice (${r.rows.length} de 15 variables). <b>Medir:</b> ${r.falta.map(esc).join(", ")}.</div>${link}</div>`;
   const col=v=>v<.4?"var(--red)":v<.7?"var(--amber)":"var(--green2)";
-  const rows=r.rows.map(x=>`<tr><td>${x.d.n}${x.d.herencia?' <span class="gsqi-her">heredado</span>':''}</td><td>${esc(x.txt)} · <span style="color:${col(x.s)}">${x.s.toFixed(2)}</span></td></tr>`).join("");
-  const aviso = r.her>.5 ? " Con estos datos el valor depende sobre todo de propiedades heredadas del material original (carbonatos, textura), no del manejo." : "";
+  const rows=r.rows.map(x=>`<tr><td>${x.d.name}${x.d.managed?'':' <span class="gsqi-her">heredado</span>'}</td><td>${esc(x.txt)} · <span style="color:${col(x.s)}">${x.s.toFixed(2)}</span></td></tr>`).join("");
+  const aviso = r.her>.5 ? " Con estos datos pesan sobre todo propiedades heredadas del material original, no del manejo." : "";
   return `<div class="sol-block gsqi-block"><div class="sol-head">Salud del suelo · GSQI <span class="iot-sub">parcial</span></div>
-    <div class="gsqi-top"><b class="gsqi-num" style="color:${col(r.g)}">${r.g.toFixed(2).replace(".",",")}</b>
-      <div class="gsqi-bar"><i style="left:${pos(GSQI_OLIVAR_CONV)}" title="Media del olivar convencional en Jaén: 0,26"></i><b style="left:${pos(r.g)}"></b></div></div>
-    <div class="gsqi-note">Escala 0,1–1; la marca fina es la media del olivar convencional en Jaén (0,26). Calculado con ${r.rows.length} de 15 indicadores, que suman el ${Math.round(r.cov*100)} % del peso del índice.${aviso}</div>
+    <div class="gsqi-top"><b class="gsqi-num" style="color:${col(r.g/100)}">${r.g.toFixed(1).replace(".",",")}</b>
+      <div class="gsqi-bar"><i style="left:${GSQI_OLIVAR_CONV}%" title="Media del olivar convencional en Jaén: 26,3"></i><b style="left:${r.g.toFixed(1)}%"></b></div></div>
+    <div class="gsqi-note">Escala 0–100; la marca fina es la media del olivar convencional en Jaén (26,3). Calculado con ${r.rows.length} de 15 variables (${Math.round(r.cov*100)} % del peso del índice).${aviso}</div>
     <table class="sue-table"><tbody>${rows}</tbody></table>
-    <div class="gsqi-note"><b>Para completarlo, medir:</b> ${r.falta.map(esc).join(", ")}.</div>
-    <a class="gsqi-link" href="${gsqiUrl(exps)}" target="_blank" rel="noopener">Completar autodiagnóstico →</a></div>`;
+    <div class="gsqi-note"><b>Para completarlo, medir:</b> ${r.falta.map(esc).join(", ")}.</div>${link}</div>`;
 }
 function solucionesHtml(exps) {
   const s = SOLUCIONES[exps];

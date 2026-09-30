@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Autodiagnóstico Salud del Suelo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: cuaderno de campo a dos columnas — formulario de perfil a la izquierda, ficha de resultado fija a la derecha; en móvil se apilan. */
+:root{
+  --bg:#f3f4f0; --paper:#ffffff; --ink:#1f2420; --muted:#5d665e; --line:#d7dbd2;
+  --accent:#4f6b2a; --accent-ink:#ffffff; --accent-soft:#e6ecd9;
+  --good:#3f7d3a; --warn:#b07a12; --bad:#a8432f; --field:#fbfcf9;
+  --f-display:"Newsreader", Georgia, "Times New Roman", serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161915; --paper:#1f231e; --ink:#e7eadf; --muted:#a3ab9f; --line:#343a32;
+  --accent:#a7c46e; --accent-ink:#172010; --accent-soft:#2b3522;
+  --good:#7fbf6f; --warn:#e0ab45; --bad:#e2826d; --field:#191c18; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#161915; --paper:#1f231e; --ink:#e7eadf; --muted:#a3ab9f; --line:#343a32;
+  --accent:#a7c46e; --accent-ink:#172010; --accent-soft:#2b3522;
+  --good:#7fbf6f; --warn:#e0ab45; --bad:#e2826d; --field:#191c18; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:1180px;margin:0 auto}
+header.top{padding-block:28px 18px;display:flex;flex-wrap:wrap;gap:8px 24px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--line);margin-bottom:22px}
+h1{font:600 clamp(26px,4vw,36px)/1.1 var(--f-display);margin:0;text-wrap:balance}
+.sub{color:var(--muted);max-width:62ch;margin:6px 0 0}
+.eyebrow{font:500 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:24px;align-items:start}
+@media (max-width:920px){.grid{grid-template-columns:minmax(0,1fr)}}
+section.card{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px 18px 20px;min-width:0}
+.col{display:flex;flex-direction:column;gap:18px;min-width:0}
+h2{font:600 20px/1.2 var(--f-display);margin:0 0 4px}
+h3{font:600 13px/1.3 var(--f-body);margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px 14px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f label{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;gap:6px;align-items:center}
+input,select,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:4px;padding:7px 8px;width:100%;min-width:0}
+textarea{font:13px/1.45 var(--f-mono);min-height:150px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chip{font:500 11px/1 var(--f-mono);padding:3px 5px;border-radius:3px;background:var(--accent-soft);color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip.na{background:transparent;color:var(--muted);border:1px dashed var(--line)}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{font:500 13.5px var(--f-body);border-radius:4px;padding:7px 12px;cursor:pointer;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:hover{border-color:var(--accent)}
+.color-row{display:grid;grid-template-columns:44px repeat(3,minmax(0,1fr));gap:8px;align-items:end}
+.swatch{width:44px;height:36px;border-radius:4px;border:1px solid var(--line);background:var(--field)}
+.subgroup{display:flex;flex-direction:column;gap:8px;padding-top:14px;margin-top:14px;border-top:1px dashed var(--line)}
+.subgroup:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.hz{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.hz button{font-family:var(--f-mono);font-size:12.5px}
+.hz button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.parsed{font-size:13px;color:var(--muted);margin-top:10px}
+.parsed b{color:var(--ink);font-weight:500}
+/* resultado */
+.result{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:920px){.result{position:static}}
+.score{display:flex;align-items:baseline;gap:12px;margin:6px 0 2px}
+.score .big{font:600 64px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.score .of{color:var(--muted);font-size:13px}
+.cov{font-size:13px;color:var(--muted)}
+.cov.low{color:var(--warn)}
+.scale{position:relative;height:88px;margin:14px 4px 6px}
+.scale .bar{position:absolute;left:0;right:0;top:38px;height:10px;border-radius:5px;background:linear-gradient(90deg,var(--bad),var(--warn) 45%,var(--good))}
+.scale .tick{position:absolute;top:30px;width:1px;height:26px;background:var(--ink);opacity:.45}
+.scale .lab{position:absolute;transform:translateX(-50%);font:500 10.5px/1 var(--f-mono);color:var(--muted);white-space:nowrap}
+.scale .lab.t{top:14px}.scale .lab.b{top:62px}
+.scale .me{position:absolute;top:28px;width:16px;height:30px;margin-left:-8px;border-radius:3px;background:var(--ink);border:2px solid var(--paper);box-shadow:0 0 0 1px var(--ink)}
+.scale .ends{position:absolute;top:76px;left:0;right:0;display:flex;justify-content:space-between;font:10.5px var(--f-mono);color:var(--muted)}
+.verdict{font-size:14px;margin:8px 0 14px}
+.inds{display:flex;flex-direction:column;gap:7px;margin:10px 0 0}
+.ind{display:grid;grid-template-columns:minmax(0,1fr) 92px 40px;gap:8px;align-items:center;font-size:13px}
+.ind .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ind .nm small{color:var(--muted);font-family:var(--f-mono);font-size:11px;margin-left:4px}
+.ind .track{height:8px;background:var(--accent-soft);border-radius:4px;position:relative;overflow:hidden}
+.ind .fill{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.ind .v{font:12px var(--f-mono);text-align:right;font-variant-numeric:tabular-nums}
+.ind.na{opacity:.45}
+.tag{font:500 10px/1 var(--f-mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 4px;border-radius:2px;border:1px solid var(--line);color:var(--muted);margin-left:4px;vertical-align:1px}
+.advice{margin:14px 0 0;padding:12px 14px;background:var(--accent-soft);border-radius:4px;font-size:13.5px}
+.advice ul{margin:6px 0 0;padding-left:18px}
+.advice li+li{margin-top:5px}
+.flags{font-size:12.5px;color:var(--warn);margin:10px 0 0;padding-left:18px}
+.saved{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.saved .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:6px;font-size:13.5px}
+.saved .row span{min-width:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+details.method{margin-top:22px}
+details.method summary{cursor:pointer;font:600 20px var(--f-display);padding:4px 0}
+.prose{max-width:72ch}
+.prose p{margin:8px 0}
+.tbl{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;font-size:12.5px;width:100%;min-width:640px}
+th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+td.cls{font-family:var(--f-mono);font-size:11.5px}
+.formula{font:13px var(--f-mono);background:var(--field);border:1px solid var(--line);border-radius:4px;padding:10px 12px;overflow-x:auto}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:4px;font-size:13.5px}
+footer{margin-top:28px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:12px}
+a{color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.scale .me{transition:left .35s ease}.ind .fill{transition:width .3s ease}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="top">
+  <div>
+    <div class="eyebrow">Índice Global de Calidad del Suelo · GSQI</div>
+    <h1>Autodiagnóstico de Salud del Suelo</h1>
+    <p class="sub">Introduce la descripción del horizonte superficial (Ap/Ah) de tu parcela. El índice combina 7 indicadores morfológicos de campo y 8 analíticos, escalados con CatPCA sobre 131 perfiles de la provincia de Jaén.</p>
+  </div>
+  <div class="btns">
+    <button type="button" id="btnExample">Cargar ejemplo</button>
+    <button type="button" id="btnClear">Vaciar</button>
+  </div>
+</header>
+
+<div class="grid">
+<div class="col">
+
+<section class="card">
+  <h2>Leer una descripción de perfil</h2>
+  <p class="hint">Pega el texto de una ficha de perfil (por ejemplo del <a href="https://www.juntadeandalucia.es/medioambiente/documentos_tecnicos/catalogo2/catalogo_ind.html" target="_blank" rel="noopener">Catálogo de Suelos de Andalucía</a> o de una memoria LUCDEME). Se extraen color Munsell, textura, raíces y adhesividad de cada horizonte.</p>
+  <textarea id="desc" spellcheck="false" placeholder="AP  0-30 CM.; GRIS PARDUZCO CLARO (2.5Y6/2), EN SECO, ARCILLOSO; …"></textarea>
+  <div class="btns" style="margin-top:10px"><button type="button" class="pri" id="btnParse">Leer descripción</button></div>
+  <div class="hz" id="hzList"></div>
+  <div class="parsed" id="parsedInfo"></div>
+</section>
+
+<section class="card">
+  <h2>Datos del perfil</h2>
+  <p class="hint">No intervienen en el cálculo; sirven para identificar y guardar el diagnóstico.</p>
+  <div class="fields">
+    <div class="f"><label for="p_name">Parcela / perfil</label><input id="p_name"></div>
+    <div class="f"><label for="p_x">X UTM (m)</label><input id="p_x" inputmode="decimal"></div>
+    <div class="f"><label for="p_y">Y UTM (m)</label><input id="p_y" inputmode="decimal"></div>
+    <div class="f"><label for="p_alt">Altitud (m)</label><input id="p_alt" inputmode="decimal"></div>
+    <div class="f"><label for="p_lut">Uso del suelo</label><select id="p_lut">
+      <option value="">—</option><option>Olivar convencional</option><option>Olivar ecológico</option><option>Cultivo herbáceo</option><option>Pastizal / erial degradado</option><option>Espartal</option><option>Matorral mediterráneo</option><option>Bosque / dehesa mediterránea</option><option>Pinar de repoblación</option><option>Bosque poco alterado</option><option>Otro</option></select></div>
+    <div class="f"><label for="p_parent">Material original</label><input id="p_parent"></div>
+    <div class="f"><label for="p_pos">Posición fisiográfica</label><input id="p_pos"></div>
+    <div class="f"><label for="p_class">Clasificación</label><input id="p_class"></div>
+    <div class="f"><label for="p_hz">Horizonte</label><input id="p_hz"></div>
+    <div class="f"><label for="p_depth">Profundidad (cm)</label><input id="p_depth"></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Indicadores morfológicos</h2>
+  <p class="hint">Observables en campo con una tabla Munsell y el tacto. La etiqueta de cada campo muestra su puntuación (0,1 peor – 1 mejor).</p>
+
+  <div class="subgroup">
+    <h3>Color en seco</h3>
+    <div class="color-row">
+      <div class="swatch" id="sw_dry" title="Aproximación del color Munsell"></div>
+      <div class="f"><label for="dryHue">Matiz <span class="chip na" data-chip="dryHue">—</span></label><select id="dryHue"></select></div>
+      <div class="f"><label for="dryValue">Brillo <span class="chip na" data-chip="dryValue">—</span></label><select id="dryValue"></select></div>
+      <div class="f"><label for="dryChroma">Croma</label><select id="dryChroma"></select></div>
+    </div>
+  </div>
+  <div class="subgroup">
+    <h3>Color en húmedo</h3>
+    <div class="color-row">
+      <div class="swatch" id="sw_moist" title="Aproximación del color Munsell"></div>
+      <div class="f"><label for="moistHue">Matiz</label><select id="moistHue"></select></div>
+      <div class="f"><label for="moistValue">Brillo <span class="chip na" data-chip="moistValue">—</span></label><select id="moistValue"></select></div>
+      <div class="f"><label for="moistChroma">Croma</label><select id="moistChroma"></select></div>
+    </div>
+  </div>
+  <div class="subgroup">
+    <h3>Tierra fina y biología</h3>
+    <div class="fields">
+      <div class="f"><label for="texture">Clase textural <span class="chip na" data-chip="texture">—</span></label><select id="texture"></select></div>
+      <div class="f"><label for="roots">Abundancia de raíces <span class="chip na" data-chip="roots">—</span></label><select id="roots"></select></div>
+      <div class="f"><label for="stick">Adhesividad <span class="chip na" data-chip="stick">—</span></label><select id="stick"></select></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Indicadores analíticos</h2>
+  <p class="hint">Resultados de laboratorio de la tierra fina. Deja en blanco lo que no tengas: el índice se calcula con los datos disponibles.</p>
+  <div class="fields" id="anaFields"></div>
+  <p class="parsed" id="textureNote"></p>
+</section>
+
+</div>
+
+<aside class="col result">
+<section class="card" id="resultCard" aria-live="polite">
+  <div class="eyebrow">Resultado</div>
+  <div class="score"><span class="big" id="gsqi">—</span><span class="of">GSQI<br>escala 0,1 – 1</span></div>
+  <div class="cov" id="coverage"></div>
+  <div class="scale" id="scale"></div>
+  <p class="verdict" id="verdict"></p>
+  <h3>Indicadores, por peso en el índice</h3>
+  <div class="inds" id="inds"></div>
+  <ul class="flags" id="flags"></ul>
+  <div class="advice" id="advice" hidden></div>
+</section>
+
+<section class="card">
+  <h2>Diagnósticos guardados</h2>
+  <p class="hint">Se guardan solo en este navegador.</p>
+  <div class="btns">
+    <button type="button" class="pri" id="btnSave">Guardar diagnóstico</button>
+    <button type="button" id="btnCsv">Copiar resultados (CSV)</button>
+    <button type="button" id="btnJson">Copiar JSON</button>
+  </div>
+  <div class="saved" id="savedList"></div>
+</section>
+</aside>
+</div>
+
+<details class="method card" id="method">
+  <summary>Cómo se calcula</summary>
+  <div class="prose">
+    <p>El método sigue a Aranda, Calero, Comino, Montejo y Serrano (2014), <i>Knowledge fusion in the agro-environmental field: a global index for soil quality in olive groves from quantitative and qualitative variables</i>. Un análisis de componentes principales categórico (CatPCA) sobre 131 perfiles de Jaén transforma cada categoría morfológica y cada intervalo analítico en una cuantificación óptima <span class="mono">q</span>. La primera componente (33 % de la varianza) es la de calidad del suelo: aumenta con suelos más claros, calizos y pobres en carbono.</p>
+    <div class="formula">s = 0,1 + 0,9 · (q − q<sub>min</sub>) / (q<sub>max</sub> − q<sub>min</sub>) &nbsp; si la carga en CP1 es negativa (más es mejor)<br>s = 1,1 − s<sub>más es mejor</sub> &nbsp; si la carga en CP1 es positiva (menos es mejor)<br>GSQI = Σ s<sub>j</sub>·w<sub>j</sub> / Σ w<sub>j</sub> &nbsp; (sobre los indicadores con dato)</div>
+    <p>Las cuantificaciones <span class="mono">q</span> se han extraído de los datos vectoriales de la figura 1 del artículo; al normalizar entre mínimo y máximo, el error de lectura del eje se cancela. Valores de brillo intermedios entre categorías se interpolan.</p>
+    <div class="f" style="max-width:360px;margin-top:10px"><label for="wmode">Peso w<sub>j</sub> de cada indicador</label>
+      <select id="wmode"><option value="abs">|carga en CP1| (coordenada del vector)</option><option value="sq">carga² en CP1 (varianza explicada, VAF)</option></select></div>
+    <p><b>Pendiente de validar con el equipo de Edafología:</b> (1) si <span class="mono">w</span> es la carga o su cuadrado; (2) arena y densidad aparente tienen cargas casi nulas en CP1 pero de signo “más es mejor”, se aplican tal cual con peso mínimo; (3) las cuantificaciones exactas de la salida de SPSS sustituirían a las leídas de la figura.</p>
+  </div>
+  <div class="tbl"><table id="methodTable"></table></div>
+</details>
+
+<footer>Basado en el Proyecto de Innovación Docente PID15B de la Universidad de Jaén (Aranda V., Calero J., Montejo A., Serrano J.M.). Referencias del índice por uso del suelo: tabla IV del artículo (medias de GSQI de 131 perfiles).</footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* ---------- Modelo (Aranda et al. 2014, tablas II y figura 1) ---------- */
+const IND = [
+  // morfológicos
+  {id:"dryValue",  name:"Brillo en seco",  kind:"ord", load:.915, managed:true,
+   cats:[2,3,4,4.5,5,6,6.5,7,7.5,8], q:[-2.583,-1.664,-1.664,-0.496,-0.444,0.527,0.58,0.763,0.908,0.908]},
+  {id:"moistValue",name:"Brillo en húmedo",kind:"ord", load:.902, managed:true,
+   cats:[1.5,2,3,3.5,4,4.5,5,5.5,6,6.5,7], q:[-2.0,-1.989,-1.512,-0.392,-0.258,0.507,0.629,0.807,0.807,1.029,1.095]},
+  {id:"roots",     name:"Raíces",          kind:"nom", load:-.682, managed:true,
+   cats:["VF","F","C","M"], labels:["Muy pocas","Pocas","Frecuentes","Abundantes"], q:[-0.66,-0.66,-0.534,1.828]},
+  {id:"dryHue",    name:"Matiz en seco",   kind:"nom", load:-.498, managed:false,
+   cats:["2.5Y","10YR","7.5YR","5YR","2.5YR"], labels:["2.5Y","10YR","7.5YR","5YR","2.5YR"], q:[-1.802,-0.419,0.83,2.213,1.746]},
+  {id:"texture",   name:"Textura",         kind:"nom", load:-.125, managed:false,
+   cats:["C","SiC","SiCL","SC","SiL","CL","L","SCL","SL","LS"],
+   labels:["Arcillosa","Arcillo-limosa","Franco-arcillo-limosa","Arcillo-arenosa","Franco-limosa","Franco-arcillosa","Franca","Franco-arcillo-arenosa","Franco-arenosa","Arenoso-franca"],
+   q:[-1.119,-0.959,-0.461,-0.408,-0.212,-0.052,0.517,0.962,2.42,3.273]},
+  {id:"stick",     name:"Adhesividad",     kind:"nom", load:.115, managed:false,
+   cats:["NS","SS","S","VS"], labels:["No adherente","Ligeramente adherente","Adherente","Muy adherente"], q:[-1.908,-0.728,0.928,0.928]},
+  // analíticos: intervalos [min,max] de la discretización CatPCA
+  {id:"oc",   name:"Carbono orgánico", unit:"%",         kind:"num", load:-.868, managed:true,
+   cls:[[0.1,0.2],[0.3,1.5],[1.6,2.8],[2.9,4.2],[4.3,5.9],[6.1,13.8]], q:[-1.52,-0.81,-0.077,0.656,1.366,2.099]},
+  {id:"caco3",name:"Carbonato cálcico eq.", unit:"%",    kind:"num", load:.740, managed:false,
+   cls:[[0,16],[17,30],[31,42],[43,56],[57,76],[77,78]], q:[-1.503,-0.856,-0.19,0.477,1.124,1.791]},
+  {id:"cec",  name:"CIC", unit:"cmol(+)/kg",             kind:"num", load:-.719, managed:true,
+   cls:[[3.7,4.4],[4.5,12],[12,18],[19,24],[25,30],[31,39],[40,53]], q:[-2.171,-1.476,-0.78,-0.085,0.611,1.306,2.002]},
+  {id:"w33",  name:"Humedad a cap. de campo (33 kPa)", unit:"%", kind:"num", load:-.624, managed:true,
+   cls:[[8,17],[18,22],[23,27],[28,32],[33,38],[39,42],[43,57]], q:[-2.128,-1.446,-0.765,-0.102,0.58,1.243,1.925]},
+  {id:"w1500",name:"Humedad punto marchitez (1500 kPa)", unit:"%", kind:"num", load:-.585, managed:true,
+   cls:[[1,6],[7,10],[11,15],[16,18],[19,21],[22,25],[26,35]], q:[-2.074,-1.422,-0.751,-0.099,0.572,1.243,1.895]},
+  {id:"ntot", name:"Nitrógeno total", unit:"%",          kind:"num", load:-.163, managed:true,
+   cls:[[0.012,0.120],[0.121,0.230],[0.231,0.250],[0.251,0.400],[0.401,1.520]], q:[-0.738,0.141,1.033,1.911,2.790]},
+  {id:"clay", name:"Arcilla", unit:"%",                  kind:"num", load:.110, managed:false,
+   cls:[[4,13],[14,23],[24,31],[32,38],[39,47],[48,57],[58,82]], q:[-2.123,-1.438,-0.754,-0.092,0.592,1.255,1.939]},
+  {id:"sand", name:"Arena", unit:"%",                    kind:"num", load:-.096, managed:false,
+   cls:[[2,12],[12,21],[22,31],[32,42],[43,54],[55,84]], q:[-1.334,-0.662,0.02,0.701,1.373,2.055]},
+  {id:"bd",   name:"Densidad aparente", unit:"g/cm³",    kind:"num", load:-.039, managed:true,
+   cls:[[0.95,1.10],[1.11,1.38],[1.39,1.44],[1.45,1.49],[1.50,1.55],[1.56,1.64]], q:[-2.856,-1.97,-1.073,-0.175,0.723,1.608]},
+];
+const BYID = Object.fromEntries(IND.map(d=>[d.id,d]));
+const LUT = [ // Tabla IV: media de GSQI por uso del suelo
+  {k:"COG",v:.263,n:"Olivar convencional"},{k:"HC",v:.278,n:"Cultivo herbáceo"},{k:"PDG",v:.528,n:"Pastizal degradado"},
+  {k:"MXS",v:.609,n:"Matorral mediterráneo"},{k:"MXW",v:.673,n:"Bosque mediterráneo"},{k:"PPF",v:.732,n:"Pinar de repoblación"},
+  {k:"AG",v:.899,n:"Espartal"},{k:"LDF",v:.940,n:"Bosque poco alterado"}];
+const ADVICE = {
+  oc:"Carbono orgánico bajo: mantener cubierta vegetal entre calles, incorporar restos de poda triturados y aportar compost o estiércol.",
+  dryValue:"Suelo claro en seco: suele reflejar poca materia orgánica; las mismas medidas que elevan el carbono lo oscurecen con los años.",
+  moistValue:"Suelo claro en húmedo: indica materia orgánica escasa; priorizar cubiertas y aportes orgánicos.",
+  roots:"Pocas raíces en superficie: una cubierta herbácea (espontánea o sembrada) y reducir el laboreo aumentan la actividad radicular.",
+  cec:"CIC baja: la materia orgánica es la vía manejable para aumentar la retención de nutrientes.",
+  w33:"Baja retención de agua a capacidad de campo: la materia orgánica y la protección frente a la erosión mejoran el almacenamiento.",
+  w1500:"Bajo contenido de agua en punto de marchitez: ligado a textura y materia orgánica; conviene evitar la pérdida de horizonte superficial.",
+  ntot:"Nitrógeno total bajo: leguminosas en la cubierta y aportes orgánicos lo elevan sin depender solo de abonos minerales.",
+  bd:"Densidad aparente fuera de lo óptimo: revisar compactación por tránsito de maquinaria, sobre todo con suelo húmedo."
+};
+
+/* ---------- Puntuación ---------- */
+function norm(d){ const mn=Math.min(...d.q), mx=Math.max(...d.q); return q=>{ const m=.1+.9*(q-mn)/(mx-mn); return d.load<0?m:1.1-m; }; }
+IND.forEach(d=>{ d.s=norm(d); });
+function weight(d){ return $("wmode").value==="sq" ? d.load*d.load : Math.abs(d.load); }
+
+function qFor(d, raw){ // devuelve {q, note, label}
+  if(raw===""||raw==null) return null;
+  if(d.kind==="ord"){
+    const v=parseFloat(raw); if(isNaN(v)) return null;
+    const c=d.cats; let note="";
+    if(v<=c[0]) return {q:d.q[0], label:String(v), note: v<c[0]?`${d.name} ${v}: fuera de la escala, se usa ${c[0]}`:""};
+    if(v>=c[c.length-1]) return {q:d.q[c.length-1], label:String(v), note: v>c[c.length-1]?`${d.name} ${v}: fuera de la escala, se usa ${c[c.length-1]}`:""};
+    for(let i=0;i<c.length-1;i++) if(v>=c[i]&&v<=c[i+1]){ const t=(v-c[i])/(c[i+1]-c[i]); return {q:d.q[i]+t*(d.q[i+1]-d.q[i]), label:String(v), note}; }
+  }
+  if(d.kind==="nom"){ const i=d.cats.indexOf(raw); return i<0?null:{q:d.q[i], label:d.labels[i]}; }
+  if(d.kind==="num"){
+    const v=parseFloat(String(raw).replace(",",".")); if(isNaN(v)) return null;
+    const cl=d.cls; let i=0;
+    for(;i<cl.length-1;i++){ const cut=(cl[i][1]+cl[i+1][0])/2; if(v<=cut) break; }
+    let note="";
+    if(v<cl[0][0]||v>cl[cl.length-1][1]) note=`${d.name} ${v} ${d.unit}: fuera del rango de la base de datos (${cl[0][0]}–${cl[cl.length-1][1]}), se asigna el intervalo extremo`;
+    return {q:d.q[i], label:`${v} ${d.unit}`, cls:`${cl[i][0]}–${cl[i][1]}`, note};
+  }
+  return null;
+}
+
+/* ---------- Utilidades DOM ---------- */
+function $(id){ return document.getElementById(id); }
+function opt(sel, items, blank="—"){ sel.innerHTML=`<option value="">${blank}</option>`+items.map(([v,t])=>`<option value="${v}">${t}</option>`).join(""); }
+const HUES=["5Y","2.5Y","10YR","7.5YR","5YR","2.5YR","10R"];
+const VALUES_D=[2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8], VALUES_M=[1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7], CHROMAS=[0,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8];
+opt($("dryHue"),HUES.map(h=>[h,h])); opt($("moistHue"),HUES.map(h=>[h,h]));
+opt($("dryValue"),VALUES_D.map(v=>[v,v])); opt($("moistValue"),VALUES_M.map(v=>[v,v]));
+opt($("dryChroma"),CHROMAS.map(v=>[v,v])); opt($("moistChroma"),CHROMAS.map(v=>[v,v]));
+opt($("texture"),BYID.texture.cats.map((c,i)=>[c,`${c} · ${BYID.texture.labels[i]}`]),"— (se deduce de arena/arcilla)");
+opt($("roots"),BYID.roots.cats.map((c,i)=>[c,BYID.roots.labels[i]]));
+opt($("stick"),BYID.stick.cats.map((c,i)=>[c,BYID.stick.labels[i]]));
+$("anaFields").innerHTML = IND.filter(d=>d.kind==="num").map(d=>
+  `<div class="f"><label for="${d.id}">${d.name} (${d.unit}) <span class="chip na" data-chip="${d.id}">—</span></label><input id="${d.id}" inputmode="decimal" autocomplete="off"></div>`).join("")
+  + `<div class="f"><label for="silt">Limo (%) <span class="chip na">informativo</span></label><input id="silt" inputmode="decimal" autocomplete="off"></div>`;
+
+const HUE_DEG={"10R":40,"2.5YR":46,"5YR":55,"7.5YR":63,"10YR":72,"2.5Y":82,"5Y":92};
+function munsellCss(h,v,c){ if(!h||v===""||c==="") return ""; return `lch(${(parseFloat(v)*10).toFixed(1)}% ${(parseFloat(c)*4.6).toFixed(1)} ${HUE_DEG[h]})`; }
+
+/* ---------- Textura USDA desde arena/arcilla ---------- */
+function usda(sand,clay){
+  const silt=100-sand-clay;
+  if(silt<0) return null;
+  if(silt+1.5*clay<15) return "S";
+  if(silt+2*clay<30) return "LS";
+  if((clay>=7&&clay<20&&sand>52)||(clay<7&&silt<50)) return "SL";
+  if(clay>=7&&clay<27&&silt>=28&&silt<50&&sand<=52) return "L";
+  if(silt>=80&&clay<12) return "Si";
+  if(silt>=50&&clay<27) return "SiL";
+  if(clay>=20&&clay<35&&silt<28&&sand>45) return "SCL";
+  if(clay>=27&&clay<40&&sand>20&&sand<=45) return "CL";
+  if(clay>=27&&clay<40&&sand<=20) return "SiCL";
+  if(clay>=35&&sand>45) return "SC";
+  if(clay>=40&&silt>=40) return "SiC";
+  return "C";
+}
+
+/* ---------- Estado y cálculo ---------- */
+const FORM_IDS=["p_name","p_x","p_y","p_alt","p_lut","p_parent","p_pos","p_class","p_hz","p_depth","dryHue","dryValue","dryChroma","moistHue","moistValue","moistChroma","texture","roots","stick",...IND.filter(d=>d.kind==="num").map(d=>d.id),"silt"];
+function readForm(){ const o={}; FORM_IDS.forEach(id=>o[id]=$(id).value.trim()); return o; }
+function writeForm(o){ FORM_IDS.forEach(id=>{ $(id).value = o[id]??""; }); }
+
+function hueToIndex(h, flags){
+  if(!h) return "";
+  if(h==="5Y"){ flags.push("Matiz 5Y fuera de la escala del modelo: se trata como 2.5Y"); return "2.5Y"; }
+  if(h==="10R"){ flags.push("Matiz 10R fuera de la escala del modelo: se trata como 2.5YR"); return "2.5YR"; }
+  return h;
+}
+
+function compute(){
+  const f=readForm(), flags=[], rows=[];
+  const raw={ dryValue:f.dryValue, moistValue:f.moistValue, roots:f.roots, stick:f.stick, dryHue:hueToIndex(f.dryHue,flags), texture:f.texture };
+  IND.filter(d=>d.kind==="num").forEach(d=>raw[d.id]=f[d.id]);
+  let texNote="";
+  if(!raw.texture && f.sand!=="" && f.clay!==""){
+    let t=usda(parseFloat(f.sand.replace(",",".")),parseFloat(f.clay.replace(",",".")));
+    if(t==="S"){ t="LS"; texNote="Textura arenosa (S) fuera de la escala del modelo: se usa arenoso-franca. "; }
+    if(t==="Si"){ t="SiL"; texNote="Textura limosa (Si) fuera de la escala del modelo: se usa franco-limosa. "; }
+    if(t){ raw.texture=t; texNote+=`Clase textural deducida de arena y arcilla: ${t} (${BYID.texture.labels[BYID.texture.cats.indexOf(t)]}).`; }
+  }
+  if(f.sand!==""&&f.clay!==""&&f.silt!==""){
+    const tot=[f.sand,f.clay,f.silt].reduce((a,b)=>a+parseFloat(b.replace(",",".")),0);
+    if(Math.abs(tot-100)>3) flags.push(`Arena + limo + arcilla suman ${tot.toFixed(1)} %, revisa la granulometría`);
+  }
+  $("textureNote").textContent=texNote;
+  let sw=0, sws=0, wAll=0;
+  IND.forEach(d=>{
+    const w=weight(d); wAll+=w;
+    const r=qFor(d, raw[d.id]);
+    if(r){ const s=d.s(r.q); sw+=w; sws+=s*w; if(r.note) flags.push(r.note); rows.push({d,w,s,label:r.label,cls:r.cls}); }
+    else rows.push({d,w,s:null});
+  });
+  const g = sw>0 ? sws/sw : null;
+  return {g, cov: sw/wAll, rows, flags, form:f};
+}
+
+function scoreColor(s){ return s==null?"var(--line)": s<.4?"var(--bad)": s<.7?"var(--warn)":"var(--good)"; }
+
+function render(){
+  const R=compute(), f=R.form;
+  // chips
+  document.querySelectorAll("[data-chip]").forEach(el=>{
+    const row=R.rows.find(r=>r.d.id===el.dataset.chip);
+    if(row&&row.s!=null){ el.textContent=row.s.toFixed(2); el.classList.remove("na"); el.style.boxShadow=`inset 3px 0 0 ${scoreColor(row.s)}`; }
+    else { el.textContent="—"; el.classList.add("na"); el.style.boxShadow=""; }
+  });
+  $("sw_dry").style.background = munsellCss(f.dryHue,f.dryValue,f.dryChroma)||"var(--field)";
+  $("sw_moist").style.background = munsellCss(f.moistHue,f.moistValue,f.moistChroma)||"var(--field)";
+  // número
+  $("gsqi").textContent = R.g==null ? "—" : R.g.toFixed(2).replace(".",",");
+  const n=R.rows.filter(r=>r.s!=null).length;
+  $("coverage").textContent = n ? `${n} de 15 indicadores · ${(R.cov*100).toFixed(0)} % del peso total del índice` : "Introduce al menos un indicador.";
+  $("coverage").classList.toggle("low", n>0 && R.cov<.5);
+  // escala
+  const pos=v=>`${((v-.1)/.9*100).toFixed(2)}%`;
+  $("scale").innerHTML = `<div class="bar"></div>` +
+    LUT.map((l,i)=>`<div class="tick" style="left:${pos(l.v)}"></div><div class="lab ${i%2?"b":"t"}" style="left:${pos(l.v)}" title="${l.n}: ${l.v}">${l.k}</div>`).join("") +
+    (R.g!=null?`<div class="me" style="left:${pos(R.g)}" title="Tu suelo"></div>`:"") +
+    `<div class="ends"><span>0,1</span><span>1</span></div>`;
+  // veredicto
+  let vt="";
+  if(R.g!=null){
+    const lo=[...LUT].reverse().find(l=>l.v<=R.g), hi=LUT.find(l=>l.v>R.g);
+    if(!lo) vt=`Por debajo de la media del olivar convencional (${LUT[0].v.toFixed(2)}), el uso con peor calidad en la base de datos de Jaén.`;
+    else if(!hi) vt=`Por encima de la media de bosque poco alterado (${lo.v.toFixed(2)}), la referencia de mayor calidad.`;
+    else vt=`Entre la media de <b>${lo.n.toLowerCase()}</b> (${lo.v.toFixed(2)}) y la de <b>${hi.n.toLowerCase()}</b> (${hi.v.toFixed(2)}). En el valle del Atanor, el olivar ecológico dio 0,36 y el convencional 0,22.`;
+    if(R.cov<.5) vt+=` Con menos de la mitad del peso del índice cubierto, el resultado es orientativo.`;
+  }
+  $("verdict").innerHTML=vt;
+  // indicadores
+  const rows=[...R.rows].sort((a,b)=>b.w-a.w);
+  $("inds").innerHTML = rows.map(r=>`<div class="ind ${r.s==null?"na":""}" title="${r.d.name}${r.label?": "+r.label:""}${r.cls?" (intervalo "+r.cls+")":""} · peso ${r.w.toFixed(3)}">
+     <span class="nm">${r.d.name}${r.d.managed?"":`<span class="tag">heredado</span>`}${r.label?`<small>${r.label}</small>`:""}</span>
+     <span class="track"><span class="fill" style="width:${r.s==null?0:(r.s*100).toFixed(1)}%;background:${scoreColor(r.s)}"></span></span>
+     <span class="v">${r.s==null?"—":r.s.toFixed(2)}</span></div>`).join("");
+  $("flags").innerHTML = R.flags.map(t=>`<li>${t}</li>`).join("");
+  // consejo
+  const weak=R.rows.filter(r=>r.s!=null&&r.d.managed&&r.s<.55&&ADVICE[r.d.id]).sort((a,b)=>(a.s-b.s)||(b.w-a.w)).slice(0,3);
+  $("advice").hidden = !weak.length;
+  $("advice").innerHTML = weak.length ? `<b>Dónde actuar primero</b><ul>${weak.map(r=>`<li>${ADVICE[r.d.id]}</li>`).join("")}</ul>` : "";
+  try{ localStorage.setItem("gsqi.draft", JSON.stringify(readForm())); }catch(e){}
+  return R;
+}
+
+/* ---------- Lector de descripciones ---------- */
+const deacc=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase();
+function parseHorizon(txt){
+  const T=deacc(txt).replace(/[-–]/g," ").replace(/\s+/g," ");
+  const out={}, found=[];
+  // colores Munsell
+  const re=/\(?\s*(\d+(?:[.,]\d+)?)\s*(YR|Y|R)\s*(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)\s*\)?([^()]{0,30})/g;
+  let m;
+  while((m=re.exec(T))){
+    const hue=m[1].replace(",",".")+m[2], v=m[3].replace(",","."), c=m[4].replace(",",".");
+    const moist=/HUMEDO/.test(m[5]) && !/SECO/.test(m[5].split("HUMEDO")[0]);
+    const k=moist?"moist":"dry";
+    if(out[k+"Hue"]) continue;
+    out[k+"Hue"]=hue; out[k+"Value"]=v; out[k+"Chroma"]=c;
+    found.push(`color ${moist?"húmedo":"seco"} ${hue} ${v}/${c}`);
+  }
+  const TEX=[["FRANCO ARCILLO LIMOS","SiCL"],["FRANCO ARCILLO ARENOS","SCL"],["ARCILLO LIMOS","SiC"],["ARCILLO ARENOS","SC"],["FRANCO ARCILLOS","CL"],["FRANCO LIMOS","SiL"],["FRANCO ARENOS","SL"],["ARENOSO FRANCO","LS"],["ARENO FRANCO","LS"],["ARCILLOS","C"],["LIMOS","SiL"],["ARENOS","LS"],["FRANC","L"]];
+  for(const [k,v] of TEX){ if(new RegExp("\\b"+k).test(T)){ out.texture=v; found.push(`textura ${v}`); break; } }
+  const R=[[/(MUY (POCAS|ESCASAS) RAICES|RAICES MUY (POCAS|ESCASAS)|SIN RAICES)/,"VF"],[/((POCAS|ESCASAS) RAICES|RAICES (POCAS|ESCASAS))/,"F"],[/((FRECUENTES|COMUNES) RAICES|RAICES (FRECUENTES|COMUNES))/,"C"],[/((ABUNDANTES|MUCHAS|MUY ABUNDANTES) RAICES|RAICES (MUY )?(ABUNDANTES|MUCHAS))/,"M"]];
+  for(const [r,v] of R){ if(r.test(T)){ out.roots=v; found.push(`raíces ${BYID.roots.labels[BYID.roots.cats.indexOf(v)].toLowerCase()}`); break; } }
+  const S=[[/NO (ADHERENTE|PEGAJOSO)/,"NS"],[/LIGERAMENTE (ADHERENTE|PEGAJOSO)/,"SS"],[/MUY (ADHERENTE|PEGAJOSO)/,"VS"],[/(ADHERENTE|PEGAJOSO)/,"S"]];
+  for(const [r,v] of S){ if(r.test(T)){ out.stick=v; found.push(`adhesividad ${v}`); break; } }
+  return {out,found};
+}
+function parseProfile(text){
+  const meta={}, T=text;
+  const grab=(lab,key)=>{ const m=new RegExp(lab+"\\s*:\\s*([^\\n]+)","i").exec(deacc(T)); if(m){ const idx=m.index+m[0].indexOf(m[1]); meta[key]=T.substr(idx,m[1].length).trim(); } };
+  grab("MATERIAL ORIGINAL","p_parent"); grab("POSICION FISIOGRAFICA","p_pos"); grab("CLASIFICACION","p_class");
+  const re=/^[ \t]*(?:([A-Z][A-Za-z0-9]{0,5})[ \t]+)?(\d{1,3})\s*[-–]\s*(\d{0,3})\s*CM/gim;
+  const hits=[]; let m;
+  while((m=re.exec(T))) hits.push({i:m.index, code:m[1]||`H${hits.length+1}`, top:m[2], bot:m[3]});
+  const hz=hits.map((h,k)=>{ const body=T.slice(h.i, k+1<hits.length?hits[k+1].i:T.length); const cut=body.search(/\n\s*REFERENCIA/i); return {code:h.code.toUpperCase(), depth:`${h.top}-${h.bot||""}`, text:cut>0?body.slice(0,cut):body}; });
+  if(!hz.length && T.trim()) hz.push({code:"H1",depth:"",text:T});
+  return {meta,hz};
+}
+let parsed=null;
+function applyHorizon(i){
+  const h=parsed.hz[i], r=parseHorizon(h.text), cur=readForm();
+  ["dryHue","dryValue","dryChroma","moistHue","moistValue","moistChroma","texture","roots","stick"].forEach(k=>cur[k]=r.out[k]??"");
+  Object.assign(cur, parsed.meta, {p_hz:h.code, p_depth:h.depth});
+  // valores fuera de las listas: añadir opción
+  ["dryValue","moistValue","dryChroma","moistChroma"].forEach(k=>{ const s=$(k); if(cur[k]&&![...s.options].some(o=>o.value===cur[k])) s.add(new Option(cur[k],cur[k])); });
+  ["dryHue","moistHue"].forEach(k=>{ const s=$(k); if(cur[k]&&![...s.options].some(o=>o.value===cur[k])) s.add(new Option(cur[k],cur[k])); });
+  writeForm(cur);
+  document.querySelectorAll("#hzList button").forEach((b,j)=>b.setAttribute("aria-pressed", j===i));
+  $("parsedInfo").innerHTML = r.found.length ? `Horizonte <b>${h.code}</b> (${h.depth} cm): ${r.found.map(x=>`<b>${x}</b>`).join(", ")}.` + (r.found.some(x=>x.startsWith("adhesividad"))?"":" No se encontró adhesividad; complétala si la conoces.") : `No se reconocieron indicadores en el horizonte ${h.code}.`;
+  render();
+}
+$("btnParse").onclick=()=>{
+  parsed=parseProfile($("desc").value);
+  if(!parsed.hz.length){ $("hzList").innerHTML=""; $("parsedInfo").textContent="Pega primero el texto de la descripción."; return; }
+  $("hzList").innerHTML = parsed.hz.map((h,i)=>`<button type="button" data-i="${i}">${h.code} · ${h.depth} cm</button>`).join("");
+  $("hzList").querySelectorAll("button").forEach(b=>b.onclick=()=>applyHorizon(+b.dataset.i));
+  applyHorizon(0);
+};
+
+/* ---------- Ejemplo ---------- */
+const EXAMPLE=`MATERIAL ORIGINAL: MARGA (MIOCENO)
+POSICIÓN FISIOGRÁFICA: COLINA
+CLASIFICACIÓN: TYPIC CHROMOXERERTS
+OBSERVADOR Y FECHA: J. L. MUDARRA; ABRIL 1961.
+
+AP   0-30 CM.; GRIS PARDUZCO CLARO (2.5Y6/2), EN SECO, ARCILLOSO; ESTRUCTURA SUBANGULAR, FINA, FUERTEMENTE DESARROLLADA; MODERADAMENTE PLÁSTICO EN MOJADO, MODERADAMENTE FRIABLE EN HÚMEDO, DURO EN SECO; ABUNDANTES RAÍCES, FINAS; REACCIÓN FUERTE; LÍMITE NETO Y PLANO.
+AC1  30-60 CM.; PARDO MUY PÁLIDO (10YR7/3), EN SECO, ARCILLOSO; ESTRUCTURA SUBANGULAR, MEDIA, FUERTEMENTE DESARROLLADA; MODERADAMENTE PLÁSTICO EN MOJADO, MODERADAMENTE FIRME EN HÚMEDO, DURO EN SECO; REACCIÓN FUERTE; LÍMITE GRADUAL.
+AC2  60-80 CM.; PARDO MUY PÁLIDO (10YR7/3), EN SECO, PARDO PÁLIDO (10YR6/3), EN HÚMEDO; ARCILLOSO; ESTRUCTURA PRISMÁTICA, GRUESA, FUERTEMENTE DESARROLLADA; MODERADAMENTE PLÁSTICO EN MOJADO, MODERADAMENTE FIRME EN HÚMEDO, DURO EN SECO; REACCIÓN FUERTE; LÍMITE NETO Y PLANO.
+CCA  80- CM.; AMARILLO PÁLIDO (2.5Y7/4), EN SECO, ARCILLOSO; ESTRUCTURA PRISMÁTICA; MODERADAMENTE PLÁSTICO EN MOJADO, MODERADAMENTE FIRME EN HÚMEDO, DURO EN SECO; REACCIÓN FUERTE; FRECUENTES NÓDULOS, CALIZOS.
+
+REFERENCIA: J. L. MUDARRA ET AL. 1976. ESTUDIO GENERAL DE LOS SUELOS DE SIERRA MORENA Y CUENCA ALTA DEL GUADALQUIVIR.`;
+function loadExample(){
+  writeForm({}); $("desc").value=EXAMPLE; $("btnParse").click();
+  $("p_name").value="Ejemplo · perfil Mudarra 1961 (sin analítica)"; render();
+}
+$("btnExample").onclick=loadExample;
+$("btnClear").onclick=()=>{ writeForm({}); $("desc").value=""; $("hzList").innerHTML=""; $("parsedInfo").textContent=""; render(); };
+
+/* ---------- Guardar / exportar ---------- */
+function toast(t){ const el=$("toast"); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2200); }
+function loadSaved(){ try{ return JSON.parse(localStorage.getItem("gsqi.saved")||"[]"); }catch(e){ return []; } }
+function storeSaved(a){ try{ localStorage.setItem("gsqi.saved",JSON.stringify(a)); return true; }catch(e){ toast("Este navegador no permite guardar datos locales."); return false; } }
+function renderSaved(){
+  const a=loadSaved();
+  $("savedList").innerHTML = a.length ? a.map((s,i)=>`<div class="row"><span><b>${s.form.p_name||"Sin nombre"}</b> · <span class="mono">${s.g==null?"—":s.g.toFixed(2)}</span> · ${new Date(s.t).toLocaleDateString("es-ES")}</span><span class="btns"><button type="button" data-load="${i}">Abrir</button><button type="button" data-del="${i}">Borrar</button></span></div>`).join("") : `<p class="hint" style="margin:6px 0 0">Aún no hay diagnósticos guardados.</p>`;
+  $("savedList").querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>{ writeForm(loadSaved()[+b.dataset.load].form); render(); toast("Diagnóstico abierto"); });
+  $("savedList").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    if(b.dataset.armed){ const a=loadSaved(); a.splice(+b.dataset.del,1); storeSaved(a); renderSaved(); toast("Diagnóstico borrado"); }
+    else { b.dataset.armed="1"; b.textContent="¿Seguro?"; }
+  });
+}
+$("btnSave").onclick=()=>{ const R=render(); const a=loadSaved(); a.unshift({t:Date.now(),g:R.g,form:R.form}); if(storeSaved(a)){ renderSaved(); toast("Diagnóstico guardado"); } };
+function copy(text,msg){
+  const done=()=>toast(msg);
+  const fallback=()=>{ const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); done(); }catch(e){ toast("No se pudo copiar"); } ta.remove(); };
+  try{ navigator.clipboard.writeText(text).then(done,fallback); }catch(e){ fallback(); }
+}
+$("btnCsv").onclick=()=>{
+  const R=render(), f=R.form;
+  const lines=[["parcela","horizonte","indicador","valor","puntuacion","peso"].join(";")];
+  R.rows.forEach(r=>lines.push([f.p_name,f.p_hz,r.d.name,r.label??"",r.s==null?"":r.s.toFixed(3),r.w.toFixed(3)].join(";")));
+  lines.push([f.p_name,f.p_hz,"GSQI","",R.g==null?"":R.g.toFixed(3),""].join(";"));
+  copy(lines.join("\n"),"CSV copiado al portapapeles");
+};
+$("btnJson").onclick=()=>{ const R=render(); copy(JSON.stringify({gsqi:R.g,cobertura:R.cov,datos:R.form,indicadores:R.rows.map(r=>({id:r.d.id,valor:r.label??null,s:r.s,w:r.w}))},null,2),"JSON copiado al portapapeles"); };
+
+/* ---------- Tabla de método ---------- */
+function renderMethod(){
+  $("methodTable").innerHTML = `<thead><tr><th>Indicador</th><th>Carga CP1</th><th>Peso</th><th>Sentido</th><th>Categoría → puntuación s</th></tr></thead><tbody>` +
+    IND.map(d=>{
+      const keys = d.kind==="num" ? d.cls.map(c=>`${c[0]}–${c[1]}`) : d.kind==="ord" ? d.cats : d.cats;
+      return `<tr><td>${d.name}${d.unit?` (${d.unit})`:""}</td><td class="cls">${d.load.toFixed(3)}</td><td class="cls">${weight(d).toFixed(3)}</td><td>${d.load<0?"más es mejor":"menos es mejor"}</td><td class="cls">${keys.map((k,i)=>`${k}: ${d.s(d.q[i]).toFixed(2)}`).join(" · ")}</td></tr>`;
+    }).join("") + `</tbody>`;
+}
+$("wmode").onchange=()=>{ renderMethod(); render(); };
+
+/* ---------- Arranque ---------- */
+document.addEventListener("input",e=>{ if(FORM_IDS.includes(e.target.id)) render(); });
+document.addEventListener("change",e=>{ if(FORM_IDS.includes(e.target.id)) render(); });
+renderMethod(); renderSaved();
+// Precarga desde la URL (enlace «Completar autodiagnóstico» del visor de LivingSoiLL):
+// ?name=…&lut=…&caco3=…&ntot=…&bd=…&oc=…&cec=…&clay=…&sand=…&silt=…&w33=…&w1500=…&texture=SiL
+function fromQuery(){
+  let p; try{ p=new URLSearchParams(location.search); }catch(e){ return null; }
+  const keys=["texture",...IND.filter(d=>d.kind==="num").map(d=>d.id),"silt"];
+  if(!keys.some(k=>p.has(k)) && !p.has("name")) return null;
+  const o={p_name:p.get("name")||"", p_lut:p.get("lut")||"", p_hz:"Ap"};
+  keys.forEach(k=>{ if(p.has(k)) o[k]=p.get(k); });
+  return o;
+}
+const pre=fromQuery();
+let draft=null; try{ draft=JSON.parse(localStorage.getItem("gsqi.draft")||"null"); }catch(e){}
+if(pre){ writeForm(pre); render(); $("parsedInfo").textContent="Datos analíticos precargados desde el visor. Completa el color, las raíces y la adhesividad del horizonte superficial, o pega su descripción arriba."; }
+else if(draft && Object.values(draft).some(v=>v)){ writeForm(draft); render(); } else loadExample();
+</script>
+</body>
+</html>

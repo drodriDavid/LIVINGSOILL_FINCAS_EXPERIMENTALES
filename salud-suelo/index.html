@@ -12,6 +12,7 @@
   --bg:#f3f4f0; --paper:#ffffff; --ink:#1f2420; --muted:#5d665e; --line:#d7dbd2;
   --accent:#4f6b2a; --accent-ink:#ffffff; --accent-soft:#e6ecd9;
   --good:#3f7d3a; --warn:#b07a12; --bad:#a8432f; --field:#fbfcf9;
+  --k-color:#b5763c; --k-tex:#3f7fb0; --k-root:#4f9a3a; --k-stick:#8a5bb0; --k-meta:#8a8f86;
   --f-display:"Newsreader", Georgia, "Times New Roman", serif;
   --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
@@ -54,9 +55,41 @@ button:hover{border-color:var(--accent)}
 .swatch{width:44px;height:36px;border-radius:4px;border:1px solid var(--line);background:var(--field)}
 .subgroup{display:flex;flex-direction:column;gap:8px;padding-top:14px;margin-top:14px;border-top:1px dashed var(--line)}
 .subgroup:first-of-type{border-top:0;margin-top:0;padding-top:0}
-.hz{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.hz button{font-family:var(--f-mono);font-size:12.5px}
-.hz button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;padding:22px 16px;border:1.5px dashed var(--line);border-radius:6px;background:var(--field);text-align:center;cursor:pointer;color:var(--muted)}
+.drop strong{font-weight:600;color:var(--ink)}
+.drop span{font-size:13px}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.drop-ico{width:34px;height:34px;color:var(--accent)}
+.read-status{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px;font-size:13.5px}
+.read-status.err{color:var(--bad)}
+.prog{flex:1;min-width:120px;height:6px;border-radius:3px;background:var(--accent-soft);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--accent)}
+#review{margin-top:16px}
+.review-head,.src-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.src-head{margin-top:14px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+.hzt{min-width:0}
+.hzt select{min-width:118px}
+.hzt td,.hzt th{padding:6px 6px;vertical-align:middle}
+.hzt tr.on td{background:var(--accent-soft)}
+.hzt td.hzc{font-family:var(--f-mono);font-weight:500;white-space:nowrap}
+.hzt td.hzc label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.hzt input[type=radio]{width:auto;accent-color:var(--accent)}
+.hzt select,.hzt input.mun{font-size:13px;padding:5px 6px}
+.hzt input.mun{width:92px;font-family:var(--f-mono)}
+.hzt .mc{display:flex;align-items:center;gap:6px}
+.hzt .mc i{width:18px;height:18px;border-radius:3px;border:1px solid var(--line);flex:none;background:var(--field)}
+.hzt .miss{border-style:dashed;color:var(--muted)}
+.src{font:12.5px/1.65 var(--f-mono);white-space:pre-wrap;word-break:break-word;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:10px 12px;max-height:280px;overflow:auto;margin-top:8px}
+.src .hzh{font-weight:600;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+mark{color:inherit;border-radius:2px;padding:0 2px}
+mark.k-color{background:color-mix(in srgb,var(--k-color) 26%,transparent)}
+mark.k-tex{background:color-mix(in srgb,var(--k-tex) 26%,transparent)}
+mark.k-root{background:color-mix(in srgb,var(--k-root) 26%,transparent)}
+mark.k-stick{background:color-mix(in srgb,var(--k-stick) 30%,transparent)}
+mark.k-meta{background:color-mix(in srgb,var(--k-meta) 22%,transparent)}
+#desc{margin-top:8px}
 .parsed{font-size:13px;color:var(--muted);margin-top:10px}
 .parsed b{color:var(--ink);font-weight:500}
 /* resultado */
@@ -126,13 +159,30 @@ a{color:var(--accent)}
 <div class="grid">
 <div class="col">
 
-<section class="card">
-  <h2>Leer una descripción de perfil</h2>
-  <p class="hint">Pega el texto de una ficha de perfil (por ejemplo del <a href="https://www.juntadeandalucia.es/medioambiente/documentos_tecnicos/catalogo2/catalogo_ind.html" target="_blank" rel="noopener">Catálogo de Suelos de Andalucía</a> o de una memoria LUCDEME). Se extraen color Munsell, textura, raíces y adhesividad de cada horizonte.</p>
-  <textarea id="desc" spellcheck="false" placeholder="AP  0-30 CM.; GRIS PARDUZCO CLARO (2.5Y6/2), EN SECO, ARCILLOSO; …"></textarea>
-  <div class="btns" style="margin-top:10px"><button type="button" class="pri" id="btnParse">Leer descripción</button></div>
-  <div class="hz" id="hzList"></div>
-  <div class="parsed" id="parsedInfo"></div>
+<section class="card" id="readerCard">
+  <h2>Leer la ficha del perfil</h2>
+  <p class="hint">Sirve la ficha de un perfil del <a href="https://www.juntadeandalucia.es/medioambiente/documentos_tecnicos/catalogo2/catalogo_ind.html" target="_blank" rel="noopener">Catálogo de Suelos de Andalucía</a>, de una memoria LUCDEME o tu propia descripción de campo. Se reconocen el color Munsell, la textura, las raíces y la adhesividad de cada horizonte.</p>
+  <label class="drop" id="drop" for="file">
+    <input type="file" id="file" accept=".pdf,application/pdf,image/*,.txt,text/plain" hidden>
+    <svg class="drop-ico" viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="4" width="22" height="32" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 13h22M9 22h22M9 29h22" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M13 9h6M13 17.5h9M13 25.5h5" stroke="currentColor" stroke-width="1.6" fill="none" opacity=".55"/></svg>
+    <strong>Suelta aquí el PDF o una captura de la ficha</strong>
+    <span>o haz clic para elegir el archivo · también puedes pegar texto o imagen con Ctrl+V</span>
+  </label>
+  <div class="read-status" id="readStatus" hidden><span id="readMsg"></span><span class="prog" id="readProg" hidden><i></i></span></div>
+
+  <div id="review" hidden>
+    <div class="review-head">
+      <h3>Horizontes encontrados</h3>
+      <span class="legend"><mark class="k-color">color</mark><mark class="k-tex">textura</mark><mark class="k-root">raíces</mark><mark class="k-stick">adhesividad</mark><mark class="k-meta">datos del perfil</mark></span>
+    </div>
+    <p class="hint" style="margin:4px 0 8px">El índice usa el horizonte marcado (por defecto el superficial). Corrige cualquier celda y se aplica al momento; los huecos punteados no aparecían en la ficha.</p>
+    <div class="tbl"><table class="hzt" id="hzTable"></table></div>
+    <p class="parsed" id="parsedInfo"></p>
+    <div class="src-head"><h3>Texto leído</h3><button type="button" id="btnEditText">Corregir el texto</button></div>
+    <div class="src" id="srcView"></div>
+  </div>
+  <textarea id="desc" spellcheck="false" hidden placeholder="AP  0-30 CM.; GRIS PARDUZCO CLARO (2.5Y6/2), EN SECO, ARCILLOSO; …" aria-label="Texto de la ficha"></textarea>
+  <p class="parsed" id="preInfo" hidden></p>
 </section>
 
 <section class="card">
@@ -442,61 +492,185 @@ function render(){
   return R;
 }
 
-/* ---------- Lector de descripciones ---------- */
-const deacc=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").toUpperCase();
-function parseHorizon(txt){
-  const T=deacc(txt).replace(/[-–]/g," ").replace(/\s+/g," ");
-  const out={}, found=[];
-  // colores Munsell
-  const re=/\(?\s*(\d+(?:[.,]\d+)?)\s*(YR|Y|R)\s*(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)\s*\)?([^()]{0,30})/g;
-  let m;
-  while((m=re.exec(T))){
-    const hue=m[1].replace(",",".")+m[2], v=m[3].replace(",","."), c=m[4].replace(",",".");
-    const moist=/HUMEDO/.test(m[5]) && !/SECO/.test(m[5].split("HUMEDO")[0]);
-    const k=moist?"moist":"dry";
+/* ---------- Lector de fichas de perfil ---------- */
+// Mayúsculas sin tildes conservando la longitud, para que las posiciones sirvan sobre el texto original.
+const fold=s=>s.replace(/[^\u0000-\u007f]/g,c=>{ const b=c.normalize("NFD")[0]; return b.length===1?b:c; })
+  .replace(/[a-z]/g,c=>c.toUpperCase()).replace(/[ñ]/g,"Ñ");
+const SP="[\\s\\-–]+";
+const TEX_RE=new RegExp("\\b(?:"+[
+  ["FRANCO"+SP+"ARCILLO"+SP+"LIMOS\\w*","SiCL"],["FRANCO"+SP+"ARCILLO"+SP+"ARENOS\\w*","SCL"],
+  ["ARCILLO"+SP+"LIMOS\\w*","SiC"],["ARCILLO"+SP+"ARENOS\\w*","SC"],["FRANCO"+SP+"ARCILLOS\\w*","CL"],
+  ["FRANCO"+SP+"LIMOS\\w*","SiL"],["FRANCO"+SP+"ARENOS\\w*","SL"],["ARENOSO"+SP+"FRANC\\w*","LS"],["ARENO"+SP+"FRANC\\w*","LS"],
+  ["ARCILLOS[OA]S?","C"],["LIMOS[OA]S?","SiL"],["ARENOS[OA]S?","LS"],["FRANC[OA]S?","L"]
+].map(([p])=>"("+p+")").join("|")+")\\b","g");
+const TEX_CODES=["SiCL","SCL","SiC","SC","CL","SiL","SL","LS","LS","C","SiL","LS","L"];
+const ROOT_Q="MUY"+SP+"POCAS|MUY"+SP+"ESCASAS|MUY"+SP+"ABUNDANTES|POCAS|ESCASAS|FRECUENTES|COMUNES|ABUNDANTES|MUCHAS";
+const ROOT_RE=new RegExp("\\b(?:("+ROOT_Q+")\\s+RAICES|RAICES[\\s,]+("+ROOT_Q+")|(SIN|NO\\s+HAY)\\s+RAICES)\\b","g");
+const rootCode=q=>{ q=(q||"").replace(/\s+/g," "); if(/^MUY (POCAS|ESCASAS)|SIN|NO HAY/.test(q)) return "VF"; if(/POCAS|ESCASAS/.test(q)) return "F"; if(/FRECUENTES|COMUNES/.test(q)) return "C"; return "M"; };
+const STICK_RE=/\b(?:(NO|LIGERAMENTE|MUY)\s+)?(ADHERENTE|PEGAJOSO)\b/g;
+const MUN_RE=/(\d{1,2}(?:[.,]\d)?)\s*(YR|Y|R)\s*(\d(?:[.,]\d)?)\s*\/\s*(\d{1,2}(?:[.,]\d)?)/g;
+
+function firstMatch(re,U,a,b){ re.lastIndex=a; const m=re.exec(U); return m&&m.index<b?m:null; }
+function parseHorizon(U,a,b){
+  const out={}, spans=[];
+  MUN_RE.lastIndex=a; let m;
+  while((m=MUN_RE.exec(U)) && m.index<b){
+    const end=m.index+m[0].length, q=/^[\s,;)]*(?:EN\s+)?(SECO|HUMEDO)/.exec(U.slice(end,end+24));
+    const k = q&&q[1]==="HUMEDO" ? "moist" : "dry";
     if(out[k+"Hue"]) continue;
-    out[k+"Hue"]=hue; out[k+"Value"]=v; out[k+"Chroma"]=c;
-    found.push(`color ${moist?"húmedo":"seco"} ${hue} ${v}/${c}`);
+    out[k+"Hue"]=m[1].replace(",",".")+m[2]; out[k+"Value"]=m[3].replace(",","."); out[k+"Chroma"]=m[4].replace(",",".");
+    spans.push({s:m.index,e:end+(q?q[0].length:0),k:"color",t:`Color ${k==="dry"?"en seco":"en húmedo"}`});
   }
-  const TEX=[["FRANCO ARCILLO LIMOS","SiCL"],["FRANCO ARCILLO ARENOS","SCL"],["ARCILLO LIMOS","SiC"],["ARCILLO ARENOS","SC"],["FRANCO ARCILLOS","CL"],["FRANCO LIMOS","SiL"],["FRANCO ARENOS","SL"],["ARENOSO FRANCO","LS"],["ARENO FRANCO","LS"],["ARCILLOS","C"],["LIMOS","SiL"],["ARENOS","LS"],["FRANC","L"]];
-  for(const [k,v] of TEX){ if(new RegExp("\\b"+k).test(T)){ out.texture=v; found.push(`textura ${v}`); break; } }
-  const R=[[/(MUY (POCAS|ESCASAS) RAICES|RAICES MUY (POCAS|ESCASAS)|SIN RAICES)/,"VF"],[/((POCAS|ESCASAS) RAICES|RAICES (POCAS|ESCASAS))/,"F"],[/((FRECUENTES|COMUNES) RAICES|RAICES (FRECUENTES|COMUNES))/,"C"],[/((ABUNDANTES|MUCHAS|MUY ABUNDANTES) RAICES|RAICES (MUY )?(ABUNDANTES|MUCHAS))/,"M"]];
-  for(const [r,v] of R){ if(r.test(T)){ out.roots=v; found.push(`raíces ${BYID.roots.labels[BYID.roots.cats.indexOf(v)].toLowerCase()}`); break; } }
-  const S=[[/NO (ADHERENTE|PEGAJOSO)/,"NS"],[/LIGERAMENTE (ADHERENTE|PEGAJOSO)/,"SS"],[/MUY (ADHERENTE|PEGAJOSO)/,"VS"],[/(ADHERENTE|PEGAJOSO)/,"S"]];
-  for(const [r,v] of S){ if(r.test(T)){ out.stick=v; found.push(`adhesividad ${v}`); break; } }
-  return {out,found};
+  if((m=firstMatch(TEX_RE,U,a,b))){ const i=m.slice(1).findIndex(Boolean); out.texture=TEX_CODES[i]; spans.push({s:m.index,e:m.index+m[0].length,k:"tex",t:"Textura"}); }
+  if((m=firstMatch(ROOT_RE,U,a,b))){ out.roots=rootCode(m[1]||m[2]||m[3]); spans.push({s:m.index,e:m.index+m[0].length,k:"root",t:"Raíces"}); }
+  if((m=firstMatch(STICK_RE,U,a,b))){ out.stick={NO:"NS",LIGERAMENTE:"SS",MUY:"VS"}[m[1]]||"S"; spans.push({s:m.index,e:m.index+m[0].length,k:"stick",t:"Adhesividad"}); }
+  return {out,spans};
 }
 function parseProfile(text){
-  const meta={}, T=text;
-  const grab=(lab,key)=>{ const m=new RegExp(lab+"\\s*:\\s*([^\\n]+)","i").exec(deacc(T)); if(m){ const idx=m.index+m[0].indexOf(m[1]); meta[key]=T.substr(idx,m[1].length).trim(); } };
-  grab("MATERIAL ORIGINAL","p_parent"); grab("POSICION FISIOGRAFICA","p_pos"); grab("CLASIFICACION","p_class");
-  const re=/^[ \t]*(?:([A-Z][A-Za-z0-9]{0,5})[ \t]+)?(\d{1,3})\s*[-–]\s*(\d{0,3})\s*CM/gim;
+  const U=fold(text), meta={}, spans=[];
+  [["MATERIAL\\s+ORIGINAL","p_parent"],["POSICION\\s+FISIOGRAFICA","p_pos"],["CLASIFICACION","p_class"]].forEach(([lab,key])=>{
+    const m=new RegExp(lab+"\\s*:\\s*([^\\n]+)").exec(U);
+    if(m){ const s=m.index+m[0].length-m[1].length; meta[key]=text.substr(s,m[1].length).replace(/^[\s—–\-:;.,]+|[\s;.,]+$/g,""); spans.push({s,e:s+m[1].length,k:"meta",t:"Dato del perfil"}); }
+  });
+  // El código admite símbolos sueltos: el OCR a veces lee «AC2» como «AC?».
+  const re=/^[ \t]*(?:([A-Z][^\s]{0,5})[ \t]+)?(\d{1,3})\s*[-–]\s*(\d{0,3})\s*CM\b/gm;
   const hits=[]; let m;
-  while((m=re.exec(T))) hits.push({i:m.index, code:m[1]||`H${hits.length+1}`, top:m[2], bot:m[3]});
-  const hz=hits.map((h,k)=>{ const body=T.slice(h.i, k+1<hits.length?hits[k+1].i:T.length); const cut=body.search(/\n\s*REFERENCIA/i); return {code:h.code.toUpperCase(), depth:`${h.top}-${h.bot||""}`, text:cut>0?body.slice(0,cut):body}; });
-  if(!hz.length && T.trim()) hz.push({code:"H1",depth:"",text:T});
-  return {meta,hz};
+  while((m=re.exec(U))) hits.push({i:m.index,e:m.index+m[0].length,code:m[1]||`H${hits.length+1}`,top:m[2],bot:m[3]});
+  const refCut=(()=>{ const r=/\n\s*REFERENCIA/.exec(U); return r?r.index:text.length; })();
+  const hz=hits.map((h,k)=>{
+    const b=Math.min(k+1<hits.length?hits[k+1].i:text.length, h.i<refCut?refCut:text.length);
+    const r=parseHorizon(U,h.i,b);
+    return {code:h.code, depth:`${h.top}–${h.bot}`, head:{s:h.i,e:h.e}, out:r.out, spans:r.spans};
+  });
+  if(!hz.length && text.trim()){ const r=parseHorizon(U,0,text.length); hz.push({code:"—",depth:"",head:null,out:r.out,spans:r.spans}); }
+  return {text,meta,spans,hz};
 }
-let parsed=null;
+
+let parsed=null, active=0;
+const HZ_KEYS=["dryHue","dryValue","dryChroma","moistHue","moistValue","moistChroma","texture","roots","stick"];
+function ensureOption(id,v){ const s=$(id); if(v&&![...s.options].some(o=>o.value===v)) s.add(new Option(v,v)); }
 function applyHorizon(i){
-  const h=parsed.hz[i], r=parseHorizon(h.text), cur=readForm();
-  ["dryHue","dryValue","dryChroma","moistHue","moistValue","moistChroma","texture","roots","stick"].forEach(k=>cur[k]=r.out[k]??"");
-  Object.assign(cur, parsed.meta, {p_hz:h.code, p_depth:h.depth});
-  // valores fuera de las listas: añadir opción
-  ["dryValue","moistValue","dryChroma","moistChroma"].forEach(k=>{ const s=$(k); if(cur[k]&&![...s.options].some(o=>o.value===cur[k])) s.add(new Option(cur[k],cur[k])); });
-  ["dryHue","moistHue"].forEach(k=>{ const s=$(k); if(cur[k]&&![...s.options].some(o=>o.value===cur[k])) s.add(new Option(cur[k],cur[k])); });
+  active=i; const h=parsed.hz[i], cur=readForm();
+  HZ_KEYS.forEach(k=>{ cur[k]=h.out[k]??""; ensureOption(k,cur[k]); });
+  Object.assign(cur, parsed.meta, {p_hz:h.code, p_depth:h.depth.replace("–","-")});
   writeForm(cur);
-  document.querySelectorAll("#hzList button").forEach((b,j)=>b.setAttribute("aria-pressed", j===i));
-  $("parsedInfo").innerHTML = r.found.length ? `Horizonte <b>${h.code}</b> (${h.depth} cm): ${r.found.map(x=>`<b>${x}</b>`).join(", ")}.` + (r.found.some(x=>x.startsWith("adhesividad"))?"":" No se encontró adhesividad; complétala si la conoces.") : `No se reconocieron indicadores en el horizonte ${h.code}.`;
+  $("hzTable").querySelectorAll("tbody tr").forEach((tr,j)=>tr.classList.toggle("on",j===i));
+  const miss=[]; if(!h.out.dryHue) miss.push("color en seco"); if(!h.out.moistHue) miss.push("color en húmedo"); if(!h.out.texture) miss.push("textura"); if(!h.out.roots) miss.push("raíces"); if(!h.out.stick) miss.push("adhesividad");
+  $("parsedInfo").innerHTML = `Se usa el horizonte <b>${esc(h.code)}</b>${h.depth?` (${esc(h.depth)} cm)`:""}.` + (miss.length?` Falta en la ficha: ${miss.join(", ")}; puedes añadirlo en la tabla.`:" Tiene los cinco datos de campo.");
   render();
 }
-$("btnParse").onclick=()=>{
-  parsed=parseProfile($("desc").value);
-  if(!parsed.hz.length){ $("hzList").innerHTML=""; $("parsedInfo").textContent="Pega primero el texto de la descripción."; return; }
-  $("hzList").innerHTML = parsed.hz.map((h,i)=>`<button type="button" data-i="${i}">${h.code} · ${h.depth} cm</button>`).join("");
-  $("hzList").querySelectorAll("button").forEach(b=>b.onclick=()=>applyHorizon(+b.dataset.i));
-  applyHorizon(0);
-};
+function esc(s){ return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+const selHtml=(cats,labels,v,cls)=>`<select class="${v?"":"miss"} ${cls}">`+`<option value="">—</option>`+cats.map((c,i)=>`<option value="${c}"${c===v?" selected":""}>${labels[i]}</option>`).join("")+`</select>`;
+const munTxt=(o,k)=>o[k+"Hue"]?`${o[k+"Hue"]} ${o[k+"Value"]}/${o[k+"Chroma"]}`:"";
+function renderReview(){
+  const P=parsed;
+  $("hzTable").innerHTML = `<thead><tr><th>Horizonte</th><th>Color en seco</th><th>Color en húmedo</th><th>Textura</th><th>Raíces</th><th>Adhesividad</th></tr></thead><tbody>` +
+    P.hz.map((h,i)=>`<tr data-i="${i}">
+      <td class="hzc"><label><input type="radio" name="hzsel" value="${i}"${i===active?" checked":""}>${esc(h.code)} <small>${esc(h.depth)}${h.depth?" cm":""}</small></label></td>
+      ${["dry","moist"].map(k=>`<td><span class="mc"><i style="background:${munsellCss(h.out[k+"Hue"],h.out[k+"Value"],h.out[k+"Chroma"])||"var(--field)"}"></i><input class="mun ${h.out[k+"Hue"]?"":"miss"}" data-k="${k}" value="${munTxt(h.out,k)}" placeholder="10YR 5/3" aria-label="Color ${k==="dry"?"en seco":"en húmedo"} de ${esc(h.code)}"></span></td>`).join("")}
+      <td>${selHtml(BYID.texture.cats,BYID.texture.cats.map((c,j)=>`${c} · ${BYID.texture.labels[j]}`),h.out.texture,"f-texture")}</td>
+      <td>${selHtml(BYID.roots.cats,BYID.roots.labels,h.out.roots,"f-roots")}</td>
+      <td>${selHtml(BYID.stick.cats,BYID.stick.labels,h.out.stick,"f-stick")}</td></tr>`).join("") + `</tbody>`;
+  $("hzTable").querySelectorAll("tbody tr").forEach(tr=>{
+    const i=+tr.dataset.i, h=P.hz[i];
+    tr.querySelector("input[type=radio]").onchange=()=>applyHorizon(i);
+    tr.querySelectorAll("input.mun").forEach(inp=>inp.onchange=()=>{
+      const k=inp.dataset.k, m=/(\d{1,2}(?:[.,]\d)?)\s*(YR|Y|R)\s*(\d(?:[.,]\d)?)\s*\/\s*(\d{1,2}(?:[.,]\d)?)/i.exec(inp.value);
+      if(m){ h.out[k+"Hue"]=m[1].replace(",",".")+m[2].toUpperCase(); h.out[k+"Value"]=m[3].replace(",","."); h.out[k+"Chroma"]=m[4].replace(",","."); }
+      else if(!inp.value.trim()){ delete h.out[k+"Hue"]; delete h.out[k+"Value"]; delete h.out[k+"Chroma"]; }
+      else { inp.setCustomValidity("Escribe el color como 10YR 5/3"); inp.reportValidity(); return; }
+      inp.setCustomValidity(""); renderReview(); if(i===active) applyHorizon(i);
+    });
+    [["f-texture","texture"],["f-roots","roots"],["f-stick","stick"]].forEach(([c,k])=>{
+      const s=tr.querySelector("."+c); s.onchange=()=>{ if(s.value) h.out[k]=s.value; else delete h.out[k]; s.classList.toggle("miss",!s.value); if(i===active) applyHorizon(i); };
+    });
+  });
+  // texto con lo reconocido resaltado
+  const marks=[...P.spans, ...P.hz.flatMap(h=>[...(h.head?[{...h.head,k:"hz",t:"Horizonte"}]:[]), ...h.spans])].sort((a,b)=>a.s-b.s);
+  let html="", pos=0;
+  for(const s of marks){ if(s.s<pos) continue; html+=esc(P.text.slice(pos,s.s)); const t=esc(P.text.slice(s.s,s.e)); html+= s.k==="hz"?`<span class="hzh">${t}</span>`:`<mark class="k-${s.k}" title="${s.t}">${t}</mark>`; pos=s.e; }
+  $("srcView").innerHTML = html + esc(P.text.slice(pos));
+  $("review").hidden=false;
+}
+function readText(text, origin){
+  parsed=parseProfile(text); $("desc").value=text;
+  if(!parsed.hz.length){ setStatus(`No se encontró texto en ${origin}.`, true); $("review").hidden=true; return; }
+  const surf=parsed.hz.findIndex(h=>/^A/.test(h.code)); active=surf<0?0:surf;
+  if(!$("p_name").value || $("p_name").value.startsWith("Ejemplo")) $("p_name").value = /\.[a-z0-9]{2,4}$/i.test(origin) ? origin.replace(/\.[a-z0-9]+$/i,"") : "";
+  renderReview(); applyHorizon(active);
+  setStatus(`${origin}: ${parsed.hz.length} horizonte${parsed.hz.length>1?"s":""} leído${parsed.hz.length>1?"s":""}.`);
+}
+
+/* Estado de lectura */
+function setStatus(msg, err=false, prog=null){
+  $("readStatus").hidden=!msg; $("readStatus").classList.toggle("err",err); $("readMsg").textContent=msg||"";
+  $("readProg").hidden=prog==null; if(prog!=null) $("readProg").firstElementChild.style.width=`${Math.round(prog*100)}%`;
+}
+const loaded={};
+function loadScript(src){ return loaded[src] ||= new Promise((ok,ko)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>{ delete loaded[src]; ko(new Error("No se pudo cargar "+src)); }; document.head.appendChild(s); }); }
+
+/* PDF: texto con pdf.js; si el PDF es un escaneo, se pasa por OCR */
+const PDFJS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+async function pdfToText(buf){
+  setStatus("Abriendo el PDF…",false,0);
+  await loadScript(PDFJS+"pdf.worker.min.js"); await loadScript(PDFJS+"pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+"pdf.worker.min.js";
+  const doc=await pdfjsLib.getDocument({data:buf}).promise, pages=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const tc=await (await doc.getPage(p)).getTextContent(), lines=[];
+    for(const it of tc.items){ if(!it.str) continue; const y=it.transform[5], x=it.transform[4];
+      let L=lines.find(l=>Math.abs(l.y-y)<3); if(!L){ L={y,items:[]}; lines.push(L); } L.items.push({x,w:it.width,s:it.str}); }
+    lines.sort((a,b)=>b.y-a.y);
+    pages.push(lines.map(l=>{ l.items.sort((a,b)=>a.x-b.x); let s="", end=null;
+      for(const it of l.items){ if(end!=null) s+= it.x-end>12 ? "   " : (it.x-end>1.5 && !s.endsWith(" ") && !it.s.startsWith(" ") ? " " : ""); s+=it.s; end=it.x+it.w; }
+      return s; }).join("\n"));
+    setStatus(`Leyendo el PDF… página ${p} de ${doc.numPages}`,false,p/doc.numPages);
+  }
+  const text=pages.join("\n\n");
+  if(text.replace(/\s/g,"").length>40) return text;
+  // PDF escaneado: rasterizar las primeras páginas y reconocer el texto
+  const canv=[];
+  for(let p=1;p<=Math.min(doc.numPages,4);p++){ const pg=await doc.getPage(p), vp=pg.getViewport({scale:2}); const c=document.createElement("canvas"); c.width=vp.width; c.height=vp.height; await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise; canv.push(c); }
+  return ocr(canv);
+}
+/* Imagen: reconocimiento de texto (Tesseract, español) */
+async function ocr(images){
+  setStatus("Preparando el reconocimiento de texto…",false,0);
+  await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+  let part=0;
+  const w=await Tesseract.createWorker("spa",1,{logger:m=>{ if(m.status==="recognizing text") setStatus(`Reconociendo el texto${images.length>1?` (página ${part+1} de ${images.length})`:""}…`,false,(part+m.progress)/images.length); }});
+  const out=[];
+  try{ for(const im of images){ out.push((await w.recognize(im)).data.text); part++; } } finally { w.terminate(); }
+  return out.join("\n\n");
+}
+async function readFile(file){
+  const name=file.name||"la imagen pegada";
+  try{
+    let text;
+    if(/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name)) text=await pdfToText(await file.arrayBuffer());
+    else if(/^image\//.test(file.type)) text=await ocr([file]);
+    else text=await file.text();
+    readText(text, name);
+  }catch(e){
+    console.error(e);
+    setStatus(/^image\//.test(file.type)||/Tesseract|tesseract/.test(String(e))
+      ? "No se pudo reconocer el texto de la imagen aquí: el reconocimiento descarga su modelo de internet y esta página no lo permite. Usa el PDF de la ficha o la versión de la herramienta en el visor."
+      : `No se pudo leer ${name}. Comprueba que es un PDF, una imagen o un texto.`, true);
+  }
+}
+$("file").onchange=e=>{ const f=e.target.files[0]; if(f) readFile(f); e.target.value=""; };
+const drop=$("drop"), card=$("readerCard");
+["dragenter","dragover"].forEach(t=>card.addEventListener(t,e=>{ e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t=>card.addEventListener(t,e=>{ if(t==="dragleave"&&card.contains(e.relatedTarget)) return; drop.classList.remove("over"); }));
+card.addEventListener("drop",e=>{ e.preventDefault(); const f=e.dataTransfer.files[0]; if(f) readFile(f); else { const t=e.dataTransfer.getData("text"); if(t) readText(t,"El texto soltado"); } });
+document.addEventListener("paste",e=>{
+  const tgt=e.target; if(tgt.closest && tgt.closest("input,select,textarea")) return;
+  const f=[...(e.clipboardData?.files||[])][0];
+  if(f){ e.preventDefault(); readFile(f); return; }
+  const t=e.clipboardData?.getData("text"); if(t&&t.trim()){ e.preventDefault(); readText(t,"El texto pegado"); }
+});
+$("btnEditText").onclick=()=>{ const d=$("desc"); d.hidden=!d.hidden; $("btnEditText").textContent=d.hidden?"Corregir el texto":"Ocultar el texto"; if(!d.hidden) d.focus(); };
+let editT; $("desc").addEventListener("input",()=>{ clearTimeout(editT); editT=setTimeout(()=>{ const t=$("desc").value; parsed=parseProfile(t); if(parsed.hz.length){ active=Math.min(active,parsed.hz.length-1); renderReview(); applyHorizon(active); } },400); });
 
 /* ---------- Ejemplo ---------- */
 const EXAMPLE=`MATERIAL ORIGINAL: MARGA (MIOCENO)
@@ -511,11 +685,11 @@ CCA  80- CM.; AMARILLO PÁLIDO (2.5Y7/4), EN SECO, ARCILLOSO; ESTRUCTURA PRISMÁ
 
 REFERENCIA: J. L. MUDARRA ET AL. 1976. ESTUDIO GENERAL DE LOS SUELOS DE SIERRA MORENA Y CUENCA ALTA DEL GUADALQUIVIR.`;
 function loadExample(){
-  writeForm({}); $("desc").value=EXAMPLE; $("btnParse").click();
+  writeForm({}); readText(EXAMPLE,"Ejemplo (perfil de Mudarra, 1961)");
   $("p_name").value="Ejemplo · perfil Mudarra 1961 (sin analítica)"; render();
 }
 $("btnExample").onclick=loadExample;
-$("btnClear").onclick=()=>{ writeForm({}); $("desc").value=""; $("hzList").innerHTML=""; $("parsedInfo").textContent=""; render(); };
+$("btnClear").onclick=()=>{ writeForm({}); $("desc").value=""; parsed=null; $("review").hidden=true; setStatus(""); render(); };
 
 /* ---------- Guardar / exportar ---------- */
 function toast(t){ const el=$("toast"); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2200); }
@@ -571,7 +745,7 @@ function fromQuery(){
 }
 const pre=fromQuery();
 let draft=null; try{ draft=JSON.parse(localStorage.getItem("gsqi.draft")||"null"); }catch(e){}
-if(pre){ writeForm(pre); render(); $("parsedInfo").textContent="Datos analíticos precargados desde el visor. Completa el color, las raíces y la adhesividad del horizonte superficial, o pega su descripción arriba."; }
+if(pre){ writeForm(pre); render(); $("preInfo").hidden=false; $("preInfo").textContent="Datos analíticos precargados desde el visor. Suelta arriba la ficha del perfil para añadir el color, las raíces y la adhesividad, o complétalos a mano."; }
 else if(draft && Object.values(draft).some(v=>v)){ writeForm(draft); render(); } else loadExample();
 </script>
 </body>

@@ -843,10 +843,9 @@ function suelHtml(exps){
   return `<div class="sol-block"><div class="sol-head">Analítica de suelo <span class="iot-sub">media de la finca</span></div><table class="sue-table"><tbody>${rows.join("")}</tbody></table></div>` + gsqiHtml(exps);
 }
 // Índice Global de Salud del Suelo (GSQI, 0–100) — hoja «Global Soil Quality Index (GSQI).xlsx» (J. Calero)
-// y Aranda, Calero et al. (2014). MISMO MODELO que salud-suelo/index.html: si se cambia, cambiarlo en los dos.
+// y Aranda, Calero et al. (2014). MISMO MODELO que salud-suelo/index.html: GSQI_IND lo reescribe sincronizar_visor.py (no editar a mano).
 // Puntuación 0,1–1 por variable según su cuantificación CatPCA (q) y sentido (dir); índice = 100·Σs·w/Σw.
 const GSQI_IND = [
-  // analíticas
   {id:"sand", name:"Arena", unit:"%", dir:1, w:.7479481701326981, managed:false,
    cls:[[2,12],[12,21],[22,31],[32,42],[43,54],[55,84]], q:[-1.293442003170254,-0.6153497919054691,0.06274241935931575,0.7408346306241007,1.4189268418888854,2.0970190531536703]},
   {id:"clay", name:"Arcilla", unit:"%", dir:-1, w:.7256657012257395, managed:false,
@@ -865,7 +864,6 @@ const GSQI_IND = [
    cls:[[0,16],[17,30],[31,42],[43,56],[57,76],[77,78]], q:[-1.36991509288633,-0.711384432814054,-0.05285377274178077,0.6056768873304924,1.2642075474027654,1.9227382074750385]},
   {id:"cec", name:"CIC", sub:"capacidad de intercambio catiónico", unit:"cmol/kg", dir:1, w:.7060633859070911, managed:true,
    cls:[[3.7,4.4],[4.5,12],[12,18],[19,24],[25,30],[31,39],[40,53]], q:[-1.9522823559396008,-1.2887183268225681,-0.6251542977055359,0.03840973141149665,0.7019737605285292,1.3655377896455616,2.029101818762594]},
-  // morfológicas
   {id:"dryValue", name:"Brillo Munsell en seco", sub:"value", dir:-1, w:.8550481402497961, managed:true, kind:"ord",
    cats:["2","2.5","3","3.5","4","4.5","5","5.5","6","6.5","7","7.5","8"],
    q:[-2.4911888104851934,-1.5782346807052337,-1.5782346807052337,-0.40395787521141596,-0.40395787521141596,-0.36220103990667507,0.6180245769693651,0.6639756446205035,0.6639756446205035,0.8561097913641308,1.0009927091031758,1.0009927091031758,1.001]},
@@ -908,6 +906,9 @@ function gsqiUrl(exps){
   const s=SUELO[exps]||{}, f=FINCAS.find(x=>String(x.exps)===String(exps));
   const p=new URLSearchParams({name:`EXPS${String(exps).padStart(2,"0")} · ${f?f.finca:""}`, lut:"Olivar convencional"});
   if(f&&f.municipio) p.set("mun", f.municipio);
+  // posición: centro de los vértices de las zonas de la finca
+  const pts=ZONES.filter(z=>String(z.exps)===String(exps)).flatMap(z=>z.coords||[]);
+  if(pts.length){ p.set("lat",(pts.reduce((a,c)=>a+c[0],0)/pts.length).toFixed(6)); p.set("lon",(pts.reduce((a,c)=>a+c[1],0)/pts.length).toFixed(6)); }
   for(const d of GSQI_IND){ const v=GSQI_KEY[d.id]?s[GSQI_KEY[d.id]]:null; if(v==null) continue; p.set(d.id, d.kind==="num" ? v : (GSQI_TEX[String(v).toLowerCase()]||"")); }
   return "salud-suelo/?"+p.toString();
 }

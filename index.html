@@ -914,7 +914,9 @@ function gsqiUrl(exps){
 }
 function gsqiHtml(exps){
   const r=gsqiFinca(exps); if(!r) return "";
-  const link=`<a class="gsqi-link" href="${gsqiUrl(exps)}" target="_blank" rel="noopener">Completar autodiagnóstico →</a>`;
+  // La herramienta salud-suelo/ está retirada mientras se rediseña: sin enlace hasta que vuelva.
+  const GSQI_HERRAMIENTA=false;
+  const link=GSQI_HERRAMIENTA?`<a class="gsqi-link" href="${gsqiUrl(exps)}" target="_blank" rel="noopener">Completar autodiagnóstico →</a>`:"";
   if(r.cov<.1) return `<div class="sol-block gsqi-block"><div class="sol-head">Salud del suelo · GSQI</div>
     <div class="gsqi-note">Sin datos suficientes para calcular el índice (${r.rows.length} de 15 variables). <b>Medir:</b> ${r.falta.map(esc).join(", ")}.</div>${link}</div>`;
   const col=v=>v<.4?"var(--red)":v<.7?"var(--amber)":"var(--green2)";

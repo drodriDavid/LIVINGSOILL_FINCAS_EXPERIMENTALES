@@ -1,0 +1,1839 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#00666a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Salud del suelo">
+<link rel="icon" type="image/png" href="../assets/logo_brote.png">
+<link rel="apple-touch-icon" href="../assets/logo_brote.png">
+<title>Autodiagnóstico Salud del Suelo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Leaflet 1.9.4 (BSD-2) */
+/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	behavior: url(#default#VML);
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: url(images/layers.png);
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: url(images/layers-2x.png);
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: url(images/marker-icon.png);
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+
+
+</style>
+<style>
+/* Identidad LivingSoiLL (tokens del visor de fincas). Solo tema claro, como el visor.
+   Layout: asistente de una columna centrada (inicio → parcela → observa → laboratorio → resultado)
+   con barra inferior fija de navegación e índice provisional; herramientas técnicas plegadas al final. */
+:root{
+  --soil:#8b6f55; --soil-d:#5e4a39; --green:#00666a; --green-d:#004d50; --green2:#00a86b; --red:#e24444; --amber:#f5a623;
+  --ink:#143331; --muted:#667085; --line:#d8e4df; --paper:#f4f8f6; --panel:#ffffff; --field:#fbfdfc; --soft:#e7f2ee; --soft2:#f2ece5;
+  --k-color:#b5763c; --k-tex:#3f7fb0; --k-root:#2f9a5a; --k-stick:#8a5bb0; --k-meta:#8a8f86;
+  --f-body:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--paper);color:var(--ink);font:15px/1.55 var(--f-body);padding-inline:16px;padding-block:0 120px}
+.wrap{max-width:860px;margin:0 auto}
+a{color:var(--green);font-weight:600}
+button{font:700 14px var(--f-body);border-radius:12px;padding:10px 16px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--green)}
+button:hover{border-color:var(--green)}
+button.pri{border:0;background:var(--green);color:#fff;box-shadow:0 10px 22px rgba(0,102,106,.22)}
+button.pri:hover{background:var(--green-d)}
+button.ghost{border-color:transparent;background:transparent}
+button.ghost:hover{background:var(--soft)}
+input,select,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;min-width:0}
+textarea{font:12.5px/1.45 var(--f-mono);min-height:140px;resize:vertical}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--green2) 55%,transparent);outline-offset:2px}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+/* cabecera */
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 12px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand img{width:132px;height:auto;flex:none}
+.brand span{font-size:13px;font-weight:800;color:var(--green);border-left:1px solid var(--line);padding-left:12px;line-height:1.2}
+@media (max-width:480px){.brand span{display:none}}
+/* pasos */
+.steps{display:flex;gap:6px;margin:4px 0 16px;padding:0;list-style:none}
+.steps li{flex:1;min-width:0}
+.steps button{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:0;border:0;background:none;border-radius:0;color:var(--muted);font-weight:700;font-size:12.5px;text-align:left}
+.steps button::before{content:"";display:block;width:100%;height:5px;border-radius:3px;background:var(--line)}
+.steps button.done::before{background:var(--green2)}
+.steps button[aria-current="step"]{color:var(--green)}
+.steps button[aria-current="step"]::before{background:var(--green)}
+.steps .n{font-family:var(--f-mono);font-weight:500;margin-right:4px}
+@media (max-width:560px){.steps .t{display:none}.steps button{font-size:12px}}
+/* tarjeta de paso */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px 22px;box-shadow:0 8px 24px rgba(20,51,49,.06)}
+@media (max-width:560px){.panel{padding:18px 14px;border-radius:16px}}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--green2)}
+h1,h2{color:var(--ink);font-weight:900;letter-spacing:-.02em;margin:4px 0 6px;text-wrap:balance}
+h1{font-size:clamp(26px,4.6vw,38px);line-height:1.08}
+h2{font-size:clamp(21px,3.4vw,26px);line-height:1.15}
+h3{font-size:16px;font-weight:800;margin:0;color:var(--ink)}
+.lead{color:var(--muted);font-size:16px;max-width:60ch;margin:0 0 18px}
+.q{display:flex;flex-direction:column;gap:10px;padding:18px 0;border-top:1px solid var(--line)}
+.q:first-of-type{border-top:0;padding-top:4px}
+.q-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px}
+.q-help{color:var(--muted);font-size:13.5px;margin:-4px 0 2px;max-width:66ch}
+.skip{font-size:13px;font-weight:600;color:var(--muted);padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:#fff}
+.skip[aria-pressed="true"]{background:var(--soft);color:var(--ink);border-color:var(--green2)}
+/* inicio */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:20px;align-items:center}
+@media (max-width:640px){.hero{grid-template-columns:minmax(0,1fr)}.hero svg{display:none}}
+.plan{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0 20px;padding:0;list-style:none}
+@media (max-width:640px){.plan{grid-template-columns:minmax(0,1fr)}}
+.plan li{background:var(--soft);border-radius:14px;padding:12px 14px;font-size:13.5px;color:var(--ink)}
+.plan b{display:block;font-size:14.5px;margin-bottom:2px}
+.plan .n{font-family:var(--f-mono);color:var(--green2);font-weight:500}
+/* opciones visuales */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.opt{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:12px;border-radius:14px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:500;font-size:13px;line-height:1.35}
+.opt b{font-size:14px;font-weight:800;color:var(--ink)}
+.opt small{color:var(--muted);font-size:12.5px}
+.opt svg{width:100%;height:auto;max-height:70px}
+.opt:hover{border-color:var(--green2)}
+.opt[aria-pressed="true"]{border-color:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 18%,transparent);background:#f6fbf9}
+.opt[aria-pressed="true"]::after{content:"✓";position:absolute;top:8px;right:10px;width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;font-size:13px;display:grid;place-items:center;font-weight:900}
+.group-t{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 -2px}
+.mix{display:flex;width:100%;height:8px;border-radius:4px;overflow:hidden}
+.mix i{display:block;height:100%}
+.mix-legend{display:flex;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.mix-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+/* paleta Munsell */
+.palette{display:grid;grid-template-columns:44px repeat(5,minmax(0,1fr));gap:6px;align-items:center;max-width:520px}
+.palette .ax{font:11px var(--f-mono);color:var(--muted);text-align:center}
+.palette .ay{font:11px var(--f-mono);color:var(--muted);text-align:right;padding-right:4px}
+.chipc{aspect-ratio:1.6;border-radius:9px;border:1.5px solid rgba(0,0,0,.08);padding:0;cursor:pointer;max-width:100%}
+.chipc:hover{transform:scale(1.04)}
+.chipc[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:2px}
+.pal-axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);max-width:520px;padding-left:50px}
+.wetrow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;max-width:470px}
+.wetrow .wl{font:11px var(--f-mono);color:var(--muted);text-align:center;margin-top:3px}
+.chosen{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted)}
+.chosen i{width:28px;height:20px;border-radius:6px;border:1px solid rgba(0,0,0,.1)}
+.chosen b{color:var(--ink)}
+details.exp{font-size:13.5px}
+details.exp>summary{cursor:pointer;color:var(--green);font-weight:700;width:fit-content}
+details.exp[open]>summary{margin-bottom:10px}
+.mini-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;max-width:520px}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f label{font-size:13px;color:var(--muted);font-weight:600}
+/* laboratorio */
+.lab-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px}
+@media (max-width:620px){.lab-grid{grid-template-columns:minmax(0,1fr)}}
+.lab{display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;min-width:0}
+.lab label{font-weight:800;font-size:14px}
+.lab .h{color:var(--muted);font-size:12.5px;line-height:1.35}
+.lab .row{display:flex;align-items:center;gap:8px}
+.lab .inp{position:relative;flex:1;min-width:0}
+.lab .inp input{text-align:right;font-variant-numeric:tabular-nums;font-size:16px}
+.lab .inp span{position:absolute;right:11px;top:50%;transform:translateY(-50%);font:12px var(--f-mono);color:var(--muted);pointer-events:none}
+.score-dot{flex:none;min-width:46px;text-align:center;font-size:12px;font-weight:800;padding:5px 7px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
+.toggle input{width:auto;accent-color:var(--green)}
+.conv{font-size:12px;color:var(--green2);font-weight:700}
+/* resultado */
+.res{display:grid;grid-template-columns:280px minmax(0,1fr);gap:22px;align-items:center}
+@media (max-width:680px){.res{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}}
+.gauge{width:100%;max-width:280px}
+.gauge text{font-family:var(--f-body)}
+.pill{display:inline-block;font-size:13px;font-weight:800;padding:5px 11px;border-radius:999px;color:#fff}
+.verdict{font-size:16px;margin:10px 0 6px}
+.verdict b{font-weight:800}
+.trust{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted);margin-top:6px}
+@media (max-width:680px){.trust{justify-content:center}}
+.trust .bars{display:inline-flex;gap:3px}
+.trust .bars i{width:8px;height:16px;border-radius:2px;background:var(--line)}
+.trust .bars i.on{background:var(--green2)}
+.cols2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px;align-items:start}
+@media (max-width:620px){.cols2{grid-template-columns:minmax(0,1fr)}}
+.box{border-radius:14px;padding:14px 16px;font-size:14px}
+.box h3{margin-bottom:6px;font-size:14.5px}
+.box ul{margin:0;padding-left:18px}
+.box li+li{margin-top:5px}
+.box.good{background:#e9f7f0}
+.box.todo{background:#fdf3e2}
+.box.more{background:var(--soft)}
+.refscale{position:relative;height:66px;margin:22px 8px 6px}
+.refscale .bar{position:absolute;left:0;right:0;top:26px;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--red) 0 40%,var(--amber) 40% 70%,var(--green2) 70% 100%)}
+.refscale .tk{position:absolute;top:18px;width:2px;height:28px;margin-left:-1px;background:var(--ink);opacity:.35}
+.refscale .lb{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted);white-space:nowrap;font-weight:600}
+.refscale .lb.t{top:0}.refscale .lb.b{top:50px}
+.refscale .me{position:absolute;top:16px;width:18px;height:32px;margin-left:-9px;border-radius:6px;background:var(--ink);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+details.more-d{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+details.more-d>summary{cursor:pointer;font-weight:700;color:var(--green)}
+.inds{display:flex;flex-direction:column;gap:7px;margin-top:12px}
+.ind{display:grid;grid-template-columns:minmax(0,1fr) 110px 42px;gap:10px;align-items:center;font-size:13px}
+.ind .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ind .nm small{color:var(--muted);margin-left:6px}
+.ind .track{height:8px;background:var(--soft);border-radius:4px;position:relative;overflow:hidden}
+.ind .fill{position:absolute;inset:0 auto 0 0;border-radius:4px}
+.ind .v{font:12px var(--f-mono);text-align:right}
+.ind.na{opacity:.4}
+.flags{font-size:12.5px;color:#a86b00;margin:10px 0 0;padding-left:18px}
+.saved{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.saved .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:8px;font-size:14px}
+.saved .row button{padding:6px 10px;font-size:13px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+/* mapa */
+.map{height:320px;border-radius:14px;border:1px solid var(--line);overflow:hidden;background:#e9efec;position:relative;z-index:0}
+.map-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-top:8px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.seg button{border:0;border-radius:0;padding:7px 11px;font-size:13px;color:var(--muted);box-shadow:none}
+.seg button[aria-pressed="true"]{background:var(--green);color:#fff}
+.map-note{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.leaflet-container{font-family:var(--f-body)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.two{grid-template-columns:minmax(0,1fr)}}
+/* barra inferior */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:1500;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
+.dock .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.dock .live{flex:1;min-width:0;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.dock .live b{font-size:22px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}
+.dock .live .dot{width:12px;height:12px;margin:0}
+@media (max-width:420px){.dock .live .txt{display:none}}
+/* lector de fichas y lotes */
+.drop{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 14px;border:1.5px dashed var(--line);border-radius:14px;background:var(--field);text-align:center;cursor:pointer;color:var(--muted)}
+.drop strong{color:var(--ink)}
+.drop span{font-size:13px}
+.drop:hover,.drop.over{border-color:var(--green2);background:var(--soft)}
+.drop-ico{width:30px;height:30px;color:var(--green)}
+.read-status{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:10px;font-size:13.5px}
+.read-status.err{color:var(--red)}
+.prog{flex:1;min-width:120px;height:6px;border-radius:3px;background:var(--soft);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--green2)}
+.review{margin-top:14px}
+.review-head,.src-head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.src-head{margin-top:12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;font-size:12.5px;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:6px 7px;text-align:left;vertical-align:middle}
+th{font-weight:800;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+.hzt tr.on td{background:var(--soft)}
+.hzt td.hzc{font-family:var(--f-mono);font-weight:500;white-space:nowrap}
+.hzt td.hzc label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.hzt input[type=radio]{width:auto;accent-color:var(--green)}
+.hzt select,.hzt input.mun{font-size:12.5px;padding:5px 6px;border-radius:8px}
+.hzt select{min-width:110px}
+.hzt input.mun{width:90px;font-family:var(--f-mono)}
+.hzt .mc{display:flex;align-items:center;gap:6px}
+.hzt .mc i{width:18px;height:18px;border-radius:4px;border:1px solid var(--line);flex:none;background:var(--field)}
+.hzt .miss{border-style:dashed;color:var(--muted)}
+.src{font:12px/1.65 var(--f-mono);white-space:pre-wrap;word-break:break-word;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:10px 12px;max-height:220px;overflow:auto;margin-top:8px}
+.src .hzh{font-weight:600;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+mark{color:inherit;border-radius:3px;padding:0 2px}
+mark.k-color{background:color-mix(in srgb,var(--k-color) 26%,transparent)}
+mark.k-tex{background:color-mix(in srgb,var(--k-tex) 24%,transparent)}
+mark.k-root{background:color-mix(in srgb,var(--k-root) 24%,transparent)}
+mark.k-stick{background:color-mix(in srgb,var(--k-stick) 26%,transparent)}
+mark.k-meta{background:color-mix(in srgb,var(--k-meta) 22%,transparent)}
+.parsed{font-size:13px;color:var(--muted);margin-top:8px}
+.parsed b{color:var(--ink)}
+.bt td.idx{font-weight:800;white-space:nowrap}
+.bt td.num{text-align:right;color:var(--muted)}
+.tech{margin-top:26px}
+.tech>summary{cursor:pointer;font-weight:800;color:var(--muted);font-size:14px}
+.tech[open]>summary{margin-bottom:12px}
+.tech .panel{margin-top:12px}
+.prose{max-width:76ch;font-size:13.5px}
+.prose p,.prose li{margin:6px 0}
+.formula{font:12.5px var(--f-mono);background:var(--field);border:1px solid var(--line);border-radius:12px;padding:10px 12px;overflow-x:auto}
+table.mt{min-width:660px}
+td.cls{font-family:var(--f-mono);font-size:11px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:12px;font-size:14px;z-index:2000;box-shadow:0 8px 20px rgba(0,0,0,.2)}
+footer{margin-top:22px;color:var(--muted);font-size:12px}
+[data-step]{animation:none}
+.q{scroll-margin-top:12px}
+.step-now{display:none;margin:-8px 0 12px;font-size:13px;font-weight:800;color:var(--green)}
+.step-now span{color:var(--muted);font-weight:600}
+@media (max-width:560px){
+  input,select,textarea{font-size:16px}
+  .step-now{display:block}
+  .lead{font-size:15px;margin-bottom:12px}
+  .palette{grid-template-columns:26px repeat(5,minmax(0,1fr));gap:5px}
+  .pal-axis{padding-left:31px}
+  .chipc{aspect-ratio:1.1;border-radius:8px}
+  .wetrow{gap:5px}
+  .skip{padding:8px 12px;font-size:13.5px}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .opt{padding:10px;font-size:12.5px}
+  .opt b{font-size:13.5px}
+  .map{height:250px}
+  .q{padding:16px 0}
+  .dock{padding-inline:12px}
+  .dock button{padding:12px 16px}
+  .box{padding:12px 14px}
+  .refscale .lb{font-size:10px}
+}
+@media (prefers-reduced-motion:no-preference){[data-step]:not([hidden]){animation:in .25s ease}@keyframes in{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}.chipc{transition:transform .12s}}
+</style>
+<style>
+.auth-gate { position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#0a3d2b,#125c3f); }
+.auth-gate.hidden { display:none; }
+.auth-card { background:#fff; border-radius:16px; padding:30px 28px; width:min(90vw,340px); box-shadow:0 22px 60px rgba(0,0,0,.4); text-align:center; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+.auth-logo { height:56px; margin-bottom:8px; }
+.auth-card h1 { font-size:18px; color:#0a3d2b; margin:6px 0 2px; }
+.auth-card p { font-size:13px; color:#667085; margin:0 0 16px; }
+.auth-card input { width:100%; box-sizing:border-box; padding:11px 12px; border:1px solid #d8e4df; border-radius:10px; font-size:14px; margin-bottom:10px; }
+.auth-card input:focus { outline:none; border-color:#0a3d2b; box-shadow:0 0 0 3px rgba(10,61,43,.12); }
+.auth-card button { width:100%; padding:11px; border:none; border-radius:10px; background:#0a3d2b; color:#fff; font-weight:800; font-size:14px; cursor:pointer; }
+.auth-card button:hover { background:#125c3f; }
+.auth-err { color:#e24444; font-size:12.5px; font-weight:700; margin-top:8px; }
+</style>
+</head>
+<body>
+<div id="authGate" class="auth-gate">
+  <form id="authForm" class="auth-card" autocomplete="off">
+    <img src="../assets/logo_brote.png" alt="LivingSoiLL" class="auth-logo" onerror="this.style.display='none'">
+    <h1>Autodiagnóstico de salud del suelo</h1>
+    <p>Introduce la contraseña para acceder</p>
+    <input id="authPass" type="password" placeholder="Contraseña" autocomplete="current-password" aria-label="Contraseña">
+    <button type="submit">Entrar</button>
+    <div id="authErr" class="auth-err" hidden>Contraseña incorrecta</div>
+  </form>
+</div>
+<script>
+(function(){
+  var HASH='52887f7c364fedf664ecaf5e24953ea653a3d24b9046fdd480c88b0d6aa0f628', KEY='gsqi_auth_v1';
+  var gate=document.getElementById('authGate');
+  function unlock(){ gate.classList.add('hidden'); gate.setAttribute('aria-hidden','true'); }
+  try { if(localStorage.getItem(KEY)===HASH){ unlock(); return; } } catch(_){}
+  async function sha(s){ var b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0');}).join(''); }
+  var form=document.getElementById('authForm'), inp=document.getElementById('authPass'), err=document.getElementById('authErr');
+  form.addEventListener('submit', async function(e){ e.preventDefault(); err.hidden=true;
+    var h; try{ h=await sha(inp.value); }catch(_){ h=null; }
+    if(h===HASH){ try{ localStorage.setItem(KEY,HASH); }catch(_){} unlock(); }
+    else { err.hidden=false; inp.value=''; inp.focus(); }
+  });
+  setTimeout(function(){ try{ inp.focus(); }catch(_){} }, 60);
+})();
+</script>
+<div class="wrap">
+<header class="top">
+  <div class="brand"><img alt="LivingSoiLL" src="data:image/png;base64,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"><span>Autodiagnóstico<br>de salud del suelo</span></div>
+  <button type="button" class="ghost" id="btnRestart" hidden>Empezar de nuevo</button>
+</header>
+
+<ol class="steps" id="steps" hidden>
+  <li><button type="button" data-go="1"><span><span class="n">1</span><span class="t">Tu parcela</span></span></button></li>
+  <li><button type="button" data-go="2"><span><span class="n">2</span><span class="t">Observa el suelo</span></span></button></li>
+  <li><button type="button" data-go="3"><span><span class="n">3</span><span class="t">Análisis</span></span></button></li>
+  <li><button type="button" data-go="4"><span><span class="n">4</span><span class="t">Resultado</span></span></button></li>
+</ol>
+<p class="step-now" id="stepNow" hidden></p>
+
+<!-- 0 · inicio -->
+<section class="panel" data-step="0">
+  <div class="hero">
+    <div>
+      <div class="eyebrow">Living Lab Andaluz</div>
+      <h1>¿Cómo está la salud de tu suelo?</h1>
+      <p class="lead">Contesta unas preguntas sobre lo que ves en tu parcela y, si lo tienes, tu análisis de laboratorio. Te damos una nota de 0 a 100 y qué puedes hacer para mejorarla.</p>
+    </div>
+    <svg viewBox="0 0 220 170" aria-hidden="true">
+      <rect x="10" y="62" width="200" height="98" rx="14" fill="#8b6f55"/>
+      <rect x="10" y="62" width="200" height="30" rx="14" fill="#5e4a39"/>
+      <rect x="10" y="80" width="200" height="12" fill="#5e4a39"/>
+      <g stroke="#e9dccb" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".9">
+        <path d="M70 92c-4 14 6 22 0 38s4 18 2 24"/><path d="M70 110c-12 6-16 14-20 24"/><path d="M110 92c4 12-4 22 2 36"/><path d="M150 92c-6 10 4 20-2 34s6 16 4 22"/><path d="M150 112c10 4 16 12 18 22"/>
+      </g>
+      <g fill="#c9b49a"><circle cx="40" cy="120" r="4"/><circle cx="185" cy="140" r="5"/><circle cx="125" cy="146" r="3"/><circle cx="95" cy="128" r="2.5"/></g>
+      <path d="M110 62c0-24 0-34 0-40" stroke="#00666a" stroke-width="5" stroke-linecap="round"/>
+      <path d="M110 34c-22-2-34-14-36-30 20 0 34 10 36 30z" fill="#00a86b"/>
+      <path d="M110 44c18-4 28-16 30-30-18 2-28 12-30 30z" fill="#00666a"/>
+    </svg>
+  </div>
+  <ul class="plan">
+    <li><span class="n">1</span><b>Tu parcela</b>Sitúala en el mapa (opcional).</li>
+    <li><span class="n">2</span><b>Observa el suelo</b>Color, tacto y raíces de un puñado de tierra.</li>
+    <li><span class="n">3</span><b>Tu análisis</b>Copia los datos del boletín si lo tienes.</li>
+  </ul>
+  <div class="btns"><button type="button" class="pri" id="btnStart">Empezar · 5 minutos</button><button type="button" id="btnExample">Ver un ejemplo</button></div>
+  <div id="homeSaved" hidden style="margin-top:22px">
+    <h3>Tus diagnósticos</h3>
+    <div class="saved" id="savedHome"></div>
+  </div>
+</section>
+
+<!-- 1 · parcela -->
+<section class="panel" data-step="1" hidden>
+  <div class="eyebrow">Paso 1 de 3</div>
+  <h2>Tu parcela</h2>
+  <p class="lead">Ponle un nombre y, si quieres, márcala en el mapa. Así podrás comparar parcelas y campañas.</p>
+  <div class="two">
+    <div class="f"><label for="p_name">Nombre de la parcela</label><input id="p_name" data-bind placeholder="Ej.: Olivar de la Loma"></div>
+    <div class="f"><label for="p_lut">¿Qué hay en la parcela?</label><select id="p_lut" data-bind>
+      <option value="">—</option><option>Olivar convencional</option><option>Olivar ecológico</option><option>Cultivo herbáceo</option><option>Pastizal / erial degradado</option><option>Espartal</option><option>Matorral mediterráneo</option><option>Bosque / dehesa mediterránea</option><option>Pinar de repoblación</option><option>Bosque poco alterado</option><option>Otro</option></select></div>
+  </div>
+  <div class="q" style="padding-bottom:0">
+    <div class="q-head"><h3>¿Dónde está?</h3><span class="btns"><button type="button" id="btnLocate">Usar mi ubicación</button></span></div>
+    <p class="q-help">Toca el mapa en el punto donde cogiste la muestra.</p>
+    <div class="map" id="map" role="application" aria-label="Mapa para situar la parcela"></div>
+    <div class="map-bar">
+      <span class="seg" id="baseSeg"><button type="button" data-base="pnoa" aria-pressed="true">Foto aérea</button><button type="button" data-base="ign">Mapa</button></span>
+      <span class="map-note" id="mapCoords"></span>
+    </div>
+    <p class="map-note" id="mapNote" hidden></p>
+    <details class="exp"><summary>Escribir coordenadas</summary>
+      <div class="mini-fields">
+        <div class="f"><label for="p_x">X UTM (m)</label><input id="p_x" data-bind data-coord="utm" inputmode="decimal"></div>
+        <div class="f"><label for="p_y">Y UTM (m)</label><input id="p_y" data-bind data-coord="utm" inputmode="decimal"></div>
+        <div class="f"><label for="p_zone">Huso</label><select id="p_zone" data-bind data-coord="ll"><option value="30">30</option><option value="29">29</option></select></div>
+        <div class="f"><label for="p_lat">Latitud</label><input id="p_lat" data-bind data-coord="ll" inputmode="decimal"></div>
+        <div class="f"><label for="p_lon">Longitud</label><input id="p_lon" data-bind data-coord="ll" inputmode="decimal"></div>
+        <div class="f"><label for="p_mun">Municipio</label><input id="p_mun" data-bind></div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- 2 · observa -->
+<section class="panel" data-step="2" hidden>
+  <div class="eyebrow">Paso 2 de 3</div>
+  <h2>Observa tu suelo</h2>
+  <p class="lead">Coge un puñado de tierra de los primeros 20 cm, sin piedras ni restos. Si no sabes contestar alguna pregunta, sáltala.</p>
+
+  <div class="q">
+    <div class="q-head"><h3>¿De qué color es la tierra seca?</h3><button type="button" class="skip" data-clear="dryHue,dryValue">No lo sé</button></div>
+    <p class="q-help">Compara un terrón seco con estos colores, a la luz del día, y toca el más parecido.</p>
+    <div class="pal-axis"><span>← más amarillento</span><span>más rojizo →</span></div>
+    <div class="palette" id="dryPal"></div>
+    <div class="chosen" id="dryChosen"></div>
+    <details class="exp"><summary>Tengo el código Munsell</summary>
+      <div class="mini-fields"><div class="f"><label for="dryHue">Matiz (hue)</label><select id="dryHue" data-bind></select></div><div class="f"><label for="dryValue">Brillo en seco (value)</label><select id="dryValue" data-bind></select></div><div class="f"><label for="moistValue">Brillo en húmedo</label><select id="moistValue" data-bind></select></div></div>
+    </details>
+  </div>
+
+  <div class="q">
+    <div class="q-head"><h3>¿Y mojada?</h3><button type="button" class="skip" data-clear="moistValue">No lo sé</button></div>
+    <p class="q-help">Moja el terrón con unas gotas de agua y vuelve a comparar. Mojada siempre se ve más oscura.</p>
+    <div class="wetrow" id="wetRow"></div>
+  </div>
+
+  <div class="q">
+    <div class="q-head"><h3>¿Qué se nota al tacto?</h3><button type="button" class="skip" data-clear="texture">No lo sé</button></div>
+    <p class="q-help">Humedece un poco de tierra hasta que parezca masilla, apriétala entre el pulgar y el índice y trata de hacer una cinta.</p>
+    <div class="mix-legend"><span><i style="background:#d9b26f"></i>arena</span><span><i style="background:#a98a6a"></i>limo</span><span><i style="background:#6e4f3a"></i>arcilla</span></div>
+    <div id="texCards"></div>
+  </div>
+
+  <div class="q">
+    <div class="q-head"><h3>¿Cuántas raíces ves?</h3><button type="button" class="skip" data-clear="roots">No lo sé</button></div>
+    <p class="q-help">Mira la pared del hoyo o un terrón partido en los primeros centímetros.</p>
+    <div class="cards" id="rootCards"></div>
+  </div>
+
+  <div class="q">
+    <div class="q-head"><h3>¿Se pega a los dedos?</h3><button type="button" class="skip" data-clear="stick">No lo sé</button></div>
+    <p class="q-help">Con la tierra bien mojada, apriétala entre los dedos y sepáralos despacio.</p>
+    <div class="cards" id="stickCards"></div>
+  </div>
+
+  <details class="exp q" id="readerCard"><summary>¿Tienes la ficha de un perfil de suelo? Léela automáticamente</summary>
+    <p class="q-help">Sirve una ficha del <a href="https://www.juntadeandalucia.es/medioambiente/documentos_tecnicos/catalogo2/catalogo_ind.html" target="_blank" rel="noopener">Catálogo de Suelos de Andalucía</a>, de una memoria LUCDEME o tu propia descripción, en PDF o foto.</p>
+    <label class="drop" id="drop" for="file">
+      <input type="file" id="file" accept=".pdf,application/pdf,image/*,.txt,text/plain" hidden>
+      <svg class="drop-ico" viewBox="0 0 40 40" aria-hidden="true"><rect x="9" y="4" width="22" height="32" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 13h22M9 22h22M9 29h22" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+      <strong>Suelta aquí el PDF o la foto de la ficha</strong><span>o toca para elegir el archivo</span>
+    </label>
+    <div class="read-status" id="readStatus" hidden><span id="readMsg"></span><span class="prog" id="readProg" hidden><i></i></span></div>
+    <div class="review" id="review" hidden>
+      <div class="review-head"><h3>Horizontes encontrados</h3><span class="legend"><mark class="k-color">color</mark><mark class="k-tex">textura</mark><mark class="k-root">raíces</mark><mark class="k-stick">adhesividad</mark></span></div>
+      <div class="tbl" style="margin-top:8px"><table class="hzt" id="hzTable"></table></div>
+      <p class="parsed" id="parsedInfo"></p>
+      <div class="src-head"><h3>Texto leído</h3><button type="button" id="btnEditText">Corregir el texto</button></div>
+      <div class="src" id="srcView"></div>
+    </div>
+    <textarea id="desc" spellcheck="false" hidden aria-label="Texto de la ficha"></textarea>
+  </details>
+</section>
+
+<!-- 3 · laboratorio -->
+<section class="panel" data-step="3" hidden>
+  <div class="eyebrow">Paso 3 de 3 · opcional</div>
+  <h2>Tu análisis de laboratorio</h2>
+  <p class="lead">Si tienes un boletín de análisis de suelo, copia los valores que aparezcan. Deja en blanco lo que no tengas: cuantos más datos, más fiable el resultado.</p>
+  <div class="lab-grid" id="labGrid"></div>
+</section>
+
+<!-- 4 · resultado -->
+<section class="panel" data-step="4" hidden>
+  <div class="eyebrow">Resultado</div>
+  <div class="res">
+    <svg class="gauge" id="gauge" viewBox="0 0 240 150" role="img" aria-label="Índice de salud del suelo"></svg>
+    <div>
+      <h2 id="resTitle">Índice de salud del suelo</h2>
+      <span class="pill" id="resPill"></span>
+      <p class="verdict" id="resVerdict"></p>
+      <div class="trust" id="resTrust"></div>
+    </div>
+  </div>
+  <div class="refscale" id="refScale"></div>
+  <div class="cols2">
+    <div class="box good" id="resGood"></div>
+    <div class="box todo" id="resTodo"></div>
+  </div>
+  <div class="box more" id="resMore" style="margin-top:12px" hidden></div>
+  <ul class="flags" id="flags"></ul>
+  <details class="more-d"><summary>Ver la nota de cada dato</summary><div class="inds" id="inds"></div></details>
+  <div class="btns" style="margin-top:20px">
+    <button type="button" class="pri" id="btnSave">Guardar diagnóstico</button>
+    <button type="button" id="btnShare">Copiar resumen para WhatsApp</button>
+    <button type="button" id="btnNew">Nuevo diagnóstico</button>
+  </div>
+  <div style="margin-top:22px"><h3>Tus diagnósticos</h3><div class="saved" id="savedList"></div></div>
+</section>
+
+<details class="tech" id="techCard">
+  <summary>Herramientas para técnicos: varias muestras, exportar y método de cálculo</summary>
+  <section class="panel" id="batchCard">
+    <h3>Calcular varias muestras (Excel o CSV)</h3>
+    <p class="q-help" style="margin-top:6px">Una fila por muestra y una columna por variable; los nombres de columna y las categorías se reconocen en español o en inglés. Si hay coordenadas, las muestras aparecen en el mapa del paso 1.</p>
+    <label class="drop" id="bdrop" for="bfile">
+      <input type="file" id="bfile" accept=".xlsx,.xls,.csv,.tsv,.txt" hidden>
+      <svg class="drop-ico" viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="7" width="30" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 15h30M5 22h30M5 29h30M15 7v26M25 7v26" stroke="currentColor" stroke-width="1.4" fill="none" opacity=".6"/></svg>
+      <strong>Suelta aquí la hoja de muestras</strong><span>.xlsx, .xls o .csv · o toca para elegirla</span>
+    </label>
+    <div class="btns" style="margin-top:10px"><button type="button" id="btnBatchExample">Probar con un ejemplo</button><button type="button" id="btnTemplate">Copiar plantilla</button><button type="button" id="btnCsv">Copiar el diagnóstico actual (CSV)</button><button type="button" id="btnJson">Copiar JSON</button></div>
+    <div class="read-status" id="bStatus" hidden><span id="bMsg"></span></div>
+    <div id="bOut" hidden style="margin-top:12px">
+      <div class="tbl"><table class="bt" id="bTable"></table></div>
+      <div class="btns" style="margin-top:10px"><button type="button" class="pri" id="btnBatchCsv">Copiar resultados (CSV)</button><button type="button" id="btnBatchSave">Guardar todas</button></div>
+    </div>
+  </section>
+  <section class="panel" id="method">
+    <h3>Cómo se calcula</h3>
+    <div class="prose">
+      <p>Método de Aranda, Calero, Comino, Montejo y Serrano (2014) con la hoja «Global Soil Quality Index (GSQI).xlsx» de J. Calero. Cada dato se lleva a una categoría con una cuantificación óptima <span class="mono">q</span> (CatPCA sobre 131 perfiles de Jaén), que se normaliza a una puntuación entre 0,1 y 1:</p>
+      <div class="formula">s = 0,1 + 0,9 · (q − q<sub>min</sub>) / (q<sub>max</sub> − q<sub>min</sub>) &nbsp; (más es mejor)<br>s = 1,1 − s<sub>más es mejor</sub> &nbsp; (menos es mejor)<br>Índice = 100 · Σ s<sub>j</sub>·w<sub>j</sub> / Σ w<sub>j</sub> &nbsp; (sobre los datos disponibles; w = VAF<sub>j</sub>)</div>
+      <p>Correcciones respecto a la hoja, pendientes de confirmar con Edafología: reescalado final ponderado (la hoja no pasa de ~71), matiz 5YR = 1 (la hoja da 1,12), brillo en seco 6.5–7.5 sin desplazar, límites de clase según las etiquetas y valores fuera de rango asignados al intervalo extremo. Con los datos de ejemplo de la hoja, esta da <b>52,4</b> y la herramienta <b id="xlsCheck">—</b>.</p>
+    </div>
+    <div class="tbl" style="margin-top:12px"><table class="mt" id="methodTable"></table></div>
+  </section>
+</details>
+
+<footer>LivingSoiLL · Living Lab Andaluz. Método: Aranda, Calero, Comino, Montejo y Serrano (2014); Proyecto de Innovación Docente PID15B, Universidad de Jaén. Cartografía: PNOA e IGN.</footer>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <div class="in">
+    <button type="button" id="btnPrev">Atrás</button>
+    <div class="live"><span class="dot" id="liveDot"></span><b id="liveIdx">—</b><span class="txt" id="liveTxt">nota provisional</span></div>
+    <button type="button" class="pri" id="btnNext">Siguiente</button>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+/* @@PURO-INICIO — sin DOM: lo ejecutan también las pruebas (test.js) y el visor (sincronizar_visor.py) */
+/* ---------- Modelo: hoja «Global Soil Quality Index (GSQI).xlsx» (J. Calero) ---------- */
+// dir: +1 más es mejor, −1 menos es mejor · w: VAF_j · q: cuantificación óptima CatPCA por categoría
+const IND = [
+  {id:"sand", name:"Arena", unit:"%", dir:1, w:.7479481701326981, managed:false,
+   cls:[[2,12],[12,21],[22,31],[32,42],[43,54],[55,84]], q:[-1.293442003170254,-0.6153497919054691,0.06274241935931575,0.7408346306241007,1.4189268418888854,2.0970190531536703]},
+  {id:"clay", name:"Arcilla", unit:"%", dir:-1, w:.7256657012257395, managed:false,
+   cls:[[4,13],[14,23],[24,31],[32,38],[39,47],[48,57],[58,82]], q:[-1.9658665615248951,-1.2901419768197897,-0.6144173921146842,0.061307192590421514,0.7370317772955272,1.4127563620006327,2.0884809467057384]},
+  {id:"bd", name:"Densidad aparente", unit:"g/cm³", dir:1, w:.9565915764478402, managed:true,
+   cls:[[0.95,1.10],[1.11,1.38],[1.39,1.44],[1.45,1.49],[1.50,1.55],[1.56,1.64]], q:[-2.774897037032311,-1.8803346258682785,-0.9857722147042461,-0.0912098035402135,0.803352607623819,1.697915018787852]},
+  {id:"w33", name:"Humedad a 33 kPa", sub:"capacidad de campo", unit:"%", dir:1, w:.8433516093889986, managed:true,
+   cls:[[8,17],[18,22],[23,27],[28,32],[33,38],[39,42],[43,57]], q:[-1.9954795814898514,-1.3207251780761555,-0.6459707746624594,0.02878362875123676,0.7035380321649328,1.378292435578629,2.053046838992325]},
+  {id:"w1500", name:"Humedad a 1500 kPa", sub:"punto de marchitez", unit:"%", dir:1, w:.80355450297066, managed:true,
+   cls:[[1,6],[7,10],[11,15],[16,18],[19,21],[22,25],[26,35]], q:[-1.9522823559396008,-1.2887183268225681,-0.6251542977055359,0.03840973141149665,0.7019737605285292,1.3655377896455616,2.029101818762594]},
+  {id:"oc", name:"Carbono orgánico", unit:"%", dir:1, w:.7666385668621443, managed:true,
+   cls:[[0.1,0.2],[0.3,1.5],[1.6,2.8],[2.9,4.2],[4.3,5.9],[6.1,13.8]], q:[-1.369199538568743,-0.6442820421520474,0.08063545426464806,0.8055529506813437,1.5304704470980393,2.2553879435147346]},
+  {id:"ntot", name:"Nitrógeno total", unit:"%", dir:1, w:.9225501838478646, managed:true,
+   cls:[[0.012,0.120],[0.121,0.230],[0.231,0.250],[0.251,0.400],[0.401,1.520]], q:[-0.7359881111618596,0.146250176947745,1.0284884650573498,1.9107267531669545,2.792965041276559]},
+  {id:"caco3", name:"Carbonatos", sub:"CaCO₃ equivalente", unit:"%", dir:-1, w:.5871118977795764, managed:false,
+   cls:[[0,16],[17,30],[31,42],[43,56],[57,76],[77,78]], q:[-1.36991509288633,-0.711384432814054,-0.05285377274178077,0.6056768873304924,1.2642075474027654,1.9227382074750385]},
+  {id:"cec", name:"CIC", sub:"capacidad de intercambio catiónico", unit:"cmol/kg", dir:1, w:.7060633859070911, managed:true,
+   cls:[[3.7,4.4],[4.5,12],[12,18],[19,24],[25,30],[31,39],[40,53]], q:[-1.9522823559396008,-1.2887183268225681,-0.6251542977055359,0.03840973141149665,0.7019737605285292,1.3655377896455616,2.029101818762594]},
+  {id:"dryValue", name:"Brillo Munsell en seco", sub:"value", dir:-1, w:.8550481402497961, managed:true, kind:"ord",
+   cats:["2","2.5","3","3.5","4","4.5","5","5.5","6","6.5","7","7.5","8"],
+   q:[-2.4911888104851934,-1.5782346807052337,-1.5782346807052337,-0.40395787521141596,-0.40395787521141596,-0.36220103990667507,0.6180245769693651,0.6639756446205035,0.6639756446205035,0.8561097913641308,1.0009927091031758,1.0009927091031758,1.001]},
+  {id:"moistValue", name:"Brillo Munsell en húmedo", sub:"value", dir:-1, w:.8863164163844558, managed:true, kind:"ord",
+   cats:["1.5","2","2.5","3","3.5","4","4.5","5","5.5","6","6.5","7"],
+   q:[-1.91981911352823,-1.9183162859030396,-1.442526004418897,-1.442526004418897,-0.3147989839782885,-0.1868935780062311,0.5803221140517115,0.6995100598168723,0.8800884535908337,0.8853433384881392,1.1015253786562373,1.1659727926192298]},
+  {id:"dryHue", name:"Matiz Munsell en seco", sub:"hue", dir:1, w:.2965690859311225, managed:false, kind:"nom",
+   cats:["2.5Y","10YR","7.5YR","5YR","2.5YR"], q:[-1.6826982981255005,-0.30954638265272777,0.9391166035854283,2.3301729833486604,1.857303197310169]},
+  {id:"texture", name:"Clase textural", sub:"USDA", dir:1, w:.8001965135497339, managed:false, kind:"nom",
+   cats:["C","SiC","Si","SiCL","SC","SiL","CL","L","SCL","SL","LS","S"],
+   labels:["Arcillosa","Arcillo-limosa","Limosa","Franco-arcillo-limosa","Arcillo-arenosa","Franco-limosa","Franco-arcillosa","Franca","Franco-arcillo-arenosa","Franco-arenosa","Arenoso-franca","Arenosa"],
+   q:[-0.9974511110656697,-0.840609826348694,-0.840609826348694,-0.3413571966839059,-0.2813658345843171,-0.09435340258562727,0.07351998945810793,0.6424531582852481,1.080109059492798,2.533869022211039,3.387771807889188,3.387771807889188]},
+  {id:"stick", name:"Adhesividad", sub:"stickiness", dir:-1, w:.19825136264362156, managed:false, kind:"ord",
+   cats:["NS","SS","S","VS"], labels:["No adherente","Ligeramente adherente","Adherente","Muy adherente"], q:[-1.852852831736085,-0.6747090928942296,0.9821333942712702,0.9821333942712702]},
+  {id:"roots", name:"Abundancia de raíces", dir:1, w:.5621580710988435, managed:true, kind:"ord",
+   cats:["VF","F","C","M"], labels:["Muy pocas","Pocas","Frecuentes","Abundantes"], q:[-0.5990018677686478,-0.5990018677686478,-0.47541376505867483,1.8856153071579427]},
+];
+IND.forEach(d=>{ d.kind ||= "num"; const mn=Math.min(...d.q), mx=Math.max(...d.q); d.s=d.q.map(q=>{ const m=.1+.9*(q-mn)/(mx-mn); return d.dir>0?m:1.1-m; }); });
+const BYID=Object.fromEntries(IND.map(d=>[d.id,d]));
+const W_ALL=IND.reduce((a,d)=>a+d.w,0);
+const LUT=[ // tabla IV (GSQI medio por uso del suelo, ×100)
+  {k:"COG",v:26.3,n:"Olivar convencional"},{k:"HC",v:27.8,n:"Cultivo herbáceo"},{k:"PDG",v:52.8,n:"Pastizal degradado"},
+  {k:"MXS",v:60.9,n:"Matorral mediterráneo"},{k:"MXW",v:67.3,n:"Bosque mediterráneo"},{k:"PPF",v:73.2,n:"Pinar de repoblación"},
+  {k:"AG",v:89.9,n:"Espartal"},{k:"LDF",v:94.0,n:"Bosque poco alterado"}];
+
+const num=v=>{ if(v==null) return null; const x=parseFloat(String(v).trim().replace(",",".")); return isNaN(x)?null:x; };
+const fmt=(v,d=1)=>v.toFixed(d).replace(".",",");
+const fold=s=>String(s).replace(/[^\u0000-\u007f]/g,c=>{ const b=c.normalize("NFD")[0]; return b.length===1?b:c; }).replace(/[a-z]/g,c=>c.toUpperCase());
+
+function classify(d,raw){
+  if(raw===""||raw==null) return null;
+  if(d.kind!=="num"){ const i=d.cats.indexOf(String(raw)); return i<0?{bad:true}:{i,label:d.labels?d.labels[i]:String(raw)}; }
+  const v=num(raw); if(v==null) return {bad:true};
+  const c=d.cls; let i=0;
+  for(;i<c.length-1;i++) if(v<=(c[i][1]+c[i+1][0])/2) break;
+  const note=(v<c[0][0]||v>c[c.length-1][1])?`${d.name} ${String(raw).replace(".",",")} ${d.unit}: fuera de los intervalos de referencia (${c[0][0]}–${c[c.length-1][1]}); se usa el extremo.`:"";
+  return {i,label:`${raw} ${d.unit}`,cls:`${c[i][0]}–${c[i][1]}`,note};
+}
+// Índice 0–100 sobre las variables con dato: 100·Σs·w/Σw
+function compute(form){
+  const rows=[],flags=[]; let sw=0,sws=0;
+  for(const d of IND){
+    const r=classify(d,form[d.id]);
+    if(r&&r.bad){ flags.push(`${d.name}: «${form[d.id]}» no es un valor válido.`); rows.push({d,s:null}); continue; }
+    if(!r){ rows.push({d,s:null}); continue; }
+    const s=d.s[r.i]; sw+=d.w; sws+=s*d.w; if(r.note) flags.push(r.note);
+    rows.push({d,s,label:r.label,cls:r.cls});
+  }
+  const sand=num(form.sand), clay=num(form.clay);
+  if(sand!=null&&clay!=null&&sand+clay>100) flags.push(`Arena + arcilla suman ${fmt(sand+clay)} %, revisa la granulometría.`);
+  return {idx: sw?100*sws/sw:null, cov:sw/W_ALL, n:rows.filter(r=>r.s!=null).length, rows, flags};
+}
+function stateOf(idx){ if(idx==null) return null; return idx<40?{t:"Salud baja",c:"var(--red)"}:idx<70?{t:"Salud media",c:"#c98500"}:{t:"Salud alta",c:"var(--green2)"}; }
+
+/* ---------- Coordenadas: UTM ETRS89 ↔ geográficas (GRS80) ---------- */
+const UTM={a:6378137,f:1/298.257222101,k0:0.9996};
+function toUTM(lat,lon,zone){
+  const {a,f,k0}=UTM, e2=f*(2-f), ep2=e2/(1-e2), r=Math.PI/180;
+  const phi=lat*r, lam=lon*r, lam0=((zone-1)*6-180+3)*r;
+  const N=a/Math.sqrt(1-e2*Math.sin(phi)**2), T=Math.tan(phi)**2, C=ep2*Math.cos(phi)**2, A=Math.cos(phi)*(lam-lam0);
+  const e4=e2*e2, e6=e4*e2;
+  const M=a*((1-e2/4-3*e4/64-5*e6/256)*phi-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*phi)+(15*e4/256+45*e6/1024)*Math.sin(4*phi)-(35*e6/3072)*Math.sin(6*phi));
+  const x=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*ep2)*A**5/120)+500000;
+  const y=k0*(M+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*ep2)*A**6/720));
+  return {x,y};
+}
+function fromUTM(x,y,zone){
+  const {a,f,k0}=UTM, e2=f*(2-f), ep2=e2/(1-e2), r=Math.PI/180;
+  const e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2)), M=y/k0, mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2**3/256));
+  const p1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+  const N1=a/Math.sqrt(1-e2*Math.sin(p1)**2), T1=Math.tan(p1)**2, C1=ep2*Math.cos(p1)**2, R1=a*(1-e2)/(1-e2*Math.sin(p1)**2)**1.5, D=(x-500000)/(N1*k0);
+  const lat=p1-(N1*Math.tan(p1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D**6/720);
+  const lon=((zone-1)*6-180+3)*r+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D**5/120)/Math.cos(p1);
+  return {lat:lat/r,lon:lon/r};
+}
+
+/* ---------- Lector de fichas de perfil ---------- */
+const SP="[\\s\\-–]+";
+const TEX_PAT=[["FRANCO"+SP+"ARCILLO"+SP+"LIMOS\\w*","SiCL"],["FRANCO"+SP+"ARCILLO"+SP+"ARENOS\\w*","SCL"],["ARCILLO"+SP+"LIMOS\\w*","SiC"],["ARCILLO"+SP+"ARENOS\\w*","SC"],
+  ["FRANCO"+SP+"ARCILLOS\\w*","CL"],["FRANCO"+SP+"LIMOS\\w*","SiL"],["FRANCO"+SP+"ARENOS\\w*","SL"],["ARENOSO"+SP+"FRANC\\w*","LS"],["ARENO"+SP+"FRANC\\w*","LS"],
+  ["ARCILLOS[OA]S?","C"],["LIMOS[OA]S?","Si"],["ARENOS[OA]S?","S"],["FRANC[OA]S?","L"]];
+const TEX_RE=new RegExp("\\b(?:"+TEX_PAT.map(([p])=>"("+p+")").join("|")+")\\b","g");
+const ROOT_Q="MUY"+SP+"POCAS|MUY"+SP+"ESCASAS|MUY"+SP+"ABUNDANTES|POCAS|ESCASAS|FRECUENTES|COMUNES|ABUNDANTES|MUCHAS";
+const ROOT_RE=new RegExp("\\b(?:("+ROOT_Q+")\\s+RAICES|RAICES[\\s,]+("+ROOT_Q+")|(SIN|NO\\s+HAY)\\s+RAICES)\\b","g");
+const rootCode=q=>{ q=(q||"").replace(/\s+/g," "); if(/^MUY (POCAS|ESCASAS)|SIN|NO HAY/.test(q)) return "VF"; if(/POCAS|ESCASAS/.test(q)) return "F"; if(/FRECUENTES|COMUNES/.test(q)) return "C"; return "M"; };
+const STICK_RE=/\b(?:(NO|LIGERAMENTE|MUY)\s+)?(ADHERENTE|PEGAJOSO)\b/g;
+const MUN_RE=/(\d{1,2}(?:[.,]\d)?)\s*(YR|Y|R)\s*(\d(?:[.,]\d)?)\s*\/\s*(\d{1,2}(?:[.,]\d)?)/g;
+function firstMatch(re,U,a,b){ re.lastIndex=a; const m=re.exec(U); return m&&m.index<b?m:null; }
+function parseHorizon(U,a,b){
+  const out={},spans=[]; let m;
+  MUN_RE.lastIndex=a;
+  while((m=MUN_RE.exec(U))&&m.index<b){
+    const end=m.index+m[0].length, q=/^[\s,;)]*(?:EN\s+)?(SECO|HUMEDO)/.exec(U.slice(end,end+24));
+    const k=q&&q[1]==="HUMEDO"?"moist":"dry";
+    if(out[k+"Hue"]) continue;
+    out[k+"Hue"]=m[1].replace(",",".")+m[2]; out[k+"Value"]=m[3].replace(",","."); out[k+"Chroma"]=m[4].replace(",",".");
+    spans.push({s:m.index,e:end+(q?q[0].length:0),k:"color",t:`Color ${k==="dry"?"en seco":"en húmedo"}`});
+  }
+  if((m=firstMatch(TEX_RE,U,a,b))){ out.texture=TEX_PAT[m.slice(1).findIndex(Boolean)][1]; spans.push({s:m.index,e:m.index+m[0].length,k:"tex",t:"Textura"}); }
+  if((m=firstMatch(ROOT_RE,U,a,b))){ out.roots=rootCode(m[1]||m[2]||m[3]); spans.push({s:m.index,e:m.index+m[0].length,k:"root",t:"Raíces"}); }
+  if((m=firstMatch(STICK_RE,U,a,b))){ out.stick={NO:"NS",LIGERAMENTE:"SS",MUY:"VS"}[m[1]]||"S"; spans.push({s:m.index,e:m.index+m[0].length,k:"stick",t:"Adhesividad"}); }
+  return {out,spans};
+}
+function parseProfile(text){
+  const U=fold(text),meta={},spans=[];
+  [["MATERIAL\\s+ORIGINAL","p_parent"],["CLASIFICACION","p_class"]].forEach(([lab,key])=>{
+    const m=new RegExp(lab+"\\s*:\\s*([^\\n]+)").exec(U);
+    if(m){ const s=m.index+m[0].length-m[1].length; meta[key]=text.substr(s,m[1].length).replace(/^[\s—–\-:;.,]+|[\s;.,]+$/g,""); spans.push({s,e:s+m[1].length,k:"meta",t:"Dato del perfil"}); }
+  });
+  // El código admite símbolos sueltos: el OCR a veces lee «AC2» como «AC?».
+  const re=/^[ \t]*(?:([A-Z][^\s]{0,5})[ \t]+)?(\d{1,3})\s*[-–]\s*(\d{0,3})\s*CM\b/gm;
+  const hits=[]; let m;
+  while((m=re.exec(U))) hits.push({i:m.index,e:m.index+m[0].length,code:m[1]||`H${hits.length+1}`,top:m[2],bot:m[3]});
+  const ref=/\n\s*REFERENCIA/.exec(U), refCut=ref?ref.index:text.length;
+  const hz=hits.map((h,k)=>{
+    const b=Math.min(k+1<hits.length?hits[k+1].i:text.length, h.i<refCut?refCut:text.length), r=parseHorizon(U,h.i,b);
+    return {code:h.code,depth:`${h.top}–${h.bot}`,head:{s:h.i,e:h.e},out:r.out,spans:r.spans};
+  });
+  if(!hz.length&&text.trim()){ const r=parseHorizon(U,0,text.length); hz.push({code:"—",depth:"",head:null,out:r.out,spans:r.spans}); }
+  return {text,meta,spans,hz};
+}
+// Valor numérico de color → categoría más próxima de la lista del índice
+function snapValue(d,v){ const x=num(v); if(x==null) return ""; let best=d.cats[0]; for(const c of d.cats) if(Math.abs(+c-x)<Math.abs(+best-x)) best=c; return best; }
+const HUE_MAP={"5Y":"2.5Y","7.5Y":"2.5Y","10R":"2.5YR","7.5R":"2.5YR"};
+
+/* ---------- Lotes: reconocer columnas y categorías (español / inglés) ---------- */
+const key=s=>fold(s).replace(/[^A-Z0-9]/g,"");
+const COLS={
+  name:["ID","MUESTRA","CODIGO","NOMBRE","PARCELA","PERFIL","SAMPLE","NAME","SITE","FINCA","PUNTO"],
+  p_mun:["MUNICIPIO","LOCALIDAD","MUNICIPALITY"], p_x:["X","XUTM","UTMX","COORDX","ESTE","EASTING"], p_y:["Y","YUTM","UTMY","COORDY","NORTE","NORTHING"],
+  p_lat:["LAT","LATITUD","LATITUDE"], p_lon:["LON","LNG","LONG","LONGITUD","LONGITUDE"], p_hz:["HORIZONTE","HORIZON"], p_lut:["USO","USODELSUELO","LANDUSE"],
+  sand:["ARENA","SAND","ARENATOTAL"], clay:["ARCILLA","CLAY"], bd:["DENSIDADAPARENTE","DENSIDAD","DA","BD","BULKDENSITY"],
+  w33:["W33","HUMEDAD33","HUMEDAD33KPA","CC","CAPACIDADDECAMPO","FIELDCAPACITY","THETA33"], w1500:["W1500","HUMEDAD1500","HUMEDAD1500KPA","PMP","PUNTODEMARCHITEZ","WILTINGPOINT","THETA1500"],
+  oc:["CO","CARBONOORGANICO","OC","ORGANICCARBON","SOC","COT"], ntot:["N","NTOTAL","NITROGENOTOTAL","NITROGENO","TOTALNITROGEN","NT"],
+  caco3:["CACO3","CARBONATOS","CARBONATES","CACO3EQ","CARBONATOCALCICO","CALIZATOTAL"], cec:["CIC","CEC","CAPACIDADDEINTERCAMBIOCATIONICO"],
+  dryValue:["BRILLOSECO","BRILLOENSECO","VALUESECO","DRYVALUE","VALORSECO"], moistValue:["BRILLOHUMEDO","BRILLOENHUMEDO","VALUEHUMEDO","WETVALUE","MOISTVALUE","VALORHUMEDO"],
+  dryHue:["MATIZSECO","MATIZENSECO","MATIZ","HUESECO","DRYHUE","HUE"], texture:["TEXTURA","CLASETEXTURAL","TEXTURE","TEXTURECLASS"],
+  stick:["ADHESIVIDAD","ADHERENCIA","STICKINESS"], roots:["RAICES","ABUNDANCIADERAICES","ROOTS","ROOTABUNDANCE"]
+};
+const COL_INDEX={}; for(const [f,ks] of Object.entries(COLS)) ks.forEach(k=>COL_INDEX[k]=f);
+const CAT_SYN={
+  texture:{C:["CLAY","ARCILLOSA","ARCILLOSO","ARCILLA"],SiC:["SILTYCLAY","ARCILLOLIMOSA","ARCILLOLIMOSO"],Si:["SILT","LIMOSA","LIMOSO","LIMO"],SiCL:["SILTYCLAYLOAM","FRANCOARCILLOLIMOSA","FRANCOARCILLOLIMOSO"],
+    SC:["SANDYCLAY","ARCILLOARENOSA","ARCILLOARENOSO"],SiL:["SILTLOAM","SILTYLOAM","FRANCOLIMOSA","FRANCOLIMOSO"],CL:["CLAYLOAM","FRANCOARCILLOSA","FRANCOARCILLOSO"],L:["LOAM","FRANCA","FRANCO"],
+    SCL:["SANDYCLAYLOAM","FRANCOARCILLOARENOSA","FRANCOARCILLOARENOSO"],SL:["SANDYLOAM","FRANCOARENOSA","FRANCOARENOSO"],LS:["LOAMYSAND","ARENOSOFRANCA","ARENOSOFRANCO","ARENOFRANCA"],S:["SAND","ARENOSA","ARENOSO","ARENA"]},
+  roots:{VF:["VERYFEW","MUYPOCAS","MUYESCASAS","NINGUNA","SINRAICES"],F:["FEW","POCAS","ESCASAS"],C:["COMMON","FRECUENTES","COMUNES"],M:["MANY","ABUNDANTES","MUCHAS","MUYABUNDANTES"]},
+  stick:{NS:["NONSTICKY","NOADHERENTE","NOPEGAJOSO"],SS:["SLIGHTLYSTICKY","LIGERAMENTEADHERENTE","LIGERAMENTEPEGAJOSO"],S:["STICKY","ADHERENTE","PEGAJOSO"],VS:["VERYSTICKY","MUYADHERENTE","MUYPEGAJOSO"]}
+};
+function normCat(id,v){
+  if(v==null||String(v).trim()==="") return "";
+  const d=BYID[id], s=String(v).trim();
+  if(id==="dryValue"||id==="moistValue") return snapValue(d,s);
+  if(id==="dryHue"){ const h=fold(s).replace(/\s+/g,"").replace(",","."); return d.cats.find(c=>fold(c)===h)||HUE_MAP[h]||s; }
+  const exact=d.cats.find(c=>c.toUpperCase()===s.toUpperCase()); if(exact) return exact;
+  const k=key(s); for(const [c,list] of Object.entries(CAT_SYN[id]||{})) if(list.includes(k)) return c;
+  return s;   // se marcará como valor no válido
+}
+function rowToForm(obj){
+  const f={}, unknown=[];
+  for(const [h,v] of Object.entries(obj)){
+    const fld=COL_INDEX[key(h)];
+    if(!fld){ if(String(h).trim()) unknown.push(h); continue; }
+    const target=fld==="name"?"p_name":fld;
+    f[target]= BYID[fld]&&BYID[fld].kind!=="num" ? normCat(fld,v) : (v==null?"":String(v).trim());
+  }
+  return {f,unknown};
+}
+function parseDelimited(text){
+  const lines=text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+  if(!lines.length) return [];
+  const first=lines[0], delim=[";","\t",","].map(d=>[d,first.split(d).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const split=l=>{ const out=[]; let cur="",q=false; for(let i=0;i<l.length;i++){ const c=l[i]; if(c==='"'){ if(q&&l[i+1]==='"'){ cur+='"'; i++; } else q=!q; } else if(c===delim&&!q){ out.push(cur); cur=""; } else cur+=c; } out.push(cur); return out; };
+  const head=split(first).map(s=>s.trim());
+  return lines.slice(1).map(l=>{ const c=split(l), o={}; head.forEach((h,i)=>o[h]=c[i]??""); return o; });
+}
+/* @@PURO-FIN */
+
+/* ================= Interfaz: asistente para agricultores ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ADVICE={
+  oc:"Aumenta la materia orgánica: deja cubierta vegetal entre calles, tritura e incorpora los restos de poda y aporta compost o estiércol.",
+  dryValue:"Tu suelo es claro: suele indicar poca materia orgánica. Con cubiertas y aportes orgánicos se irá oscureciendo con los años.",
+  moistValue:"El color en húmedo apunta a poca materia orgánica: prioriza cubiertas y aportes orgánicos.",
+  roots:"Hay pocas raíces en superficie: una cubierta herbácea y menos laboreo dan más vida al suelo.",
+  cec:"El suelo retiene pocos nutrientes (CIC baja): la materia orgánica es la forma de mejorarlo.",
+  w33:"El suelo guarda poca agua: la materia orgánica y evitar la erosión aumentan el agua disponible.",
+  w1500:"Poca agua retenida: protege el horizonte superficial frente a la erosión y aumenta la materia orgánica.",
+  ntot:"Nitrógeno bajo: siembra leguminosas en la cubierta y usa abonos orgánicos.",
+  bd:"La densidad aparente es baja respecto a los suelos de referencia: revisa el dato con tu laboratorio."
+};
+const HERED="Depende sobre todo del material del que se formó el suelo y cambia muy poco con el manejo.";
+const FRIENDLY={sand:"Arena",clay:"Arcilla",bd:"Densidad aparente",w33:"Agua a capacidad de campo",w1500:"Agua en punto de marchitez",oc:"Carbono orgánico",ntot:"Nitrógeno total",caco3:"Carbonatos (caliza)",cec:"CIC (capacidad de intercambio)",dryValue:"Color en seco",moistValue:"Color en húmedo",dryHue:"Tono del color",texture:"Textura",stick:"Adhesividad",roots:"Raíces"};
+
+/* ---------- Estado ---------- */
+const SITE_IDS=["p_name","p_mun","p_x","p_y","p_zone","p_lat","p_lon","p_lut","p_parent","p_class","p_hz","p_depth"];
+const FORM_IDS=[...IND.map(d=>d.id),...SITE_IDS];
+let S={}, step=0, moMode=false;
+const readForm=()=>({...S});
+function writeForm(o){ S={}; FORM_IDS.forEach(id=>S[id]=o[id]??(id==="p_zone"?"30":"")); refreshAll(); syncCoords("ll",true); }
+function setVal(id,v){ S[id]=v; refreshAll(); }
+
+/* ---------- Opciones visuales ---------- */
+const HUES=["2.5Y","10YR","7.5YR","5YR","2.5YR"], DRY_ROWS=["8","7","6","5","4","3","2"], WET_VALS=["7","6","5","4","3","2"];
+const HUE_DEG={"10R":40,"2.5YR":46,"5YR":55,"7.5YR":63,"10YR":72,"2.5Y":82,"5Y":92};
+const munsellCss=(h,v,c)=>(!h||!HUE_DEG[h]||v==null||v===""||c==null)?"":`lch(${(+v*10).toFixed(1)}% ${(+c*5.6).toFixed(1)} ${HUE_DEG[h]})`;
+const chromaFor=v=>+v>=5?4:+v>=3?3:2;
+function buildPickers(){
+  $("dryPal").innerHTML=`<span></span>`+HUES.map(h=>`<span class="ax">${h}</span>`).join("")+
+    DRY_ROWS.map(v=>`<span class="ay">${v}</span>`+HUES.map(h=>`<button type="button" class="chipc" data-hue="${h}" data-val="${v}" style="background:${munsellCss(h,v,chromaFor(v))}" aria-label="Color ${h} brillo ${v}"></button>`).join("")).join("");
+  $("dryPal").querySelectorAll(".chipc").forEach(b=>b.onclick=()=>{ S.dryHue=b.dataset.hue; S.dryValue=b.dataset.val; refreshAll(); advance(b); });
+  const opt=(id,cats,lab)=>{ $(id).innerHTML=`<option value="">—</option>`+cats.map((c,i)=>`<option value="${c}">${lab?lab[i]:c}</option>`).join(""); };
+  opt("dryHue",BYID.dryHue.cats); opt("dryValue",BYID.dryValue.cats); opt("moistValue",BYID.moistValue.cats);
+  // textura por familias
+  const MIX={S:[92,5,3],LS:[82,12,6],SL:[65,25,10],L:[40,40,20],SiL:[20,65,15],Si:[7,87,6],SCL:[60,13,27],CL:[32,34,34],SiCL:[10,56,34],SC:[52,6,42],SiC:[7,46,47],C:[20,20,60]};
+  const FEEL={S:"Áspera y suelta; no se mantiene unida aunque la mojes.",LS:"Áspera; forma una bola frágil que se deshace.",SL:"Se nota la arena; hace bola pero no cinta.",
+    L:"Ni áspera ni pegajosa; cinta muy corta (menos de 2,5 cm).",SiL:"Suave como harina; cinta corta que se rompe.",Si:"Muy suave y sedosa, como talco; casi no hace cinta.",
+    SCL:"Áspera pero algo pegajosa; cinta de 2,5 a 5 cm.",CL:"Algo pegajosa; cinta de 2,5 a 5 cm.",SiCL:"Suave y algo pegajosa; cinta de 2,5 a 5 cm.",
+    SC:"Pegajosa y áspera; cinta larga (más de 5 cm).",SiC:"Pegajosa y suave; cinta larga.",C:"Muy pegajosa y plástica; cinta larga y fina que brilla."};
+  const GROUPS=[["Arenosas · se notan los granos",["S","LS","SL"]],["Francas · equilibradas",["L","SiL","Si","SCL"]],["Arcillosas · pegajosas",["CL","SiCL","SC","SiC","C"]]];
+  const d=BYID.texture;
+  $("texCards").innerHTML=GROUPS.map(([t,cs])=>`<p class="group-t">${t}</p><div class="cards">`+cs.map(c=>{ const m=MIX[c];
+    return `<button type="button" class="opt" data-k="texture" data-v="${c}"><b>${d.labels[d.cats.indexOf(c)]}</b><span class="mix"><i style="width:${m[0]}%;background:#d9b26f"></i><i style="width:${m[1]}%;background:#a98a6a"></i><i style="width:${m[2]}%;background:#6e4f3a"></i></span><small>${FEEL[c]}</small></button>`; }).join("")+`</div>`).join("");
+  // raíces: dibujo con más o menos raíces
+  const rootSvg=n=>{ let p=""; for(let i=0;i<n;i++){ const x=8+((i*37)%104), w=(i%3)-1; p+=`<path d="M${x} 6c${4*w} 10 ${-3*w} 18 ${2*w} 28s${-4*w} 14 ${w} 22" />`; if(n>6&&i%2) p+=`<path d="M${x} 24c6 4 9 8 11 14"/>`; }
+    return `<svg viewBox="0 0 120 60" aria-hidden="true"><rect width="120" height="60" rx="8" fill="#8b6f55"/><rect width="120" height="8" rx="4" fill="#5e4a39"/><g stroke="#f1e6d6" stroke-width="1.8" fill="none" stroke-linecap="round">${p}</g></svg>`; };
+  const RD={VF:["Casi ninguna","Hay que buscarlas"],F:["Pocas","Alguna aquí y allá"],C:["Bastantes","Se ven en cualquier terrón"],M:["Muchas","El suelo está lleno de raíces"]};
+  const RN={VF:1,F:3,C:8,M:18};
+  $("rootCards").innerHTML=BYID.roots.cats.map(c=>`<button type="button" class="opt" data-k="roots" data-v="${c}">${rootSvg(RN[c])}<b>${RD[c][0]}</b><small>${RD[c][1]}</small></button>`).join("");
+  // adhesividad: hilos entre los dedos
+  const stickSvg=n=>{ let p=""; for(let i=0;i<n;i++){ const x=30+i*(60/Math.max(n-1,1)); p+=`<path d="M${x} 22 q ${i%2?3:-3} 9 0 18"/>`; }
+    return `<svg viewBox="0 0 120 60" aria-hidden="true"><rect x="14" y="8" width="92" height="14" rx="7" fill="#e8c9a8"/><rect x="14" y="40" width="92" height="14" rx="7" fill="#e8c9a8"/><g stroke="#6e4f3a" stroke-width="2.4" fill="none" stroke-linecap="round">${p}</g></svg>`; };
+  const SD={NS:["No se pega","Los dedos salen limpios"],SS:["Se pega un poco","Se suelta al separarlos"],S:["Se pega","Hace hilos al separar los dedos"],VS:["Se pega mucho","Cuesta separar los dedos"]};
+  const SN={NS:0,SS:1,S:3,VS:6};
+  $("stickCards").innerHTML=BYID.stick.cats.map(c=>`<button type="button" class="opt" data-k="stick" data-v="${c}">${stickSvg(SN[c])}<b>${SD[c][0]}</b><small>${SD[c][1]}</small></button>`).join("");
+  document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{ const on=S[b.dataset.k]!==b.dataset.v; S[b.dataset.k]=on?b.dataset.v:""; refreshAll(); if(on) advance(b); });
+  document.querySelectorAll("[data-clear]").forEach(b=>b.onclick=()=>{ b.dataset.clear.split(",").forEach(k=>S[k]=""); refreshAll(); toast("Pregunta saltada"); advance(b); });
+  // laboratorio
+  const HELP={oc:"En el boletín: «carbono orgánico» o «materia orgánica».",ntot:"«Nitrógeno total» (Kjeldahl).",caco3:"«Carbonatos totales» o «caliza total».",cec:"«CIC» o «capacidad de intercambio catiónico».",
+    sand:"Granulometría: «arena».",clay:"Granulometría: «arcilla».",bd:"Poco habitual en boletines: «densidad aparente».",w33:"Poco habitual: «humedad a 33 kPa» o «capacidad de campo».",w1500:"Poco habitual: «humedad a 1500 kPa» o «punto de marchitez»."};
+  const ORDER=["oc","ntot","caco3","cec","sand","clay","bd","w33","w1500"];
+  $("labGrid").innerHTML=ORDER.map(id=>{ const d=BYID[id];
+    return `<div class="lab"><label for="${id}" id="lbl_${id}">${FRIENDLY[id]}</label><span class="h">${HELP[id]}</span>
+      <span class="row"><span class="inp"><input id="${id}" data-bind data-num inputmode="decimal" autocomplete="off" placeholder="${d.cls[0][0]}–${d.cls[d.cls.length-1][1]}" style="padding-right:calc(${d.unit.length}ch + 22px)"><span>${d.unit}</span></span><span class="score-dot" data-chip="${id}">—</span></span>
+      ${id==="oc"?`<label class="toggle"><input type="checkbox" id="moToggle"> Mi boletín da materia orgánica</label><span class="conv" id="ocConv" hidden></span>`:""}</div>`; }).join("");
+  $("moToggle").onchange=e=>{ moMode=e.target.checked; $("lbl_oc").textContent=moMode?"Materia orgánica":FRIENDLY.oc; refreshAll(); };
+}
+
+/* Tras responder, baja a la siguiente pregunta (sobre todo útil en el móvil) */
+const reduced=()=>matchMedia("(prefers-reduced-motion:reduce)").matches;
+function advance(el){
+  try{ navigator.vibrate&&navigator.vibrate(8); }catch(e){}
+  const q=el.closest(".q"); if(!q) return;
+  let n=q.nextElementSibling; while(n&&!n.classList.contains("q")) n=n.nextElementSibling;
+  if(!n||n.id==="readerCard") return;
+  setTimeout(()=>n.scrollIntoView({behavior:reduced()?"auto":"smooth",block:"start"}),220);
+}
+/* ---------- Pintar estado en controles ---------- */
+function refreshAll(){
+  document.querySelectorAll("[data-bind]").forEach(el=>{ if(document.activeElement===el) return;
+    if(el.id==="oc"&&moMode){ el.value=S.oc?String(+(num(S.oc)*1.724).toFixed(2)):""; } else el.value=S[el.id]??""; });
+  document.querySelectorAll(".chipc[data-hue]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.hue===S.dryHue&&b.dataset.val===S.dryValue));
+  const dc=munsellCss(S.dryHue,S.dryValue,chromaFor(S.dryValue||5));
+  $("dryChosen").innerHTML=S.dryHue&&S.dryValue?`<i style="background:${dc}"></i>Elegido: <b>${S.dryHue} ${S.dryValue}</b>`:"";
+  const wh=S.dryHue||"10YR";
+  $("wetRow").innerHTML=WET_VALS.map(v=>`<span><button type="button" class="chipc" data-wet="${v}" style="width:100%;background:${munsellCss(wh,v,chromaFor(v)+1)}" aria-pressed="${S.moistValue===v}" aria-label="Brillo en húmedo ${v}"></button><span class="wl" style="display:block">${v}</span></span>`).join("");
+  $("wetRow").querySelectorAll("[data-wet]").forEach(b=>b.onclick=()=>{ S.moistValue=b.dataset.wet; refreshAll(); advance($("wetRow")); });
+  document.querySelectorAll(".opt").forEach(b=>b.setAttribute("aria-pressed",S[b.dataset.k]===b.dataset.v));
+  if(moMode&&S.oc){ $("ocConv").hidden=false; $("ocConv").textContent=`= ${fmt(num(S.oc),2)} % de carbono orgánico (MO ÷ 1,724)`; } else if($("ocConv")) $("ocConv").hidden=true;
+  render();
+}
+document.addEventListener("input",e=>{ const el=e.target; if(!el.hasAttribute||!el.hasAttribute("data-bind")) return;
+  if(el.id==="oc"&&moMode){ const v=num(el.value); S.oc=v==null?"":(v/1.724).toFixed(2); } else S[el.id]=el.value.trim();
+  if(el.dataset.coord) return; refreshAll(); });
+document.addEventListener("change",e=>{ const el=e.target; if(!el.hasAttribute||!el.hasAttribute("data-bind")) return;
+  S[el.id]=el.id==="oc"&&moMode?S.oc:el.value.trim(); if(el.dataset.coord){ syncCoords(el.dataset.coord,true); } refreshAll(); });
+
+/* ---------- Resultado ---------- */
+const col=s=>s==null?"var(--line)":s<.4?"var(--red)":s<.7?"var(--amber)":"var(--green2)";
+const dotColor=idx=>idx==null?"#98a2b3":idx<40?"#e24444":idx<70?"#f5a623":"#00a86b";
+function gaugeSvg(idx){
+  const cx=120,cy=124,r=96, P=v=>{ const a=Math.PI*(1-v/100); return [cx+r*Math.cos(a),cy-r*Math.sin(a)]; };
+  const arc=(a,b,c)=>{ const [x1,y1]=P(a),[x2,y2]=P(b); return `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} A${r} ${r} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${c}" stroke-width="20" fill="none" stroke-linecap="butt"/>`; };
+  let g=arc(0,39.6,"#e24444")+arc(40.4,69.6,"#f5a623")+arc(70.4,100,"#00a86b");
+  if(idx!=null){ const [mx,my]=P(Math.min(Math.max(idx,0),100));
+    g+=`<circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="15" fill="#fff" stroke="#143331" stroke-width="5"/>`; }
+  g+=`<text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="52" font-weight="900" fill="#143331" letter-spacing="-1">${idx==null?"—":fmt(idx,0)}</text>`+
+     `<text x="${cx}" y="${cy+16}" text-anchor="middle" font-size="13" font-weight="700" fill="#667085">de 100</text>`+
+     `<text x="${cx-r}" y="${cy+20}" text-anchor="middle" font-size="12" fill="#667085">0</text><text x="${cx+r}" y="${cy+20}" text-anchor="middle" font-size="12" fill="#667085">100</text>`;
+  return g;
+}
+function trustOf(R){ return R.cov>=.75?{n:3,t:"alta"}:R.cov>=.45?{n:2,t:"media"}:{n:1,t:"baja"}; }
+function render(){
+  const f=readForm(), R=compute(f), st=stateOf(R.idx);
+  document.querySelectorAll("[data-chip]").forEach(el=>{ const r=R.rows.find(x=>x.d.id===el.dataset.chip);
+    if(r&&r.s!=null){ el.textContent=fmt(r.s,2); el.style.background=col(r.s); el.style.color="#fff"; el.title=r.cls?`Intervalo ${r.cls}`:""; } else { el.textContent="—"; el.style.background=""; el.style.color=""; el.title=""; } });
+  // barra inferior
+  $("liveIdx").textContent=R.idx==null?"—":fmt(R.idx,0); $("liveDot").style.background=dotColor(R.idx);
+  $("liveTxt").textContent=R.n?`nota provisional · ${R.n} de 15 datos`:"aún sin datos";
+  // resultado
+  $("gauge").innerHTML=gaugeSvg(R.idx);
+  $("resPill").hidden=!st; if(st){ $("resPill").textContent=st.t; $("resPill").style.background=st.c; }
+  $("resTitle").textContent=f.p_name?`Salud del suelo · ${f.p_name}`:"Salud del suelo de tu parcela";
+  let vt="Responde alguna pregunta de los pasos 2 y 3 para ver tu nota.";
+  if(R.idx!=null){ const cog=LUT[0], bosque=LUT[LUT.length-1];
+    vt = R.idx<cog.v ? `Por debajo de la media de los olivares convencionales de Jaén (<b>${fmt(cog.v,0)}</b>).`
+       : R.idx<52.8 ? `Algo por encima de la media de los olivares convencionales de Jaén (<b>${fmt(cog.v,0)}</b>), aún lejos de los suelos naturales.`
+       : R.idx<bosque.v ? `Comparable a suelos poco alterados: matorral y bosque mediterráneo puntúan entre <b>61</b> y <b>73</b>.`
+       : `Al nivel de los suelos de bosque poco alterado (<b>${fmt(bosque.v,0)}</b>).`; }
+  $("resVerdict").innerHTML=vt;
+  // qué pedir primero: lo más fácil de conseguir para un agricultor (boletín estándar y observación de campo)
+  const EASY=["oc","ntot","dryValue","moistValue","roots","texture","cec","caco3","clay","sand","stick","dryHue","bd","w33","w1500"];
+  const tr=trustOf(R), missing=EASY.filter(id=>R.rows.find(r=>r.d.id===id).s==null).slice(0,3).map(id=>id==="cec"?FRIENDLY[id]:FRIENDLY[id].toLowerCase());
+  $("resTrust").innerHTML=R.n?`<span class="bars">${[1,2,3].map(i=>`<i class="${i<=tr.n?"on":""}"></i>`).join("")}</span><span>Fiabilidad ${tr.t}: ${R.n} de 15 datos.${tr.n<3&&missing.length?` Para afinar, añade ${missing.join(", ")}.`:""}</span>`:"";
+  const pos=v=>`${v.toFixed(1)}%`, refs=[{v:26.3,t:"Olivar convencional",c:"t"},{v:67.3,t:"Bosque mediterráneo",c:"b"},{v:94,t:"Bosque poco alterado",c:"t"}];
+  $("refScale").innerHTML=`<div class="bar"></div>`+refs.map(r=>`<div class="tk" style="left:${pos(r.v)}"></div><div class="lb ${r.c}" style="left:${pos(Math.min(Math.max(r.v,12),88))}">${r.t} · ${fmt(r.v,0)}</div>`).join("")+(R.idx!=null?`<div class="me" style="left:${pos(R.idx)}" title="Tu suelo"></div>`:"");
+  const have=R.rows.filter(r=>r.s!=null);
+  const good=have.filter(r=>r.s>=.7).sort((a,b)=>b.s*b.d.w-a.s*a.d.w).slice(0,4);
+  $("resGood").innerHTML=`<h3>Lo que va bien</h3>`+(good.length?`<ul>${good.map(r=>`<li><b>${FRIENDLY[r.d.id]}</b>${r.label?` (${esc(r.label)})`:""}</li>`).join("")}</ul>`:`<p style="margin:0">Todavía nada destaca. Con más datos verás tus puntos fuertes.</p>`);
+  const weak=have.filter(r=>r.s<.55).sort((a,b)=>a.s-b.s);
+  const acts=weak.filter(r=>r.d.managed&&ADVICE[r.d.id]).slice(0,3), inh=weak.filter(r=>!r.d.managed).slice(0,2);
+  $("resTodo").innerHTML=`<h3>Dónde mejorar</h3>`+(acts.length?`<ul>${acts.map(r=>`<li>${ADVICE[r.d.id]}</li>`).join("")}</ul>`:`<p style="margin:0">${have.length?"Los datos que se pueden mejorar con el manejo están bien.":"Añade datos para recibir recomendaciones."}</p>`)+
+    (inh.length?`<p style="margin:8px 0 0;font-size:13px;color:var(--muted)">${inh.map(r=>FRIENDLY[r.d.id]).join(" y ")}: ${HERED}</p>`:"");
+  $("resMore").hidden=R.cov>=.75||!R.n; $("resMore").innerHTML=`<h3>Haz el análisis completo</h3><p style="margin:0">Un análisis de suelo con <b>carbono orgánico, nitrógeno total, CIC, carbonatos y granulometría</b> (arena, limo y arcilla) cuesta poco y hace que el diagnóstico sea mucho más fiable.</p>`;
+  $("flags").innerHTML=R.flags.map(t=>`<li>${esc(t)}</li>`).join("");
+  $("inds").innerHTML=[...R.rows].sort((a,b)=>b.d.w-a.d.w).map(r=>`<div class="ind ${r.s==null?"na":""}"><span class="nm">${FRIENDLY[r.d.id]}${r.label?`<small>${esc(r.label)}</small>`:""}</span><span class="track"><span class="fill" style="width:${r.s==null?0:(r.s*100).toFixed(1)}%;background:${col(r.s)}"></span></span><span class="v">${r.s==null?"—":fmt(r.s,2)}</span></div>`).join("");
+  try{ localStorage.setItem("gsqi.draft4",JSON.stringify({S:f,step})); }catch(e){}
+  return {...R,form:f};
+}
+
+/* ---------- Navegación ---------- */
+function go(n){
+  step=Math.max(0,Math.min(4,n));
+  document.querySelectorAll("[data-step]").forEach(s=>s.hidden=+s.dataset.step!==step);
+  $("steps").hidden=step===0; $("dock").hidden=step===0; $("btnRestart").hidden=step===0;
+  document.querySelectorAll("#steps button").forEach(b=>{ const k=+b.dataset.go; b.setAttribute("aria-current",k===step?"step":"false"); b.classList.toggle("done",k<step); });
+  const NAMES=["","Tu parcela","Observa el suelo","Tu análisis","Resultado"];
+  $("stepNow").hidden=step===0; $("stepNow").innerHTML=step?`${NAMES[step]} <span>· paso ${step} de 4</span>`:"";
+  $("btnPrev").textContent=step===1?"Inicio":"Atrás";
+  $("btnNext").textContent=step===3?"Ver mi resultado":step===4?"Guardar":"Siguiente";
+  if(step===1) setTimeout(()=>{ if(!map) initMap(); else map.invalidateSize(); },30);
+  if(step===4) renderSaved();
+  render(); window.scrollTo({top:0,behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"});
+}
+$("btnStart").onclick=()=>go(1);
+$("btnNext").onclick=()=>step===4?$("btnSave").click():go(step+1);
+$("btnPrev").onclick=()=>go(step-1);
+document.querySelectorAll("#steps button").forEach(b=>b.onclick=()=>go(+b.dataset.go));
+$("btnRestart").onclick=()=>{ writeForm({}); go(0); };
+$("btnNew").onclick=()=>{ writeForm({}); go(1); toast("Nuevo diagnóstico"); };
+
+/* ---------- Mapa y coordenadas ---------- */
+let map=null, marker=null, savedLayer=null, batchLayer=null, baseLayer=null, tileFail=false;
+const BASES={
+  pnoa:"https://www.ign.es/wmts/pnoa-ma?service=WMTS&request=GetTile&version=1.0.0&layer=OI.OrthoimageCoverage&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileCol={x}&TileRow={y}",
+  ign:"https://www.ign.es/wmts/ign-base?service=WMTS&request=GetTile&version=1.0.0&layer=IGNBaseTodo&style=default&format=image/jpeg&tilematrixset=GoogleMapsCompatible&TileMatrix={z}&TileCol={x}&TileRow={y}"
+};
+function mapNote(t){ $("mapNote").hidden=!t; $("mapNote").textContent=t||""; }
+function setBase(k){
+  if(!map) return;
+  if(baseLayer) map.removeLayer(baseLayer);
+  baseLayer=L.tileLayer(BASES[k],{maxZoom:19,attribution:"PNOA / IGN"}).addTo(map);
+  baseLayer.on("tileerror",()=>{ if(!tileFail){ tileFail=true; mapNote("El fondo del mapa no se puede cargar en esta vista; el punto y las coordenadas funcionan igual."); } });
+  document.querySelectorAll("#baseSeg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.base===k));
+}
+function placeMarker(lat,lon,pan){
+  $("mapCoords").textContent=lat!=null&&S.p_x?`X ${Math.round(num(S.p_x))} · Y ${Math.round(num(S.p_y))} (UTM ${S.p_zone||30})`:"";
+  if(!map) return;
+  if(lat==null||lon==null){ if(marker){ map.removeLayer(marker); marker=null; } return; }
+  if(!marker) marker=L.circleMarker([lat,lon],{radius:10,color:"#fff",weight:3,fillColor:"#00666a",fillOpacity:1}).addTo(map).bindTooltip("Tu parcela");
+  else marker.setLatLng([lat,lon]);
+  if(pan) map.setView([lat,lon],Math.max(map.getZoom(),15));
+}
+function syncCoords(from,pan){
+  const z=+(S.p_zone||30);
+  if(from==="utm"){
+    const x=num(S.p_x), y=num(S.p_y);
+    if(x!=null&&y!=null&&x>100000&&x<900000&&y>3000000&&y<5000000){ const g=fromUTM(x,y,z); S.p_lat=g.lat.toFixed(6); S.p_lon=g.lon.toFixed(6); placeMarker(g.lat,g.lon,pan); }
+  } else {
+    const lat=num(S.p_lat), lon=num(S.p_lon);
+    if(lat!=null&&lon!=null&&Math.abs(lat)<=84&&Math.abs(lon)<=180){ const u=toUTM(lat,lon,z); S.p_x=u.x.toFixed(1); S.p_y=u.y.toFixed(1); placeMarker(lat,lon,pan); }
+    else if(!S.p_lat&&!S.p_lon){ if(S.p_x&&S.p_y) return syncCoords("utm",pan); placeMarker(null,null); }
+  }
+  document.querySelectorAll("[data-coord]").forEach(el=>{ if(document.activeElement!==el) el.value=S[el.id]??""; });
+}
+function drawSaved(){
+  if(!map) return;
+  savedLayer.clearLayers();
+  loadSaved().forEach(s=>{ const lat=num(s.form.p_lat), lon=num(s.form.p_lon); if(lat==null||lon==null) return;
+    L.circleMarker([lat,lon],{radius:7,color:"#fff",weight:2,fillColor:dotColor(s.idx),fillOpacity:.95}).addTo(savedLayer).bindTooltip(`${esc(s.form.p_name||"Sin nombre")} · ${s.idx==null?"—":fmt(s.idx,0)}`); });
+}
+$("btnLocate").onclick=()=>{
+  if(!navigator.geolocation){ toast("Este navegador no da la ubicación."); return; }
+  navigator.geolocation.getCurrentPosition(p=>{ S.p_lat=p.coords.latitude.toFixed(6); S.p_lon=p.coords.longitude.toFixed(6); syncCoords("ll",true); render(); },
+    ()=>toast("No se pudo obtener tu ubicación; toca el mapa en tu parcela."),{enableHighAccuracy:true,timeout:10000});
+};
+document.querySelectorAll("#baseSeg button").forEach(b=>b.onclick=()=>setBase(b.dataset.base));
+async function initMap(){
+  try{ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"); }
+  catch(e){ $("map").hidden=true; document.querySelector(".map-bar").hidden=true; mapNote("No se pudo cargar el mapa. Puedes escribir las coordenadas a mano."); return; }
+  if(map) return;
+  map=L.map("map",{attributionControl:true}).setView([37.45,-4.4],7);
+  map.attributionControl.setPrefix("");
+  setBase("pnoa");
+  savedLayer=L.layerGroup().addTo(map); batchLayer=L.layerGroup().addTo(map);
+  map.on("click",e=>{ S.p_lat=e.latlng.lat.toFixed(6); S.p_lon=e.latlng.lng.toFixed(6); syncCoords("ll",false); render(); });
+  drawSaved(); drawBatch(); syncCoords("ll",true);
+}
+
+/* ---------- Lector de fichas ---------- */
+let parsed=null, active=0;
+function applyHorizon(i){
+  active=i; const h=parsed.hz[i], o=h.out, notes=[];
+  S.dryHue=o.dryHue?(BYID.dryHue.cats.includes(o.dryHue)?o.dryHue:(HUE_MAP[o.dryHue]||"")):"";
+  if(o.dryHue&&S.dryHue!==o.dryHue) notes.push(S.dryHue?`el matiz ${o.dryHue} no está en el índice y se usa ${S.dryHue}`:`el matiz ${o.dryHue} no está en el índice`);
+  S.dryValue=o.dryValue?snapValue(BYID.dryValue,o.dryValue):""; S.moistValue=o.moistValue?snapValue(BYID.moistValue,o.moistValue):"";
+  S.texture=o.texture||""; S.roots=o.roots||""; S.stick=o.stick||"";
+  Object.assign(S,parsed.meta,{p_hz:h.code,p_depth:h.depth.replace("–","-")});
+  $("hzTable").querySelectorAll("tbody tr").forEach((tr,j)=>tr.classList.toggle("on",j===i));
+  const miss=[]; if(!o.dryHue) miss.push("color en seco"); if(!o.moistValue) miss.push("color en húmedo"); if(!o.texture) miss.push("textura"); if(!o.roots) miss.push("raíces"); if(!o.stick) miss.push("adhesividad");
+  $("parsedInfo").innerHTML=`Se usa el horizonte <b>${esc(h.code)}</b>${h.depth?` (${esc(h.depth)} cm)`:""} y se han marcado las respuestas arriba.`+(notes.length?` Nota: ${notes.join("; ")}.`:"")+(miss.length?` No aparece en la ficha: ${miss.join(", ")}.`:"");
+  refreshAll();
+}
+const HZ_SEL=[["texture","f-texture"],["roots","f-roots"],["stick","f-stick"]];
+const selHtml=(d,v,cls)=>`<select class="${v?"":"miss"} ${cls}"><option value="">—</option>${d.cats.map((c,i)=>`<option value="${c}"${c===v?" selected":""}>${d.id==="texture"?c:d.labels[i]}</option>`).join("")}</select>`;
+const munTxt=(o,k)=>o[k+"Hue"]?`${o[k+"Hue"]} ${o[k+"Value"]}/${o[k+"Chroma"]}`:"";
+function renderReview(){
+  const P=parsed;
+  $("hzTable").innerHTML=`<thead><tr><th>Horizonte</th><th>Color en seco</th><th>Color en húmedo</th><th>Textura</th><th>Raíces</th><th>Adhesividad</th></tr></thead><tbody>`+
+    P.hz.map((h,i)=>`<tr data-i="${i}"><td class="hzc"><label><input type="radio" name="hzsel" value="${i}"${i===active?" checked":""}>${esc(h.code)} <small>${esc(h.depth)}${h.depth?" cm":""}</small></label></td>
+      ${["dry","moist"].map(k=>`<td><span class="mc"><i style="background:${munsellCss(h.out[k+"Hue"],h.out[k+"Value"],h.out[k+"Chroma"])||"var(--field)"}"></i><input class="mun ${h.out[k+"Hue"]?"":"miss"}" data-k="${k}" value="${munTxt(h.out,k)}" placeholder="10YR 5/3" aria-label="Color ${k==="dry"?"en seco":"en húmedo"} de ${esc(h.code)}"></span></td>`).join("")}
+      <td>${selHtml(BYID.texture,h.out.texture,"f-texture")}</td><td>${selHtml(BYID.roots,h.out.roots,"f-roots")}</td><td>${selHtml(BYID.stick,h.out.stick,"f-stick")}</td></tr>`).join("")+`</tbody>`;
+  $("hzTable").querySelectorAll("tbody tr").forEach(tr=>{
+    const i=+tr.dataset.i, h=P.hz[i];
+    tr.querySelector("input[type=radio]").onchange=()=>applyHorizon(i);
+    tr.querySelectorAll("input.mun").forEach(inp=>inp.onchange=()=>{
+      const k=inp.dataset.k, m=/(\d{1,2}(?:[.,]\d)?)\s*(YR|Y|R)\s*(\d(?:[.,]\d)?)\s*\/\s*(\d{1,2}(?:[.,]\d)?)/i.exec(inp.value);
+      if(m){ h.out[k+"Hue"]=m[1].replace(",",".")+m[2].toUpperCase(); h.out[k+"Value"]=m[3].replace(",","."); h.out[k+"Chroma"]=m[4].replace(",","."); }
+      else if(!inp.value.trim()){ delete h.out[k+"Hue"]; delete h.out[k+"Value"]; delete h.out[k+"Chroma"]; }
+      else { inp.setCustomValidity("Escribe el color como 10YR 5/3"); inp.reportValidity(); return; }
+      inp.setCustomValidity(""); renderReview(); if(i===active) applyHorizon(i);
+    });
+    HZ_SEL.forEach(([k,c])=>{ const s=tr.querySelector("."+c); s.onchange=()=>{ if(s.value) h.out[k]=s.value; else delete h.out[k]; s.classList.toggle("miss",!s.value); if(i===active) applyHorizon(i); }; });
+  });
+  const marks=[...P.spans,...P.hz.flatMap(h=>[...(h.head?[{...h.head,k:"hz"}]:[]),...h.spans])].sort((a,b)=>a.s-b.s);
+  let html="",pos=0;
+  for(const s of marks){ if(s.s<pos) continue; html+=esc(P.text.slice(pos,s.s)); const t=esc(P.text.slice(s.s,s.e)); html+=s.k==="hz"?`<span class="hzh">${t}</span>`:`<mark class="k-${s.k}" title="${s.t}">${t}</mark>`; pos=s.e; }
+  $("srcView").innerHTML=html+esc(P.text.slice(pos));
+  $("review").hidden=false;
+}
+function readText(text,origin){
+  $("readerCard").open=true; if(step!==2) go(2);
+  parsed=parseProfile(text); $("desc").value=text;
+  if(!parsed.hz.length){ setStatus(`No se encontró texto en ${origin}.`,true); $("review").hidden=true; return; }
+  const surf=parsed.hz.findIndex(h=>/^A/.test(h.code)); active=surf<0?0:surf;
+  renderReview(); applyHorizon(active);
+  setStatus(`${origin}: ${parsed.hz.length} horizonte${parsed.hz.length>1?"s":""} leído${parsed.hz.length>1?"s":""}.`);
+}
+function setStatus(msg,err=false,prog=null){
+  $("readStatus").hidden=!msg; $("readStatus").classList.toggle("err",err); $("readMsg").textContent=msg||"";
+  $("readProg").hidden=prog==null; if(prog!=null) $("readProg").firstElementChild.style.width=`${Math.round(prog*100)}%`;
+}
+const loaded={};
+function loadScript(src){ return loaded[src] ||= new Promise((ok,ko)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>{ delete loaded[src]; ko(new Error("No se pudo cargar "+src)); }; document.head.appendChild(s); }); }
+const PDFJS="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+async function pdfToText(buf){
+  setStatus("Abriendo el PDF…",false,0);
+  await loadScript(PDFJS+"pdf.worker.min.js"); await loadScript(PDFJS+"pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+"pdf.worker.min.js";
+  const doc=await pdfjsLib.getDocument({data:buf}).promise, pages=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const tc=await (await doc.getPage(p)).getTextContent(), lines=[];
+    for(const it of tc.items){ if(!it.str) continue; const y=it.transform[5],x=it.transform[4];
+      let Ln=lines.find(l=>Math.abs(l.y-y)<3); if(!Ln){ Ln={y,items:[]}; lines.push(Ln); } Ln.items.push({x,w:it.width,s:it.str}); }
+    lines.sort((a,b)=>b.y-a.y);
+    pages.push(lines.map(l=>{ l.items.sort((a,b)=>a.x-b.x); let s="",end=null;
+      for(const it of l.items){ if(end!=null) s+=it.x-end>12?"   ":(it.x-end>1.5&&!s.endsWith(" ")&&!it.s.startsWith(" ")?" ":""); s+=it.s; end=it.x+it.w; }
+      return s; }).join("\n"));
+    setStatus(`Leyendo el PDF… página ${p} de ${doc.numPages}`,false,p/doc.numPages);
+  }
+  const text=pages.join("\n\n");
+  if(text.replace(/\s/g,"").length>40) return text;
+  const canv=[];
+  for(let p=1;p<=Math.min(doc.numPages,4);p++){ const pg=await doc.getPage(p),vp=pg.getViewport({scale:2}),c=document.createElement("canvas"); c.width=vp.width; c.height=vp.height; await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise; canv.push(c); }
+  return ocr(canv);
+}
+async function ocr(images){
+  setStatus("Preparando el reconocimiento de texto…",false,0);
+  await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+  let part=0;
+  const w=await Tesseract.createWorker("spa",1,{logger:m=>{ if(m.status==="recognizing text") setStatus(`Reconociendo el texto${images.length>1?` (página ${part+1} de ${images.length})`:""}…`,false,(part+m.progress)/images.length); }});
+  const out=[];
+  try{ for(const im of images){ out.push((await w.recognize(im)).data.text); part++; } } finally { w.terminate(); }
+  return out.join("\n\n");
+}
+async function readFile(file){
+  const name=file.name||"la imagen pegada";
+  $("readerCard").open=true;
+  try{
+    let text;
+    if(/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name)) text=await pdfToText(await file.arrayBuffer());
+    else if(/^image\//.test(file.type)) text=await ocr([file]);
+    else text=await file.text();
+    readText(text,name);
+  }catch(e){
+    console.error(e);
+    setStatus(/^image\//.test(file.type)||/esseract/.test(String(e))?"No se pudo reconocer el texto de la foto aquí. Prueba con el PDF de la ficha.":`No se pudo leer ${name}. Comprueba que es un PDF, una foto o un texto.`,true);
+  }
+}
+$("file").onchange=e=>{ const f=e.target.files[0]; if(f) readFile(f); e.target.value=""; };
+$("btnEditText").onclick=()=>{ const d=$("desc"); d.hidden=!d.hidden; $("btnEditText").textContent=d.hidden?"Corregir el texto":"Ocultar el texto"; if(!d.hidden) d.focus(); };
+let editT; $("desc").addEventListener("input",()=>{ clearTimeout(editT); editT=setTimeout(()=>{ parsed=parseProfile($("desc").value); if(parsed.hz.length){ active=Math.min(active,parsed.hz.length-1); renderReview(); applyHorizon(active); } },400); });
+
+/* ---------- Lotes ---------- */
+let batch=[];
+function bStatus(t,err){ $("bStatus").hidden=!t; $("bStatus").classList.toggle("err",!!err); $("bMsg").textContent=t||""; }
+function drawBatch(){
+  if(!map) return; batchLayer.clearLayers();
+  batch.forEach(b=>{ const lat=num(b.f.p_lat),lon=num(b.f.p_lon); if(lat==null||lon==null) return;
+    L.circleMarker([lat,lon],{radius:7,color:"#143331",weight:1.5,fillColor:dotColor(b.R.idx),fillOpacity:.95}).addTo(batchLayer).bindTooltip(`${esc(b.f.p_name)} · ${b.R.idx==null?"—":fmt(b.R.idx,0)}`); });
+}
+function runBatch(rows,origin){
+  $("techCard").open=true;
+  const unknown=new Set();
+  batch=rows.map((o,i)=>{ const {f,unknown:u}=rowToForm(o); u.forEach(x=>unknown.add(x)); f.p_name ||= `Muestra ${i+1}`; f.p_zone ||= "30";
+    if((!f.p_lat||!f.p_lon)&&f.p_x&&f.p_y){ const x=num(f.p_x),y=num(f.p_y); if(x!=null&&y!=null){ const g=fromUTM(x,y,+f.p_zone); f.p_lat=g.lat.toFixed(6); f.p_lon=g.lon.toFixed(6); } }
+    return {f,R:compute(f)}; }).filter(b=>b.R.n);
+  if(!batch.length){ bStatus(`No se encontraron muestras con datos reconocibles en ${origin}.`,true); $("bOut").hidden=true; return; }
+  const used=IND.filter(d=>batch.some(b=>b.f[d.id])).length;
+  bStatus(`${origin}: ${batch.length} muestra${batch.length>1?"s":""}, ${used} de 15 variables reconocidas.`+(unknown.size?` Columnas que no intervienen: ${[...unknown].slice(0,8).join(", ")}${unknown.size>8?"…":""}.`:""));
+  $("bTable").innerHTML=`<thead><tr><th>Muestra</th><th>Índice</th><th>Datos</th><th>Peso cubierto</th><th></th></tr></thead><tbody>`+
+    batch.map((b,i)=>`<tr><td>${esc(b.f.p_name)}</td><td class="idx"><span class="dot" style="background:${dotColor(b.R.idx)}"></span>${b.R.idx==null?"—":fmt(b.R.idx)}</td><td class="num">${b.R.n}/15</td><td class="num">${Math.round(b.R.cov*100)} %</td><td><button type="button" data-open="${i}">Abrir</button></td></tr>`).join("")+`</tbody>`;
+  $("bTable").querySelectorAll("[data-open]").forEach(btn=>btn.onclick=()=>{ writeForm(batch[+btn.dataset.open].f); go(4); toast("Muestra abierta"); });
+  $("bOut").hidden=false; drawBatch();
+}
+async function readBatchFile(file){
+  try{
+    let rows;
+    if(/\.(xlsx|xls)$/i.test(file.name)){ bStatus("Leyendo la hoja…"); await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+      const wb=XLSX.read(await file.arrayBuffer(),{type:"array"}); rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:"",raw:false}); }
+    else rows=parseDelimited(await file.text());
+    runBatch(rows,file.name);
+  }catch(e){ console.error(e); bStatus(`No se pudo leer ${file.name}. Usa .xlsx, .xls o .csv con una fila de cabecera.`,true); }
+}
+$("bfile").onchange=e=>{ const f=e.target.files[0]; if(f) readBatchFile(f); e.target.value=""; };
+const TEMPLATE_HEAD=["muestra","x_utm","y_utm","arena","arcilla","densidad_aparente","w33","w1500","carbono_organico","n_total","carbonatos","cic","brillo_seco","brillo_humedo","matiz_seco","textura","adhesividad","raices"];
+const BATCH_EXAMPLE=[
+  ["Ejemplo hoja Excel","","","50","10","1.6","41","21","1.8","0.5","35","32","8","3.5","2.5YR","arenosa","non sticky","very few"],
+  ["Ejemplo olivar","418620","4176960","24","38","1.40","","","0.9","0.17","61.6","","6.5","5","10YR","franco-arcillosa","adherente","pocas"],
+  ["Ejemplo encinar","452300","4180400","38","22","1.12","32","15","4.1","0.31","8","28","4","3","7.5YR","franca","ligeramente adherente","abundantes"]];
+$("btnBatchExample").onclick=()=>runBatch(BATCH_EXAMPLE.map(r=>Object.fromEntries(TEMPLATE_HEAD.map((h,i)=>[h,r[i]]))),"Ejemplo con valores inventados");
+$("btnTemplate").onclick=()=>copy([TEMPLATE_HEAD.join(";"),BATCH_EXAMPLE[0].join(";")].join("\n"),"Plantilla copiada: pégala en Excel o en un .csv");
+const csvRow=a=>a.map(v=>{ const s=String(v??""); return /[;"\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s; }).join(";");
+$("btnBatchCsv").onclick=()=>{ const head=["muestra","x_utm","y_utm","latitud","longitud",...IND.map(d=>d.id),"indice_0_100","datos","peso_cubierto"];
+  copy([csvRow(head),...batch.map(b=>csvRow([b.f.p_name,b.f.p_x,b.f.p_y,b.f.p_lat,b.f.p_lon,...IND.map(d=>b.f[d.id]??""),b.R.idx==null?"":b.R.idx.toFixed(1),b.R.n,(b.R.cov*100).toFixed(0)]))].join("\n"),"Resultados copiados (CSV con «;»)"); };
+$("btnBatchSave").onclick=()=>{ const a=loadSaved(); batch.forEach(b=>a.unshift({t:Date.now(),idx:b.R.idx,form:b.f})); if(storeSaved(a)){ renderSaved(); toast(`${batch.length} diagnósticos guardados`); } };
+
+/* ---------- Arrastrar y pegar ---------- */
+const isSheet=f=>/\.(xlsx|xls|csv|tsv)$/i.test(f.name);
+["dragenter","dragover"].forEach(t=>document.addEventListener(t,e=>{ if(e.dataTransfer&&[...e.dataTransfer.types].includes("Files")){ e.preventDefault(); const tgt=e.target.closest&&e.target.closest("#techCard")?"bdrop":"drop"; if(tgt==="drop"){ $("readerCard").open=true; } $(tgt).classList.add("over"); } }));
+document.addEventListener("dragleave",e=>{ if(!e.relatedTarget){ $("drop").classList.remove("over"); $("bdrop").classList.remove("over"); } });
+document.addEventListener("drop",e=>{ $("drop").classList.remove("over"); $("bdrop").classList.remove("over"); const f=e.dataTransfer&&e.dataTransfer.files[0]; if(!f) return; e.preventDefault(); isSheet(f)?readBatchFile(f):readFile(f); });
+document.addEventListener("paste",e=>{
+  if(e.target.closest&&e.target.closest("input,select,textarea")) return;
+  const f=[...(e.clipboardData?.files||[])][0];
+  if(f){ e.preventDefault(); isSheet(f)?readBatchFile(f):readFile(f); return; }
+  const t=e.clipboardData?.getData("text"); if(!t||!t.trim()) return;
+  e.preventDefault();
+  const first=t.split(/\r?\n/)[0]; if(first.includes("\t")&&first.split("\t").some(h=>COL_INDEX[key(h)])) runBatch(parseDelimited(t),"Celdas pegadas"); else readText(t,"El texto pegado");
+});
+
+/* ---------- Guardar, compartir, exportar ---------- */
+function toast(t){ const el=$("toast"); el.textContent=t; el.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>el.hidden=true,2400); }
+function loadSaved(){ try{ return JSON.parse(localStorage.getItem("gsqi.saved2")||"[]"); }catch(e){ return []; } }
+function storeSaved(a){ try{ localStorage.setItem("gsqi.saved2",JSON.stringify(a)); return true; }catch(e){ toast("Este navegador no permite guardar datos."); return false; } }
+function savedRows(a){ return a.map((s,i)=>`<div class="row"><span><span class="dot" style="background:${dotColor(s.idx)}"></span><b>${esc(s.form.p_name||"Sin nombre")}</b> · ${s.idx==null?"—":fmt(s.idx,0)} · ${new Date(s.t).toLocaleDateString("es-ES")}</span><span class="btns"><button type="button" data-load="${i}">Abrir</button><button type="button" data-del="${i}">Borrar</button></span></div>`).join(""); }
+function renderSaved(){
+  const a=loadSaved(), html=a.length?savedRows(a):`<p class="q-help" style="margin:4px 0 0">Aún no has guardado ningún diagnóstico.</p>`;
+  $("savedList").innerHTML=html; $("savedHome").innerHTML=a.length?savedRows(a):""; $("homeSaved").hidden=!a.length;
+  document.querySelectorAll("[data-load]").forEach(b=>b.onclick=()=>{ writeForm(loadSaved()[+b.dataset.load].form); go(4); toast("Diagnóstico abierto"); });
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    if(b.dataset.armed){ const a=loadSaved(); a.splice(+b.dataset.del,1); storeSaved(a); renderSaved(); toast("Diagnóstico borrado"); }
+    else { b.dataset.armed="1"; b.textContent="¿Seguro?"; } });
+  drawSaved();
+}
+$("btnSave").onclick=()=>{ const R=render(); if(!R.n){ toast("Añade algún dato antes de guardar."); return; } const a=loadSaved(); a.unshift({t:Date.now(),idx:R.idx,form:R.form}); if(storeSaved(a)){ renderSaved(); toast("Diagnóstico guardado"); } };
+function copy(text,msg){
+  const done=()=>toast(msg);
+  const fallback=()=>{ const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); done(); }catch(e){ toast("No se pudo copiar"); } ta.remove(); };
+  try{ navigator.clipboard.writeText(text).then(done,fallback); }catch(e){ fallback(); }
+}
+$("btnShare").onclick=()=>{
+  const R=render(), f=R.form, st=stateOf(R.idx); if(R.idx==null){ toast("Todavía no hay resultado."); return; }
+  const acts=R.rows.filter(r=>r.s!=null&&r.s<.55&&r.d.managed&&ADVICE[r.d.id]).sort((a,b)=>a.s-b.s).slice(0,2);
+  copy([`🌱 Salud del suelo${f.p_name?` · ${f.p_name}`:""}: ${fmt(R.idx,0)}/100 (${st.t.toLowerCase()})`,`Datos usados: ${R.n} de 15 (fiabilidad ${trustOf(R).t}).`,
+    ...acts.map(r=>"• "+ADVICE[r.d.id]),"Autodiagnóstico LivingSoiLL · Living Lab Andaluz"].join("\n"),"Resumen copiado: pégalo en WhatsApp o en un correo");
+};
+$("btnCsv").onclick=()=>{ const R=render(),f=R.form,Ls=[csvRow(["parcela","x_utm","y_utm","latitud","longitud","variable","valor","puntuacion","peso"])];
+  R.rows.forEach(r=>Ls.push(csvRow([f.p_name,f.p_x,f.p_y,f.p_lat,f.p_lon,r.d.name,r.label??"",r.s==null?"":r.s.toFixed(3),r.d.w.toFixed(3)])));
+  Ls.push(csvRow([f.p_name,f.p_x,f.p_y,f.p_lat,f.p_lon,"Índice global (0-100)","",R.idx==null?"":R.idx.toFixed(1),""])); copy(Ls.join("\n"),"CSV copiado"); };
+$("btnJson").onclick=()=>{ const R=render(); copy(JSON.stringify({indice:R.idx,cobertura:R.cov,datos:R.form,variables:R.rows.map(r=>({id:r.d.id,valor:r.label??null,s:r.s,w:r.d.w}))},null,2),"JSON copiado"); };
+
+/* ---------- Método ---------- */
+$("methodTable").innerHTML=`<thead><tr><th>Variable</th><th>Tipo</th><th>Peso</th><th>Sentido</th><th>Categoría → puntuación</th></tr></thead><tbody>`+
+  IND.map(d=>{ const keys=d.kind==="num"?d.cls.map(c=>`${c[0]}–${c[1]}`):d.cats;
+    return `<tr><td>${d.name}${d.unit?` (${d.unit})`:""}</td><td>${d.kind==="num"?"analítica":d.kind==="ord"?"ordinal":"nominal"}</td><td class="cls">${d.w.toFixed(3)}</td><td>${d.dir>0?"más es mejor":"menos es mejor"}</td><td class="cls">${keys.map((k,i)=>`${k}: ${fmt(d.s[i],2)}`).join(" · ")}</td></tr>`; }).join("")+`</tbody>`;
+const EXAMPLE={p_name:"Ejemplo · hoja de J. Calero",sand:"50",clay:"10",bd:"1.6",w33:"41",w1500:"21",oc:"1.8",ntot:"0.5",caco3:"35",cec:"32",dryValue:"8",moistValue:"3.5",dryHue:"2.5YR",texture:"S",stick:"NS",roots:"VF"};
+$("xlsCheck").textContent=fmt(compute(EXAMPLE).idx);
+$("btnExample").onclick=()=>{ writeForm({...EXAMPLE,p_name:"Ejemplo (datos de prueba)"}); go(4); };
+
+/* ---------- Arranque ---------- */
+buildPickers();
+function fromQuery(){
+  let p; try{ p=new URLSearchParams(location.search); }catch(e){ return null; }
+  if(!IND.some(d=>p.has(d.id))&&!p.has("name")) return null;
+  const o={p_name:p.get("name")||"",p_mun:p.get("mun")||"",p_x:p.get("x")||"",p_y:p.get("y")||"",p_lat:p.get("lat")||"",p_lon:p.get("lon")||"",p_lut:p.get("lut")||"",p_hz:"Ap",p_zone:"30"};
+  IND.forEach(d=>{ if(p.has(d.id)) o[d.id]=p.get(d.id); });
+  return o;
+}
+const pre=fromQuery();
+let draft=null; try{ draft=JSON.parse(localStorage.getItem("gsqi.draft4")||"null"); }catch(e){}
+if(pre){ writeForm(pre); go(2); toast("Datos de la finca cargados desde el visor"); }
+else if(draft&&draft.S&&Object.values(draft.S).some(v=>v)){ writeForm(draft.S); go(draft.step||0); }
+else { writeForm({}); go(0); }
+renderSaved();
+</script>
+</body>
+</html>

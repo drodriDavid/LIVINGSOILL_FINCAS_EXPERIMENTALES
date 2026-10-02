@@ -1514,7 +1514,6 @@ function render(){
   $("resMore").hidden=R.cov>=.75||!R.n; $("resMore").innerHTML=`<h3>Haz el análisis completo</h3><p style="margin:0">Un análisis de suelo con <b>carbono orgánico, nitrógeno total, CIC, carbonatos y granulometría</b> (arena, limo y arcilla) cuesta poco y hace que el diagnóstico sea mucho más fiable.</p>`;
   $("flags").innerHTML=R.flags.map(t=>`<li>${esc(t)}</li>`).join("");
   $("inds").innerHTML=[...R.rows].sort((a,b)=>b.d.w-a.d.w).map(r=>`<div class="ind ${r.s==null?"na":""}"><span class="nm">${FRIENDLY[r.d.id]}${r.label?`<small>${esc(r.label)}</small>`:""}</span><span class="track"><span class="fill" style="width:${r.s==null?0:(r.s*100).toFixed(1)}%;background:${col(r.s)}"></span></span><span class="v">${r.s==null?"—":fmt(r.s,2)}</span></div>`).join("");
-  try{ localStorage.setItem("gsqi.draft4",JSON.stringify({S:f,step})); }catch(e){}
   return {...R,form:f};
 }
 
@@ -1820,10 +1819,11 @@ function fromQuery(){
   return o;
 }
 const pre=fromQuery();
-let draft=null; try{ draft=JSON.parse(localStorage.getItem("gsqi.draft4")||"null"); }catch(e){}
-if(pre){ writeForm(pre); go(2); toast("Datos de la finca cargados desde el visor"); }
-else if(draft&&draft.S&&Object.values(draft.S).some(v=>v)){ writeForm(draft.S); go(draft.step||0); }
-else { writeForm({}); go(0); }
+// Cada vez que se abre el enlace se empieza desde la portada con un diagnóstico nuevo
+// (no se recupera la visita anterior; lo guardado sigue en «Tus diagnósticos").
+try{ localStorage.removeItem("gsqi.draft4"); }catch(e){}
+writeForm(pre||{}); go(0);
+if(pre) toast("Datos de la finca cargados desde el visor");
 renderSaved();
 </script>
 </body>

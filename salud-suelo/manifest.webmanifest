@@ -1,0 +1,11 @@
+{
+  "name": "Autodiagnóstico de salud del suelo · LivingSoiLL",
+  "short_name": "Salud del suelo",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f8f6",
+  "theme_color": "#00666a",
+  "lang": "es",
+  "icons": [{"src": "../assets/logo_brote.png", "sizes": "420x420", "type": "image/png", "purpose": "any"}]
+}
